@@ -543,6 +543,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 					RequestPayloadHash: requestPayloadHash,
 					ForceCacheBilling:  forceCacheBilling,
 					APIKeyService:      h.apiKeyService,
+					SelectionReason:    selection.SelectionReason,
 					ChannelUsageFields: channelMapping.ToUsageFields(reqModel, result.UpstreamModel),
 				}); err != nil {
 					logger.L().With(
@@ -957,6 +958,7 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 					RequestPayloadHash: requestPayloadHash,
 					ForceCacheBilling:  forceCacheBilling,
 					APIKeyService:      h.apiKeyService,
+					SelectionReason:    selection.SelectionReason,
 					ChannelUsageFields: channelMapping.ToUsageFields(reqModel, result.UpstreamModel),
 				}); err != nil {
 					logger.L().With(

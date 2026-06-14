@@ -122,6 +122,8 @@ type UsageLog struct {
 	InboundEndpoint *string
 	// UpstreamEndpoint is the normalized upstream endpoint path, e.g. /v1/responses.
 	UpstreamEndpoint *string
+	// SelectionReason stores the structured account/channel selection explanation for this request.
+	SelectionReason map[string]any
 
 	GroupID        *int64
 	SubscriptionID *int64

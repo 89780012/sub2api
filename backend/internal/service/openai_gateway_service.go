@@ -352,6 +352,7 @@ type OpenAIGatewayService struct {
 	openaiWSResolver      OpenAIWSProtocolResolver
 	resolver              *ModelPricingResolver
 	channelService        *ChannelService
+	monitorQualityScorer  *ChannelMonitorQualityScorer
 	balanceNotifyService  *BalanceNotifyService
 	settingService        *SettingService
 	userPlatformQuotaRepo UserPlatformQuotaRepository
@@ -443,6 +444,12 @@ func NewOpenAIGatewayService(
 	}
 	svc.logOpenAIWSModeBootstrap()
 	return svc
+}
+
+func (s *OpenAIGatewayService) SetChannelMonitorQualityScorer(scorer *ChannelMonitorQualityScorer) {
+	if s != nil {
+		s.monitorQualityScorer = scorer
+	}
 }
 
 // ResolveChannelMapping 解析渠道级模型映射（代理到 ChannelService）
@@ -1787,7 +1794,7 @@ func (s *OpenAIGatewayService) selectBestAccount(ctx context.Context, groupID *i
 			continue
 		}
 
-		if s.isBetterAccount(fresh, selected) {
+		if s.isBetterAccount(ctx, fresh, selected) {
 			selected = fresh
 			selectedCompactTier = compactTier
 		}
@@ -1801,7 +1808,12 @@ func (s *OpenAIGatewayService) selectBestAccount(ctx context.Context, groupID *i
 //
 // isBetterAccount checks if candidate is better than current.
 // Rules: higher priority (lower value) wins; same priority: never used > least recently used.
-func (s *OpenAIGatewayService) isBetterAccount(candidate, current *Account) bool {
+func (s *OpenAIGatewayService) isBetterAccount(ctx context.Context, candidate, current *Account) bool {
+	if s != nil && s.monitorQualityScorer != nil {
+		if cmp := s.monitorQualityScorer.CompareAccounts(ctx, candidate, current); cmp != 0 {
+			return cmp < 0
+		}
+	}
 	// 优先级更高（数值更小）
 	// Higher priority (lower value)
 	if candidate.Priority < current.Priority {
@@ -1827,6 +1839,24 @@ func (s *OpenAIGatewayService) isBetterAccount(candidate, current *Account) bool
 		// 都使用过，选择最久未使用的
 		return candidate.LastUsedAt.Before(*current.LastUsedAt)
 	}
+}
+
+func (s *OpenAIGatewayService) compareAccountsByMonitorQuality(ctx context.Context, a, b *Account) int {
+	if s == nil || s.monitorQualityScorer == nil {
+		return 0
+	}
+	return s.monitorQualityScorer.CompareAccounts(ctx, a, b)
+}
+
+func (s *OpenAIGatewayService) sortAccountsByMonitorQualityPriorityAndLastUsed(ctx context.Context, accounts []*Account, preferOAuth bool) {
+	sort.SliceStable(accounts, func(i, j int) bool {
+		a, b := accounts[i], accounts[j]
+		if cmp := s.compareAccountsByMonitorQuality(ctx, a, b); cmp != 0 {
+			return cmp < 0
+		}
+		return compareAccountsByPriorityAndLastUsed(a, b, preferOAuth) < 0
+	})
+	shuffleWithinMonitorQualityPriorityAndLastUsed(ctx, s.monitorQualityScorer, accounts, preferOAuth)
 }
 
 // SelectAccountWithLoadAwareness selects an account with load-awareness and wait plan.
@@ -1997,6 +2027,11 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 
 		sort.SliceStable(available, func(i, j int) bool {
 			a, b := available[i], available[j]
+			if s.monitorQualityScorer != nil {
+				if cmp := s.monitorQualityScorer.CompareAccounts(ctx, a.account, b.account); cmp != 0 {
+					return cmp < 0
+				}
+			}
 			if a.account.Priority != b.account.Priority {
 				return a.account.Priority < b.account.Priority
 			}
@@ -2014,7 +2049,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 				return a.account.LastUsedAt.Before(*b.account.LastUsedAt)
 			}
 		})
-		shuffleWithinSortGroups(available)
+		shuffleWithinMonitorQualitySortGroups(ctx, s.monitorQualityScorer, available)
 
 		selectionOrder := make([]accountWithLoad, 0, len(available))
 		if requireCompact {
@@ -2065,7 +2100,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 	loadMap, err := s.concurrencyService.GetAccountsLoadBatch(ctx, accountLoads)
 	if err != nil {
 		ordered := append([]*Account(nil), candidates...)
-		sortAccountsByPriorityAndLastUsed(ordered, false)
+		s.sortAccountsByMonitorQualityPriorityAndLastUsed(ctx, ordered, false)
 		if requireCompact {
 			ordered = prioritizeOpenAICompactAccounts(ordered)
 		}
@@ -2110,7 +2145,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 	}
 
 	// ============ Layer 3: Fallback wait ============
-	sortAccountsByPriorityAndLastUsed(candidates, false)
+	s.sortAccountsByMonitorQualityPriorityAndLastUsed(ctx, candidates, false)
 	if requireCompact {
 		candidates = prioritizeOpenAICompactAccounts(candidates)
 	}
@@ -2254,6 +2289,15 @@ func (s *OpenAIGatewayService) newSelectionResult(ctx context.Context, account *
 		Acquired:    acquired,
 		ReleaseFunc: release,
 		WaitPlan:    waitPlan,
+		SelectionReason: buildAccountSelectionReason(ctx, accountSelectionReasonInput{
+			Layer:         "openai_load_awareness",
+			Rule:          accountSelectionRuleMonitorQualityPriorityLoadLRU,
+			Account:       hydrated,
+			Acquired:      acquired,
+			WaitPlan:      waitPlan,
+			MonitorScorer: s.monitorQualityScorer,
+			TieBreakers:   []string{"monitor_quality_3_5_7", "priority", "load", "lru"},
+		}),
 	}, nil
 }
 
@@ -5731,6 +5775,7 @@ type OpenAIRecordUsageInput struct {
 	IPAddress          string // 请求的客户端 IP 地址
 	RequestPayloadHash string
 	APIKeyService      APIKeyQuotaUpdater
+	SelectionReason    map[string]any
 	ChannelUsageFields
 }
 
@@ -5859,6 +5904,7 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 		ReasoningEffort:     result.ReasoningEffort,
 		InboundEndpoint:     optionalTrimmedStringPtr(input.InboundEndpoint),
 		UpstreamEndpoint:    optionalTrimmedStringPtr(input.UpstreamEndpoint),
+		SelectionReason:     input.SelectionReason,
 		InputTokens:         actualInputTokens,
 		OutputTokens:        result.Usage.OutputTokens,
 		CacheCreationTokens: result.Usage.CacheCreationInputTokens,

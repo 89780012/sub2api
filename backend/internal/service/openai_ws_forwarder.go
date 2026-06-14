@@ -4317,19 +4317,36 @@ func (s *OpenAIGatewayService) selectAccountByPreviousResponseIDForCapability(
 			Account:     account,
 			Acquired:    true,
 			ReleaseFunc: result.ReleaseFunc,
+			SelectionReason: buildAccountSelectionReason(ctx, accountSelectionReasonInput{
+				Layer:         "openai_ws_response_sticky",
+				Rule:          accountSelectionRuleSticky,
+				Account:       account,
+				Acquired:      true,
+				MonitorScorer: s.monitorQualityScorer,
+				TieBreakers:   []string{"previous_response_id"},
+			}),
 		}, nil
 	}
 
 	cfg := s.schedulingConfig()
 	if s.concurrencyService != nil {
+		waitPlan := &AccountWaitPlan{
+			AccountID:      accountID,
+			MaxConcurrency: account.Concurrency,
+			Timeout:        cfg.StickySessionWaitTimeout,
+			MaxWaiting:     cfg.StickySessionMaxWaiting,
+		}
 		return &AccountSelectionResult{
-			Account: account,
-			WaitPlan: &AccountWaitPlan{
-				AccountID:      accountID,
-				MaxConcurrency: account.Concurrency,
-				Timeout:        cfg.StickySessionWaitTimeout,
-				MaxWaiting:     cfg.StickySessionMaxWaiting,
-			},
+			Account:  account,
+			WaitPlan: waitPlan,
+			SelectionReason: buildAccountSelectionReason(ctx, accountSelectionReasonInput{
+				Layer:         "openai_ws_response_sticky_wait",
+				Rule:          accountSelectionRuleSticky,
+				Account:       account,
+				WaitPlan:      waitPlan,
+				MonitorScorer: s.monitorQualityScorer,
+				TieBreakers:   []string{"previous_response_id", "wait_queue"},
+			}),
 		}, nil
 	}
 	return nil, nil

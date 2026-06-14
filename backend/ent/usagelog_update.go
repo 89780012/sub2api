@@ -811,6 +811,18 @@ func (_u *UsageLogUpdate) ClearImageSizeBreakdown() *UsageLogUpdate {
 	return _u
 }
 
+// SetSelectionReason sets the "selection_reason" field.
+func (_u *UsageLogUpdate) SetSelectionReason(v map[string]interface{}) *UsageLogUpdate {
+	_u.mutation.SetSelectionReason(v)
+	return _u
+}
+
+// ClearSelectionReason clears the value of the "selection_reason" field.
+func (_u *UsageLogUpdate) ClearSelectionReason() *UsageLogUpdate {
+	_u.mutation.ClearSelectionReason()
+	return _u
+}
+
 // SetCacheTTLOverridden sets the "cache_ttl_overridden" field.
 func (_u *UsageLogUpdate) SetCacheTTLOverridden(v bool) *UsageLogUpdate {
 	_u.mutation.SetCacheTTLOverridden(v)
@@ -1209,6 +1221,12 @@ func (_u *UsageLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.ImageSizeBreakdownCleared() {
 		_spec.ClearField(usagelog.FieldImageSizeBreakdown, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.SelectionReason(); ok {
+		_spec.SetField(usagelog.FieldSelectionReason, field.TypeJSON, value)
+	}
+	if _u.mutation.SelectionReasonCleared() {
+		_spec.ClearField(usagelog.FieldSelectionReason, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.CacheTTLOverridden(); ok {
 		_spec.SetField(usagelog.FieldCacheTTLOverridden, field.TypeBool, value)
@@ -2157,6 +2175,18 @@ func (_u *UsageLogUpdateOne) ClearImageSizeBreakdown() *UsageLogUpdateOne {
 	return _u
 }
 
+// SetSelectionReason sets the "selection_reason" field.
+func (_u *UsageLogUpdateOne) SetSelectionReason(v map[string]interface{}) *UsageLogUpdateOne {
+	_u.mutation.SetSelectionReason(v)
+	return _u
+}
+
+// ClearSelectionReason clears the value of the "selection_reason" field.
+func (_u *UsageLogUpdateOne) ClearSelectionReason() *UsageLogUpdateOne {
+	_u.mutation.ClearSelectionReason()
+	return _u
+}
+
 // SetCacheTTLOverridden sets the "cache_ttl_overridden" field.
 func (_u *UsageLogUpdateOne) SetCacheTTLOverridden(v bool) *UsageLogUpdateOne {
 	_u.mutation.SetCacheTTLOverridden(v)
@@ -2585,6 +2615,12 @@ func (_u *UsageLogUpdateOne) sqlSave(ctx context.Context) (_node *UsageLog, err 
 	}
 	if _u.mutation.ImageSizeBreakdownCleared() {
 		_spec.ClearField(usagelog.FieldImageSizeBreakdown, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.SelectionReason(); ok {
+		_spec.SetField(usagelog.FieldSelectionReason, field.TypeJSON, value)
+	}
+	if _u.mutation.SelectionReasonCleared() {
+		_spec.ClearField(usagelog.FieldSelectionReason, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.CacheTTLOverridden(); ok {
 		_spec.SetField(usagelog.FieldCacheTTLOverridden, field.TypeBool, value)

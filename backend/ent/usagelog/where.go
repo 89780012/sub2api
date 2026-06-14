@@ -2150,6 +2150,16 @@ func ImageSizeBreakdownNotNil() predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldNotNull(FieldImageSizeBreakdown))
 }
 
+// SelectionReasonIsNil applies the IsNil predicate on the "selection_reason" field.
+func SelectionReasonIsNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIsNull(FieldSelectionReason))
+}
+
+// SelectionReasonNotNil applies the NotNil predicate on the "selection_reason" field.
+func SelectionReasonNotNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotNull(FieldSelectionReason))
+}
+
 // CacheTTLOverriddenEQ applies the EQ predicate on the "cache_ttl_overridden" field.
 func CacheTTLOverriddenEQ(v bool) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldCacheTTLOverridden, v))

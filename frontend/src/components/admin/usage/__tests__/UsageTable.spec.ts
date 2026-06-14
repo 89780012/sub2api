@@ -20,6 +20,41 @@ const messages: Record<string, string> = {
   'usage.serviceTierStandard': 'Standard',
   'usage.rate': 'Rate',
   'usage.accountMultiplier': 'Account rate',
+  'usage.selectionReason': 'Selection Basis',
+  'usage.selectionSummary': 'Summary',
+  'usage.selectionRule': 'Rule',
+  'usage.selectionAccount': 'Account',
+  'usage.selectionEndpoint': 'Endpoint',
+  'usage.selectionCandidates': 'Candidates',
+  'usage.selectionTopK': 'Top K',
+  'usage.selectionLoadSkew': 'Load skew',
+  'usage.selectionMonitorMatched': 'Monitor matched',
+  'usage.selectionMonitorNotMatched': 'monitor not matched',
+  'usage.selectionMonitor3': 'Monitor 3',
+  'usage.selectionMonitor5': 'Monitor 5',
+  'usage.selectionMonitor7': 'Monitor 7',
+  'usage.selectionLoad': 'Load',
+  'usage.selectionLoadRate': 'Load rate',
+  'usage.selectionConcurrency': 'Concurrency',
+  'usage.selectionWaiting': 'Waiting',
+  'usage.selectionWaitPlan': 'Wait plan',
+  'usage.selectionTimeoutMs': 'Timeout ms',
+  'usage.selectionMaxWaiting': 'Max waiting',
+  'usage.selectionTieBreakerLabel': 'Tie-breakers',
+  'usage.monitorGreen': 'Green',
+  'usage.monitorOrange': 'Orange',
+  'usage.monitorRed': 'Red',
+  'usage.monitorUnknown': 'Unknown',
+  'usage.priority': 'Priority',
+  'usage.yes': 'Yes',
+  'usage.no': 'No',
+  'usage.selectionRules.monitorQualityPriorityLoadLru': 'Monitor quality > priority > load > LRU',
+  'usage.selectionRules.monitorQualityPriorityLru': 'Monitor quality > priority > LRU',
+  'usage.selectionRules.sticky': 'Sticky binding',
+  'usage.selectionRules.openaiAdvancedScheduler': 'OpenAI advanced scheduler',
+  'usage.selectionRules.legacyOrder': 'Monitor quality > priority/LRU legacy order',
+  'usage.selectionTieBreakers.monitorQuality357': 'Monitor 3/5/7',
+  'usage.selectionTieBreakers.lru': 'LRU',
   'usage.original': 'Original',
   'usage.userBilled': 'User billed',
   'usage.accountBilled': 'Account billed',
@@ -61,6 +96,7 @@ const DataTableStub = {
     <div>
       <div v-for="row in data" :key="row.request_id">
         <slot name="cell-model" :row="row" :value="row.model" />
+        <slot name="cell-selection_reason" :row="row" />
         <slot name="cell-billing_mode" :row="row" />
         <slot name="cell-tokens" :row="row" />
         <slot name="cell-cost" :row="row" />
@@ -198,6 +234,64 @@ describe('admin UsageTable tooltip', () => {
     const text = wrapper.text()
     expect(text).toContain('claude-sonnet-4')
     expect(text).toContain('claude-sonnet-4-20250514')
+  })
+
+  it('shows selection reason details for admin rows', async () => {
+    const row = {
+      request_id: 'req-admin-selection',
+      model: 'gpt-5.4',
+      actual_cost: 0,
+      total_cost: 0,
+      account_rate_multiplier: 1,
+      rate_multiplier: 1,
+      input_cost: 0,
+      output_cost: 0,
+      cache_creation_cost: 0,
+      cache_read_cost: 0,
+      input_tokens: 1,
+      output_tokens: 1,
+      selection_reason: {
+        summary: 'selected by monitor quality',
+        rule: 'monitor_quality_priority_load_lru',
+        account_id: 9,
+        account_name: 'acc-a',
+        priority: 10,
+        monitor_quality: {
+          known: true,
+          counts_3: { green: 3, orange: 0, red: 0, unknown: 0 },
+          counts_5: { green: 5, orange: 0, red: 0, unknown: 0 },
+          counts_7: { green: 7, orange: 0, red: 0, unknown: 0 },
+        },
+        load: { load_rate: 0, current_concurrency: 0, waiting_count: 0 },
+        tie_breakers: ['monitor_quality_3_5_7', 'priority', 'load', 'lru'],
+      },
+    }
+
+    const wrapper = mount(UsageTable, {
+      props: {
+        data: [row],
+        loading: false,
+        columns: [],
+      },
+      global: {
+        stubs: {
+          DataTable: DataTableStub,
+          EmptyState: true,
+          Icon: true,
+          Teleport: true,
+        },
+      },
+    })
+
+    await wrapper.findAll('.group.relative')[0].trigger('mouseenter')
+    await nextTick()
+
+    const text = wrapper.text()
+    expect(text).toContain('Selection Basis')
+    expect(text).toContain('Monitor 3')
+    expect(text).toContain('Green:3')
+    expect(text).toContain('Monitor 3/5/7')
+    expect(text).toContain('Priority')
   })
 
   it.each([

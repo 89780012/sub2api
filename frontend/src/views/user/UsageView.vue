@@ -211,6 +211,24 @@
             </span>
           </template>
 
+          <template #cell-selection_reason="{ row }">
+            <div
+              v-if="row.selection_reason"
+              class="group relative inline-flex items-center gap-1.5"
+              @mouseenter="showSelectionTooltip($event, row)"
+              @mouseleave="hideSelectionTooltip"
+            >
+              <Icon name="badge" size="sm" class="text-emerald-500" />
+              <span class="max-w-[320px] truncate text-sm text-gray-600 dark:text-gray-300">
+                {{ formatSelectionReasonSummary(row.selection_reason, t) }}
+              </span>
+              <div class="flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-100 transition-colors group-hover:bg-blue-100 dark:bg-gray-700 dark:group-hover:bg-blue-900/50">
+                <Icon name="infoCircle" size="xs" class="text-gray-400 group-hover:text-blue-500 dark:text-gray-500 dark:group-hover:text-blue-400" />
+              </div>
+            </div>
+            <span v-else class="text-sm text-gray-400 dark:text-gray-500">-</span>
+          </template>
+
           <template #cell-stream="{ row }">
             <span
               class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
@@ -604,6 +622,37 @@
       </div>
     </div>
   </Teleport>
+
+  <Teleport to="body">
+    <div
+      v-if="selectionTooltipVisible"
+      class="fixed z-[9999] pointer-events-none -translate-y-1/2"
+      :style="{
+        left: selectionTooltipPosition.x + 'px',
+        top: selectionTooltipPosition.y + 'px'
+      }"
+    >
+      <div class="max-w-[420px] rounded-lg border border-gray-700 bg-gray-900 px-3 py-2.5 text-xs text-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
+        <div class="space-y-1.5">
+          <div class="mb-2 border-b border-gray-700 pb-1.5">
+            <div class="text-xs font-semibold text-gray-300 mb-1">{{ t('usage.selectionReason') }}</div>
+            <div v-if="selectionTooltipData?.selection_reason?.summary" class="text-gray-100">
+              {{ selectionTooltipData.selection_reason.summary }}
+            </div>
+          </div>
+          <div
+            v-for="item in selectionTooltipData ? formatSelectionReasonDetails(selectionTooltipData.selection_reason, t) : []"
+            :key="item.label"
+            class="flex items-start justify-between gap-4"
+          >
+            <span class="text-gray-400">{{ item.label }}</span>
+            <span class="max-w-[260px] text-right font-medium text-white break-words">{{ item.value }}</span>
+          </div>
+        </div>
+        <div class="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-b-[6px] border-r-[6px] border-t-[6px] border-b-transparent border-r-gray-900 border-t-transparent dark:border-r-gray-800"></div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -628,6 +677,11 @@ import { formatCacheTokens, formatMultiplier } from '@/utils/formatters'
 import { formatTokenPricePerMillion } from '@/utils/usagePricing'
 import { getUsageServiceTierLabel } from '@/utils/usageServiceTier'
 import { resolveUsageRequestType } from '@/utils/usageRequestType'
+import {
+  formatSelectionReasonDetails,
+  formatSelectionReasonExport,
+  formatSelectionReasonSummary,
+} from '@/utils/usageSelectionReason'
 import {
   BILLING_MODE_TOKEN,
   getBillingModeBadgeClass,
@@ -662,6 +716,11 @@ const tokenTooltipVisible = ref(false)
 const tokenTooltipPosition = ref({ x: 0, y: 0 })
 const tokenTooltipData = ref<UsageLog | null>(null)
 
+// Selection tooltip state
+const selectionTooltipVisible = ref(false)
+const selectionTooltipPosition = ref({ x: 0, y: 0 })
+const selectionTooltipData = ref<UsageLog | null>(null)
+
 // Usage stats from API
 const usageStats = ref<UsageStatsResponse | null>(null)
 
@@ -683,6 +742,7 @@ const columns = computed<Column[]>(() => [
   { key: 'model', label: t('usage.model'), sortable: true },
   { key: 'reasoning_effort', label: t('usage.reasoningEffort'), sortable: false },
   { key: 'endpoint', label: t('usage.endpoint'), sortable: false },
+  { key: 'selection_reason', label: t('usage.selectionReason'), sortable: false },
   { key: 'stream', label: t('usage.type'), sortable: false },
   { key: 'billing_mode', label: t('admin.usage.billingMode'), sortable: false },
   { key: 'tokens', label: t('usage.tokens'), sortable: false },
@@ -978,6 +1038,7 @@ const exportToCSV = async () => {
       'Model',
       'Reasoning Effort',
       'Inbound Endpoint',
+      'Selection Reason',
       'Type',
       'Billing Mode',
       'Input Tokens',
@@ -997,6 +1058,7 @@ const exportToCSV = async () => {
         log.model,
         formatReasoningEffort(log.reasoning_effort),
         log.inbound_endpoint || '',
+        formatSelectionReasonExport(log.selection_reason, t),
         getRequestTypeExportText(log),
         getBillingModeLabel(getDisplayBillingMode(log), t),
         log.input_tokens,
@@ -1064,6 +1126,21 @@ const showTokenTooltip = (event: MouseEvent, row: UsageLog) => {
 const hideTokenTooltip = () => {
   tokenTooltipVisible.value = false
   tokenTooltipData.value = null
+}
+
+const showSelectionTooltip = (event: MouseEvent, row: UsageLog) => {
+  const target = event.currentTarget as HTMLElement
+  const rect = target.getBoundingClientRect()
+
+  selectionTooltipData.value = row
+  selectionTooltipPosition.value.x = rect.right + 8
+  selectionTooltipPosition.value.y = rect.top + rect.height / 2
+  selectionTooltipVisible.value = true
+}
+
+const hideSelectionTooltip = () => {
+  selectionTooltipVisible.value = false
+  selectionTooltipData.value = null
 }
 
 // ── Error Requests Tab ──────────────────────────────────────────────────────

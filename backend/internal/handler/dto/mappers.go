@@ -591,6 +591,7 @@ func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 		ReasoningEffort:       l.ReasoningEffort,
 		InboundEndpoint:       l.InboundEndpoint,
 		UpstreamEndpoint:      l.UpstreamEndpoint,
+		SelectionReason:       l.SelectionReason,
 		GroupID:               l.GroupID,
 		SubscriptionID:        l.SubscriptionID,
 		InputTokens:           l.InputTokens,

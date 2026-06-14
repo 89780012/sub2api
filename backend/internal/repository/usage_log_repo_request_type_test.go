@@ -90,6 +90,7 @@ func TestUsageLogRepositoryCreateSyncRequestTypeAndLegacyFields(t *testing.T) {
 			sqlmock.AnyArg(), // billing_tier
 			sqlmock.AnyArg(), // billing_mode
 			sqlmock.AnyArg(), // account_stats_cost
+			sqlmock.AnyArg(), // selection_reason
 			createdAt,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow(int64(99), createdAt))
@@ -173,6 +174,7 @@ func TestUsageLogRepositoryCreate_PersistsServiceTier(t *testing.T) {
 			sqlmock.AnyArg(), // billing_tier
 			sqlmock.AnyArg(), // billing_mode
 			sqlmock.AnyArg(), // account_stats_cost
+			sqlmock.AnyArg(), // selection_reason
 			createdAt,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow(int64(100), createdAt))
@@ -640,6 +642,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},
 			sql.NullString{},
 			sql.NullFloat64{},
+			sql.NullString{},
 			now,
 		}})
 		require.NoError(t, err)
@@ -708,6 +711,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},  // billing_tier
 			sql.NullString{},  // billing_mode
 			sql.NullFloat64{}, // account_stats_cost
+			sql.NullString{},  // selection_reason
 			now,
 		}})
 		require.NoError(t, err)
@@ -760,6 +764,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},  // billing_tier
 			sql.NullString{},  // billing_mode
 			sql.NullFloat64{}, // account_stats_cost
+			sql.NullString{},  // selection_reason
 			now,
 		}})
 		require.NoError(t, err)
@@ -812,11 +817,62 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{},  // billing_tier
 			sql.NullString{},  // billing_mode
 			sql.NullFloat64{}, // account_stats_cost
+			sql.NullString{},  // selection_reason
 			now,
 		}})
 		require.NoError(t, err)
 		require.NotNil(t, log.ServiceTier)
 		require.Equal(t, "priority", *log.ServiceTier)
+	})
+
+	t.Run("selection_reason_is_scanned", func(t *testing.T) {
+		now := time.Now().UTC()
+		log, err := scanUsageLog(usageLogScannerStub{values: []any{
+			int64(5),
+			int64(14),
+			int64(24),
+			int64(34),
+			sql.NullString{Valid: true, String: "req-selection-reason"},
+			"gpt-5",
+			sql.NullString{Valid: true, String: "gpt-5"},
+			sql.NullString{},
+			sql.NullInt64{},
+			sql.NullInt64{},
+			1, 2, 3, 4, 5, 6,
+			0, 0.0,
+			0.1, 0.2, 0.3, 0.4, 1.0, 0.9,
+			1.0,
+			sql.NullFloat64{},
+			int16(service.BillingTypeBalance),
+			int16(service.RequestTypeSync),
+			false,
+			false,
+			sql.NullInt64{},
+			sql.NullInt64{},
+			sql.NullString{},
+			sql.NullString{},
+			0,
+			sql.NullString{},
+			sql.NullString{},
+			sql.NullString{},
+			sql.NullString{},
+			sql.NullString{},
+			sql.NullString{},
+			sql.NullString{},
+			sql.NullString{},
+			sql.NullString{},
+			false,
+			sql.NullInt64{},
+			sql.NullString{},
+			sql.NullString{},
+			sql.NullString{},
+			sql.NullFloat64{},
+			sql.NullString{Valid: true, String: `{"summary":"selected by monitor quality","priority":10}`},
+			now,
+		}})
+		require.NoError(t, err)
+		require.Equal(t, "selected by monitor quality", log.SelectionReason["summary"])
+		require.Equal(t, float64(10), log.SelectionReason["priority"])
 	})
 
 }

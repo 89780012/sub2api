@@ -226,6 +226,7 @@ func (h *OpenAIGatewayHandler) Embeddings(c *gin.Context) {
 				UserAgent:          userAgent,
 				IPAddress:          clientIP,
 				APIKeyService:      h.apiKeyService,
+				SelectionReason:    selection.SelectionReason,
 				ChannelUsageFields: channelMapping.ToUsageFields(reqModel, result.UpstreamModel),
 			}); err != nil {
 				logger.L().With(

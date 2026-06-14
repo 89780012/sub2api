@@ -440,6 +440,8 @@ type UsageLog struct {
 	InboundEndpoint *string `json:"inbound_endpoint,omitempty"`
 	// UpstreamEndpoint is the normalized upstream endpoint path, e.g. /v1/responses.
 	UpstreamEndpoint *string `json:"upstream_endpoint,omitempty"`
+	// SelectionReason explains why this account/channel URL was selected for the request.
+	SelectionReason map[string]any `json:"selection_reason,omitempty"`
 
 	GroupID        *int64 `json:"group_id"`
 	SubscriptionID *int64 `json:"subscription_id"`

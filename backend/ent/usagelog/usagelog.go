@@ -92,6 +92,8 @@ const (
 	FieldImageSizeSource = "image_size_source"
 	// FieldImageSizeBreakdown holds the string denoting the image_size_breakdown field in the database.
 	FieldImageSizeBreakdown = "image_size_breakdown"
+	// FieldSelectionReason holds the string denoting the selection_reason field in the database.
+	FieldSelectionReason = "selection_reason"
 	// FieldCacheTTLOverridden holds the string denoting the cache_ttl_overridden field in the database.
 	FieldCacheTTLOverridden = "cache_ttl_overridden"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -187,6 +189,7 @@ var Columns = []string{
 	FieldImageOutputSize,
 	FieldImageSizeSource,
 	FieldImageSizeBreakdown,
+	FieldSelectionReason,
 	FieldCacheTTLOverridden,
 	FieldCreatedAt,
 }

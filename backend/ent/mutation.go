@@ -34941,6 +34941,7 @@ type UsageLogMutation struct {
 	image_output_size           *string
 	image_size_source           *string
 	image_size_breakdown        *map[string]int
+	selection_reason            *map[string]interface{}
 	cache_ttl_overridden        *bool
 	created_at                  *time.Time
 	clearedFields               map[string]struct{}
@@ -37079,6 +37080,55 @@ func (m *UsageLogMutation) ResetImageSizeBreakdown() {
 	delete(m.clearedFields, usagelog.FieldImageSizeBreakdown)
 }
 
+// SetSelectionReason sets the "selection_reason" field.
+func (m *UsageLogMutation) SetSelectionReason(value map[string]interface{}) {
+	m.selection_reason = &value
+}
+
+// SelectionReason returns the value of the "selection_reason" field in the mutation.
+func (m *UsageLogMutation) SelectionReason() (r map[string]interface{}, exists bool) {
+	v := m.selection_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSelectionReason returns the old "selection_reason" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldSelectionReason(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSelectionReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSelectionReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSelectionReason: %w", err)
+	}
+	return oldValue.SelectionReason, nil
+}
+
+// ClearSelectionReason clears the value of the "selection_reason" field.
+func (m *UsageLogMutation) ClearSelectionReason() {
+	m.selection_reason = nil
+	m.clearedFields[usagelog.FieldSelectionReason] = struct{}{}
+}
+
+// SelectionReasonCleared returns if the "selection_reason" field was cleared in this mutation.
+func (m *UsageLogMutation) SelectionReasonCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldSelectionReason]
+	return ok
+}
+
+// ResetSelectionReason resets all changes to the "selection_reason" field.
+func (m *UsageLogMutation) ResetSelectionReason() {
+	m.selection_reason = nil
+	delete(m.clearedFields, usagelog.FieldSelectionReason)
+}
+
 // SetCacheTTLOverridden sets the "cache_ttl_overridden" field.
 func (m *UsageLogMutation) SetCacheTTLOverridden(b bool) {
 	m.cache_ttl_overridden = &b
@@ -37320,7 +37370,7 @@ func (m *UsageLogMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UsageLogMutation) Fields() []string {
-	fields := make([]string, 0, 41)
+	fields := make([]string, 0, 42)
 	if m.user != nil {
 		fields = append(fields, usagelog.FieldUserID)
 	}
@@ -37438,6 +37488,9 @@ func (m *UsageLogMutation) Fields() []string {
 	if m.image_size_breakdown != nil {
 		fields = append(fields, usagelog.FieldImageSizeBreakdown)
 	}
+	if m.selection_reason != nil {
+		fields = append(fields, usagelog.FieldSelectionReason)
+	}
 	if m.cache_ttl_overridden != nil {
 		fields = append(fields, usagelog.FieldCacheTTLOverridden)
 	}
@@ -37530,6 +37583,8 @@ func (m *UsageLogMutation) Field(name string) (ent.Value, bool) {
 		return m.ImageSizeSource()
 	case usagelog.FieldImageSizeBreakdown:
 		return m.ImageSizeBreakdown()
+	case usagelog.FieldSelectionReason:
+		return m.SelectionReason()
 	case usagelog.FieldCacheTTLOverridden:
 		return m.CacheTTLOverridden()
 	case usagelog.FieldCreatedAt:
@@ -37621,6 +37676,8 @@ func (m *UsageLogMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldImageSizeSource(ctx)
 	case usagelog.FieldImageSizeBreakdown:
 		return m.OldImageSizeBreakdown(ctx)
+	case usagelog.FieldSelectionReason:
+		return m.OldSelectionReason(ctx)
 	case usagelog.FieldCacheTTLOverridden:
 		return m.OldCacheTTLOverridden(ctx)
 	case usagelog.FieldCreatedAt:
@@ -37906,6 +37963,13 @@ func (m *UsageLogMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetImageSizeBreakdown(v)
+		return nil
+	case usagelog.FieldSelectionReason:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSelectionReason(v)
 		return nil
 	case usagelog.FieldCacheTTLOverridden:
 		v, ok := value.(bool)
@@ -38236,6 +38300,9 @@ func (m *UsageLogMutation) ClearedFields() []string {
 	if m.FieldCleared(usagelog.FieldImageSizeBreakdown) {
 		fields = append(fields, usagelog.FieldImageSizeBreakdown)
 	}
+	if m.FieldCleared(usagelog.FieldSelectionReason) {
+		fields = append(fields, usagelog.FieldSelectionReason)
+	}
 	return fields
 }
 
@@ -38303,6 +38370,9 @@ func (m *UsageLogMutation) ClearField(name string) error {
 		return nil
 	case usagelog.FieldImageSizeBreakdown:
 		m.ClearImageSizeBreakdown()
+		return nil
+	case usagelog.FieldSelectionReason:
+		m.ClearSelectionReason()
 		return nil
 	}
 	return fmt.Errorf("unknown UsageLog nullable field %s", name)
@@ -38428,6 +38498,9 @@ func (m *UsageLogMutation) ResetField(name string) error {
 		return nil
 	case usagelog.FieldImageSizeBreakdown:
 		m.ResetImageSizeBreakdown()
+		return nil
+	case usagelog.FieldSelectionReason:
+		m.ResetSelectionReason()
 		return nil
 	case usagelog.FieldCacheTTLOverridden:
 		m.ResetCacheTTLOverridden()

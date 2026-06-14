@@ -1207,6 +1207,43 @@ export type UsageRequestType = 'unknown' | 'sync' | 'stream' | 'ws_v2'
 export type ImageSizeSource = 'output' | 'input' | 'default' | 'legacy'
 export type ImageSizeBreakdown = Record<string, number>
 
+export interface MonitorStatusCounts {
+  green?: number
+  orange?: number
+  red?: number
+  unknown?: number
+}
+
+export interface UsageSelectionReason {
+  summary?: string
+  layer?: string
+  rule?: string
+  account_id?: number
+  account_name?: string
+  platform?: string
+  provider?: string
+  endpoint?: string
+  priority?: number
+  acquired?: boolean
+  candidate_count?: number
+  top_k?: number
+  load_skew?: number
+  monitor_quality?: {
+    known?: boolean
+    counts_3?: MonitorStatusCounts
+    counts_5?: MonitorStatusCounts
+    counts_7?: MonitorStatusCounts
+  }
+  load?: {
+    load_rate?: number
+    current_concurrency?: number
+    waiting_count?: number
+  }
+  wait_plan?: Record<string, unknown>
+  tie_breakers?: string[]
+  [key: string]: unknown
+}
+
 export interface UsageLog {
   id: number
   user_id: number
@@ -1256,6 +1293,9 @@ export interface UsageLog {
 
   // User-Agent
   user_agent: string | null
+
+  // Account/channel selection basis recorded when the request was routed.
+  selection_reason?: UsageSelectionReason | null
 
   // Cache TTL Override
   cache_ttl_overridden: boolean

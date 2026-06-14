@@ -101,6 +101,8 @@ type UsageLog struct {
 	ImageSizeSource *string `json:"image_size_source,omitempty"`
 	// ImageSizeBreakdown holds the value of the "image_size_breakdown" field.
 	ImageSizeBreakdown map[string]int `json:"image_size_breakdown,omitempty"`
+	// SelectionReason holds the value of the "selection_reason" field.
+	SelectionReason map[string]interface{} `json:"selection_reason,omitempty"`
 	// CacheTTLOverridden holds the value of the "cache_ttl_overridden" field.
 	CacheTTLOverridden bool `json:"cache_ttl_overridden,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -188,7 +190,7 @@ func (*UsageLog) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case usagelog.FieldImageSizeBreakdown:
+		case usagelog.FieldImageSizeBreakdown, usagelog.FieldSelectionReason:
 			values[i] = new([]byte)
 		case usagelog.FieldStream, usagelog.FieldCacheTTLOverridden:
 			values[i] = new(sql.NullBool)
@@ -474,6 +476,14 @@ func (_m *UsageLog) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field image_size_breakdown: %w", err)
 				}
 			}
+		case usagelog.FieldSelectionReason:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field selection_reason", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.SelectionReason); err != nil {
+					return fmt.Errorf("unmarshal field selection_reason: %w", err)
+				}
+			}
 		case usagelog.FieldCacheTTLOverridden:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field cache_ttl_overridden", values[i])
@@ -697,6 +707,9 @@ func (_m *UsageLog) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("image_size_breakdown=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ImageSizeBreakdown))
+	builder.WriteString(", ")
+	builder.WriteString("selection_reason=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SelectionReason))
 	builder.WriteString(", ")
 	builder.WriteString("cache_ttl_overridden=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CacheTTLOverridden))

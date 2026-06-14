@@ -75,6 +75,24 @@
           </div>
         </template>
 
+        <template #cell-selection_reason="{ row }">
+          <div
+            v-if="row.selection_reason"
+            class="group relative inline-flex items-center gap-1.5"
+            @mouseenter="showSelectionTooltip($event, row)"
+            @mouseleave="hideSelectionTooltip"
+          >
+            <Icon name="badge" size="sm" class="text-emerald-500" />
+            <span class="max-w-[320px] truncate text-sm text-gray-600 dark:text-gray-300">
+              {{ formatSelectionReasonSummary(row.selection_reason, t) }}
+            </span>
+            <div class="flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-100 transition-colors group-hover:bg-blue-100 dark:bg-gray-700 dark:group-hover:bg-blue-900/50">
+              <Icon name="infoCircle" size="xs" class="text-gray-400 group-hover:text-blue-500 dark:text-gray-500 dark:group-hover:text-blue-400" />
+            </div>
+          </div>
+          <span v-else class="text-sm text-gray-400 dark:text-gray-500">-</span>
+        </template>
+
         <template #cell-group="{ row }">
           <span v-if="row.group" class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
             {{ row.group.name }}
@@ -273,6 +291,37 @@
     </div>
   </Teleport>
 
+  <Teleport to="body">
+    <div
+      v-if="selectionTooltipVisible"
+      class="fixed z-[9999] pointer-events-none -translate-y-1/2"
+      :style="{
+        left: selectionTooltipPosition.x + 'px',
+        top: selectionTooltipPosition.y + 'px'
+      }"
+    >
+      <div class="max-w-[420px] rounded-lg border border-gray-700 bg-gray-900 px-3 py-2.5 text-xs text-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
+        <div class="space-y-1.5">
+          <div class="mb-2 border-b border-gray-700 pb-1.5">
+            <div class="text-xs font-semibold text-gray-300 mb-1">{{ t('usage.selectionReason') }}</div>
+            <div v-if="selectionTooltipData?.selection_reason?.summary" class="text-gray-100">
+              {{ selectionTooltipData.selection_reason.summary }}
+            </div>
+          </div>
+          <div
+            v-for="item in selectionTooltipData ? formatSelectionReasonDetails(selectionTooltipData.selection_reason, t) : []"
+            :key="item.label"
+            class="flex items-start justify-between gap-4"
+          >
+            <span class="text-gray-400">{{ item.label }}</span>
+            <span class="max-w-[260px] text-right font-medium text-white break-words">{{ item.value }}</span>
+          </div>
+        </div>
+        <div class="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-b-[6px] border-r-[6px] border-t-[6px] border-b-transparent border-r-gray-900 border-t-transparent dark:border-r-gray-800"></div>
+      </div>
+    </div>
+  </Teleport>
+
   <!-- Cost Tooltip Portal -->
   <Teleport to="body">
     <div
@@ -427,6 +476,10 @@ import {
   textOutputTokens,
   hasImageOutputCost,
 } from '@/utils/imageUsage'
+import {
+  formatSelectionReasonDetails,
+  formatSelectionReasonSummary,
+} from '@/utils/usageSelectionReason'
 
 /** Compute the account-billed cost for display: (account_stats_cost ?? total_cost) * rate_multiplier */
 function accountBilled(row: { total_cost?: number | null; account_stats_cost?: number | null; account_rate_multiplier?: number | null }): number {
@@ -472,6 +525,11 @@ const tooltipData = ref<AdminUsageLog | null>(null)
 const tokenTooltipVisible = ref(false)
 const tokenTooltipPosition = ref({ x: 0, y: 0 })
 const tokenTooltipData = ref<AdminUsageLog | null>(null)
+
+// Tooltip state - selection reason
+const selectionTooltipVisible = ref(false)
+const selectionTooltipPosition = ref({ x: 0, y: 0 })
+const selectionTooltipData = ref<AdminUsageLog | null>(null)
 
 const getRequestTypeLabel = (row: AdminUsageLog): string => {
   const requestType = resolveUsageRequestType(row)
@@ -529,5 +587,19 @@ const showTokenTooltip = (event: MouseEvent, row: AdminUsageLog) => {
 const hideTokenTooltip = () => {
   tokenTooltipVisible.value = false
   tokenTooltipData.value = null
+}
+
+const showSelectionTooltip = (event: MouseEvent, row: AdminUsageLog) => {
+  const target = event.currentTarget as HTMLElement
+  const rect = target.getBoundingClientRect()
+  selectionTooltipData.value = row
+  selectionTooltipPosition.value.x = rect.right + 8
+  selectionTooltipPosition.value.y = rect.top + rect.height / 2
+  selectionTooltipVisible.value = true
+}
+
+const hideSelectionTooltip = () => {
+  selectionTooltipVisible.value = false
+  selectionTooltipData.value = null
 }
 </script>

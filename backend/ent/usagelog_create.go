@@ -525,6 +525,12 @@ func (_c *UsageLogCreate) SetImageSizeBreakdown(v map[string]int) *UsageLogCreat
 	return _c
 }
 
+// SetSelectionReason sets the "selection_reason" field.
+func (_c *UsageLogCreate) SetSelectionReason(v map[string]interface{}) *UsageLogCreate {
+	_c.mutation.SetSelectionReason(v)
+	return _c
+}
+
 // SetCacheTTLOverridden sets the "cache_ttl_overridden" field.
 func (_c *UsageLogCreate) SetCacheTTLOverridden(v bool) *UsageLogCreate {
 	_c.mutation.SetCacheTTLOverridden(v)
@@ -994,6 +1000,10 @@ func (_c *UsageLogCreate) createSpec() (*UsageLog, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ImageSizeBreakdown(); ok {
 		_spec.SetField(usagelog.FieldImageSizeBreakdown, field.TypeJSON, value)
 		_node.ImageSizeBreakdown = value
+	}
+	if value, ok := _c.mutation.SelectionReason(); ok {
+		_spec.SetField(usagelog.FieldSelectionReason, field.TypeJSON, value)
+		_node.SelectionReason = value
 	}
 	if value, ok := _c.mutation.CacheTTLOverridden(); ok {
 		_spec.SetField(usagelog.FieldCacheTTLOverridden, field.TypeBool, value)
@@ -1827,6 +1837,24 @@ func (u *UsageLogUpsert) UpdateImageSizeBreakdown() *UsageLogUpsert {
 // ClearImageSizeBreakdown clears the value of the "image_size_breakdown" field.
 func (u *UsageLogUpsert) ClearImageSizeBreakdown() *UsageLogUpsert {
 	u.SetNull(usagelog.FieldImageSizeBreakdown)
+	return u
+}
+
+// SetSelectionReason sets the "selection_reason" field.
+func (u *UsageLogUpsert) SetSelectionReason(v map[string]interface{}) *UsageLogUpsert {
+	u.Set(usagelog.FieldSelectionReason, v)
+	return u
+}
+
+// UpdateSelectionReason sets the "selection_reason" field to the value that was provided on create.
+func (u *UsageLogUpsert) UpdateSelectionReason() *UsageLogUpsert {
+	u.SetExcluded(usagelog.FieldSelectionReason)
+	return u
+}
+
+// ClearSelectionReason clears the value of the "selection_reason" field.
+func (u *UsageLogUpsert) ClearSelectionReason() *UsageLogUpsert {
+	u.SetNull(usagelog.FieldSelectionReason)
 	return u
 }
 
@@ -2689,6 +2717,27 @@ func (u *UsageLogUpsertOne) UpdateImageSizeBreakdown() *UsageLogUpsertOne {
 func (u *UsageLogUpsertOne) ClearImageSizeBreakdown() *UsageLogUpsertOne {
 	return u.Update(func(s *UsageLogUpsert) {
 		s.ClearImageSizeBreakdown()
+	})
+}
+
+// SetSelectionReason sets the "selection_reason" field.
+func (u *UsageLogUpsertOne) SetSelectionReason(v map[string]interface{}) *UsageLogUpsertOne {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.SetSelectionReason(v)
+	})
+}
+
+// UpdateSelectionReason sets the "selection_reason" field to the value that was provided on create.
+func (u *UsageLogUpsertOne) UpdateSelectionReason() *UsageLogUpsertOne {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.UpdateSelectionReason()
+	})
+}
+
+// ClearSelectionReason clears the value of the "selection_reason" field.
+func (u *UsageLogUpsertOne) ClearSelectionReason() *UsageLogUpsertOne {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.ClearSelectionReason()
 	})
 }
 
@@ -3719,6 +3768,27 @@ func (u *UsageLogUpsertBulk) UpdateImageSizeBreakdown() *UsageLogUpsertBulk {
 func (u *UsageLogUpsertBulk) ClearImageSizeBreakdown() *UsageLogUpsertBulk {
 	return u.Update(func(s *UsageLogUpsert) {
 		s.ClearImageSizeBreakdown()
+	})
+}
+
+// SetSelectionReason sets the "selection_reason" field.
+func (u *UsageLogUpsertBulk) SetSelectionReason(v map[string]interface{}) *UsageLogUpsertBulk {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.SetSelectionReason(v)
+	})
+}
+
+// UpdateSelectionReason sets the "selection_reason" field to the value that was provided on create.
+func (u *UsageLogUpsertBulk) UpdateSelectionReason() *UsageLogUpsertBulk {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.UpdateSelectionReason()
+	})
+}
+
+// ClearSelectionReason clears the value of the "selection_reason" field.
+func (u *UsageLogUpsertBulk) ClearSelectionReason() *UsageLogUpsertBulk {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.ClearSelectionReason()
 	})
 }
 

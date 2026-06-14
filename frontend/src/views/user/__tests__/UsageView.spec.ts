@@ -34,6 +34,41 @@ const messages: Record<string, string> = {
   'usage.apiKeyFilter': 'API Key',
   'usage.model': 'Model',
   'usage.reasoningEffort': 'Reasoning Effort',
+  'usage.selectionReason': 'Selection Basis',
+  'usage.selectionSummary': 'Summary',
+  'usage.selectionRule': 'Rule',
+  'usage.selectionAccount': 'Account',
+  'usage.selectionEndpoint': 'Endpoint',
+  'usage.selectionCandidates': 'Candidates',
+  'usage.selectionTopK': 'Top K',
+  'usage.selectionLoadSkew': 'Load skew',
+  'usage.selectionMonitorMatched': 'Monitor matched',
+  'usage.selectionMonitorNotMatched': 'monitor not matched',
+  'usage.selectionMonitor3': 'Monitor 3',
+  'usage.selectionMonitor5': 'Monitor 5',
+  'usage.selectionMonitor7': 'Monitor 7',
+  'usage.selectionLoad': 'Load',
+  'usage.selectionLoadRate': 'Load rate',
+  'usage.selectionConcurrency': 'Concurrency',
+  'usage.selectionWaiting': 'Waiting',
+  'usage.selectionWaitPlan': 'Wait plan',
+  'usage.selectionTimeoutMs': 'Timeout ms',
+  'usage.selectionMaxWaiting': 'Max waiting',
+  'usage.selectionTieBreakerLabel': 'Tie-breakers',
+  'usage.monitorGreen': 'Green',
+  'usage.monitorOrange': 'Orange',
+  'usage.monitorRed': 'Red',
+  'usage.monitorUnknown': 'Unknown',
+  'usage.priority': 'Priority',
+  'usage.yes': 'Yes',
+  'usage.no': 'No',
+  'usage.selectionRules.monitorQualityPriorityLoadLru': 'Monitor quality > priority > load > LRU',
+  'usage.selectionRules.monitorQualityPriorityLru': 'Monitor quality > priority > LRU',
+  'usage.selectionRules.sticky': 'Sticky binding',
+  'usage.selectionRules.openaiAdvancedScheduler': 'OpenAI advanced scheduler',
+  'usage.selectionRules.legacyOrder': 'Monitor quality > priority/LRU legacy order',
+  'usage.selectionTieBreakers.monitorQuality357': 'Monitor 3/5/7',
+  'usage.selectionTieBreakers.lru': 'LRU',
   'usage.type': 'Type',
   'usage.tokens': 'Tokens',
   'usage.cost': 'Cost',
@@ -97,6 +132,7 @@ const DataTableStub = {
     <div>
       <div v-for="row in data" :key="row.request_id">
         <slot name="cell-billing_mode" :row="row" />
+        <slot name="cell-selection_reason" :row="row" />
         <slot name="cell-tokens" :row="row" />
         <slot name="cell-cost" :row="row" />
       </div>
@@ -242,6 +278,22 @@ describe('user UsageView tooltip', () => {
         model: 'gpt-5.4',
         reasoning_effort: null,
         api_key: { name: 'demo-key' },
+        selection_reason: {
+          summary: 'selected by monitor quality, then priority/load/LRU',
+          rule: 'monitor_quality_priority_load_lru',
+          account_id: 9,
+          account_name: 'acc-a',
+          endpoint: 'https://api.example.com',
+          priority: 10,
+          monitor_quality: {
+            known: true,
+            counts_3: { green: 3, orange: 0, red: 0, unknown: 0 },
+            counts_5: { green: 5, orange: 0, red: 0, unknown: 0 },
+            counts_7: { green: 7, orange: 0, red: 0, unknown: 0 },
+          },
+          load: { load_rate: 0, current_concurrency: 0, waiting_count: 0 },
+          tie_breakers: ['monitor_quality_3_5_7', 'priority', 'load', 'lru'],
+        },
       },
     ]
 
@@ -304,9 +356,98 @@ describe('user UsageView tooltip', () => {
     expect(clickSpy).toHaveBeenCalled()
     expect(showSuccess).toHaveBeenCalled()
 
+    const csv = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(exportedBlob as Blob)
+    })
+    expect(csv).toContain('Selection Reason')
+    expect(csv).toContain('Monitor 3')
+    expect(csv).toContain('Green:3')
+
     window.URL.createObjectURL = originalCreateObjectURL
     window.URL.revokeObjectURL = originalRevokeObjectURL
     clickSpy.mockRestore()
+  })
+
+  it('shows selection reason details in the user usage table', async () => {
+    query.mockResolvedValue({
+      items: [
+        {
+          request_id: 'req-user-selection',
+          actual_cost: 0,
+          total_cost: 0,
+          rate_multiplier: 1,
+          input_cost: 0,
+          output_cost: 0,
+          cache_creation_cost: 0,
+          cache_read_cost: 0,
+          input_tokens: 1,
+          output_tokens: 1,
+          cache_creation_tokens: 0,
+          cache_read_tokens: 0,
+          cache_creation_5m_tokens: 0,
+          cache_creation_1h_tokens: 0,
+          image_count: 0,
+          first_token_ms: null,
+          duration_ms: 1,
+          created_at: '2026-03-08T00:00:00Z',
+          model: 'gpt-5.4',
+          selection_reason: {
+            summary: 'selected by monitor quality',
+            rule: 'monitor_quality_priority_load_lru',
+            account_id: 9,
+            account_name: 'acc-a',
+            priority: 10,
+            monitor_quality: {
+              known: true,
+              counts_3: { green: 3, orange: 0, red: 0, unknown: 0 },
+              counts_5: { green: 5, orange: 0, red: 0, unknown: 0 },
+              counts_7: { green: 7, orange: 0, red: 0, unknown: 0 },
+            },
+            tie_breakers: ['monitor_quality_3_5_7', 'priority'],
+          },
+        },
+      ],
+      total: 1,
+      pages: 1,
+    })
+    getStatsByDateRange.mockResolvedValue({
+      total_requests: 1,
+      total_tokens: 2,
+      total_cost: 0,
+      avg_duration_ms: 1,
+    })
+    list.mockResolvedValue({ items: [] })
+
+    const wrapper = mount(UsageView, {
+      global: {
+        stubs: {
+          AppLayout: AppLayoutStub,
+          TablePageLayout: TablePageLayoutStub,
+          Pagination: true,
+          EmptyState: true,
+          Select: true,
+          DateRangePicker: true,
+          DataTable: DataTableStub,
+          Icon: true,
+          Teleport: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+
+    await wrapper.findAll('.group.relative')[0].trigger('mouseenter')
+    await nextTick()
+
+    const text = wrapper.text()
+    expect(text).toContain('Selection Basis')
+    expect(text).toContain('Monitor 3')
+    expect(text).toContain('Green:3')
+    expect(text).toContain('Monitor 3/5/7')
   })
 
   it('exports historical image rows with image billing mode derived from image_count', async () => {
