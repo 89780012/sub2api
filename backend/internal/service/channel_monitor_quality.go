@@ -2,35 +2,47 @@ package service
 
 import (
 	"context"
+	"log/slog"
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
 	"time"
-
-	gocache "github.com/patrickmn/go-cache"
 )
 
 const (
-	channelMonitorQualityRecentLimit = 7
-	channelMonitorQualityCacheTTL    = 15 * time.Second
+	channelMonitorQualityRecentLimit     = 7
+	channelMonitorQualityRefreshInterval = 10 * time.Second
 )
 
 type ChannelMonitorQualityScorer struct {
-	repo  ChannelMonitorRepository
-	cache *gocache.Cache
+	repo ChannelMonitorRepository
+
+	mu        sync.RWMutex
+	snapshot  *monitorQualitySnapshot
+	refreshMu sync.Mutex
+
+	startOnce sync.Once
+	stopOnce  sync.Once
+	stopCh    chan struct{}
 }
 
 type monitorQualitySnapshot struct {
 	monitorByKey map[string]*ChannelMonitor
 	historyByID  map[int64][]*ChannelMonitorHistoryEntry
+	createdAt    time.Time
 }
 
 type channelMonitorQualityScore struct {
-	Known   bool
-	Counts3 monitorStatusCounts
-	Counts5 monitorStatusCounts
-	Counts7 monitorStatusCounts
-	Recent7 []monitorStatusSample
+	Known        bool
+	MonitorID    int64
+	MonitorName  string
+	PrimaryModel string
+	SnapshotAt   time.Time
+	Counts3      monitorStatusCounts
+	Counts5      monitorStatusCounts
+	Counts7      monitorStatusCounts
+	Recent7      []monitorStatusSample
 }
 
 type monitorStatusCounts struct {
@@ -46,9 +58,43 @@ type monitorStatusSample struct {
 }
 
 func NewChannelMonitorQualityScorer(repo ChannelMonitorRepository) *ChannelMonitorQualityScorer {
-	return &ChannelMonitorQualityScorer{
-		repo:  repo,
-		cache: gocache.New(channelMonitorQualityCacheTTL, time.Minute),
+	scorer := &ChannelMonitorQualityScorer{
+		repo:   repo,
+		stopCh: make(chan struct{}),
+	}
+	scorer.Start()
+	return scorer
+}
+
+func (s *ChannelMonitorQualityScorer) Start() {
+	if s == nil || s.repo == nil {
+		return
+	}
+	s.startOnce.Do(func() {
+		go s.refreshLoop()
+	})
+}
+
+func (s *ChannelMonitorQualityScorer) Stop() {
+	if s == nil {
+		return
+	}
+	s.stopOnce.Do(func() {
+		close(s.stopCh)
+	})
+}
+
+func (s *ChannelMonitorQualityScorer) refreshLoop() {
+	s.refresh(context.Background())
+	ticker := time.NewTicker(channelMonitorQualityRefreshInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			s.refresh(context.Background())
+		case <-s.stopCh:
+			return
+		}
 	}
 }
 
@@ -56,15 +102,47 @@ func (s *ChannelMonitorQualityScorer) Snapshot(ctx context.Context) *monitorQual
 	if s == nil || s.repo == nil {
 		return nil
 	}
-	if cached, ok := s.cache.Get("snapshot"); ok {
-		if snapshot, ok := cached.(*monitorQualitySnapshot); ok {
-			return snapshot
-		}
+	if snapshot := s.currentSnapshot(); snapshot != nil {
+		return snapshot
 	}
+	return s.refresh(ctx)
+}
 
-	monitors, err := s.repo.ListEnabled(ctx)
-	if err != nil || len(monitors) == 0 {
+func (s *ChannelMonitorQualityScorer) currentSnapshot() *monitorQualitySnapshot {
+	if s == nil {
 		return nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.snapshot
+}
+
+func (s *ChannelMonitorQualityScorer) refresh(ctx context.Context) *monitorQualitySnapshot {
+	s.refreshMu.Lock()
+	defer s.refreshMu.Unlock()
+
+	snapshot, err := s.loadSnapshot(ctx)
+	if err != nil {
+		slog.Warn("channel_monitor_quality: refresh failed", "error", err)
+		return s.currentSnapshot()
+	}
+	s.mu.Lock()
+	s.snapshot = snapshot
+	s.mu.Unlock()
+	return snapshot
+}
+
+func (s *ChannelMonitorQualityScorer) loadSnapshot(ctx context.Context) (*monitorQualitySnapshot, error) {
+	monitors, err := s.repo.ListEnabled(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(monitors) == 0 {
+		return &monitorQualitySnapshot{
+			monitorByKey: map[string]*ChannelMonitor{},
+			historyByID:  map[int64][]*ChannelMonitorHistoryEntry{},
+			createdAt:    time.Now(),
+		}, nil
 	}
 
 	monitorByKey := make(map[string]*ChannelMonitor, len(monitors))
@@ -88,20 +166,23 @@ func (s *ChannelMonitorQualityScorer) Snapshot(ctx context.Context) *monitorQual
 		primaryModels[monitor.ID] = strings.TrimSpace(monitor.PrimaryModel)
 	}
 	if len(monitorByKey) == 0 {
-		return nil
+		return &monitorQualitySnapshot{
+			monitorByKey: map[string]*ChannelMonitor{},
+			historyByID:  map[int64][]*ChannelMonitorHistoryEntry{},
+			createdAt:    time.Now(),
+		}, nil
 	}
 
 	historyByID, err := s.repo.ListRecentHistoryForMonitors(ctx, ids, primaryModels, channelMonitorQualityRecentLimit)
 	if err != nil {
-		historyByID = map[int64][]*ChannelMonitorHistoryEntry{}
+		return nil, err
 	}
 
-	snapshot := &monitorQualitySnapshot{
+	return &monitorQualitySnapshot{
 		monitorByKey: monitorByKey,
 		historyByID:  historyByID,
-	}
-	s.cache.Set("snapshot", snapshot, channelMonitorQualityCacheTTL)
-	return snapshot
+		createdAt:    time.Now(),
+	}, nil
 }
 
 func (s *ChannelMonitorQualityScorer) CompareAccounts(ctx context.Context, a, b *Account) int {
@@ -129,13 +210,24 @@ func (s *monitorQualitySnapshot) ScoreAccount(account *Account) channelMonitorQu
 	}
 	monitor := s.monitorByKey[key]
 	if monitor == nil {
-		return channelMonitorQualityScore{}
+		return channelMonitorQualityScore{SnapshotAt: s.createdAt}
 	}
 	history := s.historyByID[monitor.ID]
 	if len(history) == 0 {
-		return channelMonitorQualityScore{Known: true}
+		return channelMonitorQualityScore{
+			Known:        true,
+			MonitorID:    monitor.ID,
+			MonitorName:  monitor.Name,
+			PrimaryModel: strings.TrimSpace(monitor.PrimaryModel),
+			SnapshotAt:   s.createdAt,
+		}
 	}
-	return buildMonitorQualityScore(history)
+	score := buildMonitorQualityScore(history)
+	score.MonitorID = monitor.ID
+	score.MonitorName = monitor.Name
+	score.PrimaryModel = strings.TrimSpace(monitor.PrimaryModel)
+	score.SnapshotAt = s.createdAt
+	return score
 }
 
 func buildMonitorQualityScore(history []*ChannelMonitorHistoryEntry) channelMonitorQualityScore {

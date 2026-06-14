@@ -51,7 +51,15 @@ const formatMonitorSummary = (reason: UsageSelectionReason, t: Translate): strin
   const quality = reason.monitor_quality
   if (!quality) return ''
   if (quality.known === false) return t('usage.selectionMonitorNotMatched')
-  return quality.counts_3 ? `3=${formatMonitorCounts(quality.counts_3, t)}` : ''
+  const monitor = formatMatchedMonitor(quality)
+  const counts = quality.counts_3 ? `3=${formatMonitorCounts(quality.counts_3, t)}` : ''
+  return [monitor, counts].filter(Boolean).join(' ')
+}
+
+const formatMatchedMonitor = (quality: NonNullable<UsageSelectionReason['monitor_quality']>): string => {
+  const name = isPresent(quality.monitor_name) ? String(quality.monitor_name) : ''
+  const id = isPresent(quality.monitor_id) ? `#${quality.monitor_id}` : ''
+  return [name, id].filter(Boolean).join(' ')
 }
 
 const formatMonitorStatusSample = (sample: MonitorStatusSample, index: number, t: Translate): string => {
@@ -145,6 +153,16 @@ export const formatSelectionReasonDetails = (
       label: t('usage.selectionMonitorMatched'),
       value: quality.known === false ? t('usage.no') : t('usage.yes'),
     })
+    const matchedMonitor = formatMatchedMonitor(quality)
+    if (matchedMonitor) {
+      details.push({ label: t('usage.selectionMonitor'), value: matchedMonitor })
+    }
+    if (isPresent(quality.primary_model)) {
+      details.push({ label: t('usage.selectionMonitorPrimaryModel'), value: String(quality.primary_model) })
+    }
+    if (isPresent(quality.snapshot_at)) {
+      details.push({ label: t('usage.selectionSnapshotAt'), value: String(quality.snapshot_at) })
+    }
     details.push({ label: t('usage.selectionMonitor3'), value: formatMonitorCounts(quality.counts_3, t) })
     details.push({ label: t('usage.selectionMonitor5'), value: formatMonitorCounts(quality.counts_5, t) })
     details.push({ label: t('usage.selectionMonitor7'), value: formatMonitorCounts(quality.counts_7, t) })

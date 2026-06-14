@@ -1235,6 +1235,10 @@ export interface UsageSelectionReason {
   load_skew?: number
   monitor_quality?: {
     known?: boolean
+    monitor_id?: number
+    monitor_name?: string
+    primary_model?: string
+    snapshot_at?: string
     order?: string
     latest_first?: boolean
     recent_7?: MonitorStatusSample[] | null

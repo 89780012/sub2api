@@ -119,14 +119,22 @@ func accountMonitorQualityReason(ctx context.Context, scorer *ChannelMonitorQual
 	if scorer != nil {
 		score = scorer.ScoreAccount(ctx, account)
 	}
+	snapshotAt := score.SnapshotAt
+	if snapshotAt.IsZero() {
+		snapshotAt = time.Now()
+	}
 	return map[string]any{
-		"known":          score.Known,
-		"order":          "checked_at_desc",
-		"latest_first":   true,
-		"recent_7":       monitorStatusSamplesReason(score.Recent7),
-		"counts_3":       monitorStatusCountsReason(score.Counts3),
-		"counts_5":       monitorStatusCountsReason(score.Counts5),
-		"counts_7":       monitorStatusCountsReason(score.Counts7),
+		"known":         score.Known,
+		"monitor_id":    score.MonitorID,
+		"monitor_name":  score.MonitorName,
+		"primary_model": score.PrimaryModel,
+		"snapshot_at":   snapshotAt.Format(time.RFC3339Nano),
+		"order":         "checked_at_desc",
+		"latest_first":  true,
+		"recent_7":      monitorStatusSamplesReason(score.Recent7),
+		"counts_3":      monitorStatusCountsReason(score.Counts3),
+		"counts_5":      monitorStatusCountsReason(score.Counts5),
+		"counts_7":      monitorStatusCountsReason(score.Counts7),
 	}
 }
 
