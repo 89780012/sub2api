@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -29,6 +30,7 @@ type channelMonitorQualityScore struct {
 	Counts3 monitorStatusCounts
 	Counts5 monitorStatusCounts
 	Counts7 monitorStatusCounts
+	Recent7 []monitorStatusSample
 }
 
 type monitorStatusCounts struct {
@@ -36,6 +38,11 @@ type monitorStatusCounts struct {
 	Orange  int
 	Red     int
 	Unknown int
+}
+
+type monitorStatusSample struct {
+	Status    string
+	CheckedAt time.Time
 }
 
 func NewChannelMonitorQualityScorer(repo ChannelMonitorRepository) *ChannelMonitorQualityScorer {
@@ -133,10 +140,52 @@ func (s *monitorQualitySnapshot) ScoreAccount(account *Account) channelMonitorQu
 
 func buildMonitorQualityScore(history []*ChannelMonitorHistoryEntry) channelMonitorQualityScore {
 	score := channelMonitorQualityScore{Known: true}
-	score.Counts3 = countMonitorStatuses(history, 3)
-	score.Counts5 = countMonitorStatuses(history, 5)
-	score.Counts7 = countMonitorStatuses(history, 7)
+	recentFirst := sortMonitorHistoryRecentFirst(history)
+	score.Counts3 = countMonitorStatuses(recentFirst, 3)
+	score.Counts5 = countMonitorStatuses(recentFirst, 5)
+	score.Counts7 = countMonitorStatuses(recentFirst, 7)
+	score.Recent7 = monitorStatusSamples(recentFirst, 7)
 	return score
+}
+
+func sortMonitorHistoryRecentFirst(history []*ChannelMonitorHistoryEntry) []*ChannelMonitorHistoryEntry {
+	recentFirst := append([]*ChannelMonitorHistoryEntry(nil), history...)
+	sort.SliceStable(recentFirst, func(i, j int) bool {
+		left := recentFirst[i]
+		right := recentFirst[j]
+		if left == nil {
+			return false
+		}
+		if right == nil {
+			return true
+		}
+		if !left.CheckedAt.Equal(right.CheckedAt) {
+			return left.CheckedAt.After(right.CheckedAt)
+		}
+		return left.ID > right.ID
+	})
+	return recentFirst
+}
+
+func monitorStatusSamples(history []*ChannelMonitorHistoryEntry, limit int) []monitorStatusSample {
+	if limit <= 0 || len(history) == 0 {
+		return nil
+	}
+	samples := make([]monitorStatusSample, 0, min(limit, len(history)))
+	for i, entry := range history {
+		if i >= limit {
+			break
+		}
+		if entry == nil {
+			samples = append(samples, monitorStatusSample{Status: "unknown"})
+			continue
+		}
+		samples = append(samples, monitorStatusSample{
+			Status:    strings.TrimSpace(entry.Status),
+			CheckedAt: entry.CheckedAt,
+		})
+	}
+	return samples
 }
 
 func countMonitorStatuses(history []*ChannelMonitorHistoryEntry, limit int) monitorStatusCounts {
@@ -144,6 +193,10 @@ func countMonitorStatuses(history []*ChannelMonitorHistoryEntry, limit int) moni
 	for i, entry := range history {
 		if i >= limit {
 			break
+		}
+		if entry == nil {
+			counts.Unknown++
+			continue
 		}
 		switch strings.TrimSpace(entry.Status) {
 		case MonitorStatusOperational:

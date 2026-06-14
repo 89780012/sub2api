@@ -47,6 +47,9 @@ const messages: Record<string, string> = {
   'usage.selectionMonitor3': 'Monitor 3',
   'usage.selectionMonitor5': 'Monitor 5',
   'usage.selectionMonitor7': 'Monitor 7',
+  'usage.selectionMonitorRecent7': 'Recent 7',
+  'usage.selectionMonitorOrder': 'Order',
+  'usage.selectionLatestFirst': 'Latest first',
   'usage.selectionLoad': 'Load',
   'usage.selectionLoadRate': 'Load rate',
   'usage.selectionConcurrency': 'Concurrency',
@@ -287,6 +290,13 @@ describe('user UsageView tooltip', () => {
           priority: 10,
           monitor_quality: {
             known: true,
+            order: 'checked_at_desc',
+            latest_first: true,
+            recent_7: [
+              { status: 'operational', checked_at: '2026-03-08T00:07:00Z' },
+              { status: 'operational', checked_at: '2026-03-08T00:06:00Z' },
+              { status: 'operational', checked_at: '2026-03-08T00:05:00Z' },
+            ],
             counts_3: { green: 3, orange: 0, red: 0, unknown: 0 },
             counts_5: { green: 5, orange: 0, red: 0, unknown: 0 },
             counts_7: { green: 7, orange: 0, red: 0, unknown: 0 },
@@ -402,6 +412,13 @@ describe('user UsageView tooltip', () => {
             priority: 10,
             monitor_quality: {
               known: true,
+              order: 'checked_at_desc',
+              latest_first: true,
+              recent_7: [
+                { status: 'operational', checked_at: '2026-03-08T00:07:00Z' },
+                { status: 'operational', checked_at: '2026-03-08T00:06:00Z' },
+                { status: 'operational', checked_at: '2026-03-08T00:05:00Z' },
+              ],
               counts_3: { green: 3, orange: 0, red: 0, unknown: 0 },
               counts_5: { green: 5, orange: 0, red: 0, unknown: 0 },
               counts_7: { green: 7, orange: 0, red: 0, unknown: 0 },
@@ -448,6 +465,8 @@ describe('user UsageView tooltip', () => {
     expect(text).toContain('Monitor 3')
     expect(text).toContain('Green:3')
     expect(text).toContain('Monitor 3/5/7')
+    expect(text).toContain('Latest first')
+    expect(text).toContain('1.Green@2026-03-08T00:07:00Z')
   })
 
   it('exports historical image rows with image billing mode derived from image_count', async () => {

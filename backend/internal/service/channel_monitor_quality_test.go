@@ -78,6 +78,18 @@ func TestCompareMonitorQualityScoresUses3Then5Then7(t *testing.T) {
 	require.Greater(t, compareMonitorQualityScores(scoreC, scoreD), 0, "same first 5: first 7 breaks the tie")
 }
 
+func TestBuildMonitorQualityScoreSortsHistoryByNewestFirst(t *testing.T) {
+	now := time.Now()
+	score := buildMonitorQualityScore([]*ChannelMonitorHistoryEntry{
+		{ID: 1, Status: MonitorStatusFailed, CheckedAt: now.Add(-10 * time.Minute)},
+		{ID: 2, Status: MonitorStatusOperational, CheckedAt: now.Add(-1 * time.Minute)},
+		{ID: 3, Status: MonitorStatusOperational, CheckedAt: now.Add(-2 * time.Minute)},
+		{ID: 4, Status: MonitorStatusOperational, CheckedAt: now.Add(-3 * time.Minute)},
+	})
+
+	require.Equal(t, monitorStatusCounts{Green: 3}, score.Counts3)
+}
+
 func TestChannelMonitorQualityScorerMatchesAccountByEndpointOrigin(t *testing.T) {
 	repo := channelMonitorQualityRepoStub{
 		monitors: []*ChannelMonitor{

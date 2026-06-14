@@ -1,4 +1,4 @@
-import type { MonitorStatusCounts, UsageSelectionReason } from '@/types'
+import type { MonitorStatusCounts, MonitorStatusSample, UsageSelectionReason } from '@/types'
 
 type Translate = (key: string, params?: Record<string, unknown>) => string
 
@@ -52,6 +52,34 @@ const formatMonitorSummary = (reason: UsageSelectionReason, t: Translate): strin
   if (!quality) return ''
   if (quality.known === false) return t('usage.selectionMonitorNotMatched')
   return quality.counts_3 ? `3=${formatMonitorCounts(quality.counts_3, t)}` : ''
+}
+
+const formatMonitorStatusSample = (sample: MonitorStatusSample, index: number, t: Translate): string => {
+  const status = String(sample.status || 'unknown')
+  const checkedAt = sample.checked_at ? `@${sample.checked_at}` : ''
+  return `${index + 1}.${formatMonitorStatusLabel(status, t)}${checkedAt}`
+}
+
+const formatMonitorStatusLabel = (status: string, t: Translate): string => {
+  switch (status) {
+    case 'operational':
+      return t('usage.monitorGreen')
+    case 'degraded':
+      return t('usage.monitorOrange')
+    case 'failed':
+    case 'error':
+      return t('usage.monitorRed')
+    default:
+      return t('usage.monitorUnknown')
+  }
+}
+
+export const formatMonitorRecentSamples = (
+  samples: MonitorStatusSample[] | null | undefined,
+  t: Translate,
+): string => {
+  if (!samples || samples.length === 0) return '-'
+  return samples.map((sample, index) => formatMonitorStatusSample(sample, index, t)).join(' ')
 }
 
 export const formatSelectionReasonSummary = (
@@ -120,6 +148,14 @@ export const formatSelectionReasonDetails = (
     details.push({ label: t('usage.selectionMonitor3'), value: formatMonitorCounts(quality.counts_3, t) })
     details.push({ label: t('usage.selectionMonitor5'), value: formatMonitorCounts(quality.counts_5, t) })
     details.push({ label: t('usage.selectionMonitor7'), value: formatMonitorCounts(quality.counts_7, t) })
+    details.push({
+      label: t('usage.selectionMonitorRecent7'),
+      value: formatMonitorRecentSamples(quality.recent_7, t),
+    })
+    details.push({
+      label: t('usage.selectionMonitorOrder'),
+      value: quality.latest_first === true ? t('usage.selectionLatestFirst') : (quality.order || '-'),
+    })
   }
 
   if (reason.load) {

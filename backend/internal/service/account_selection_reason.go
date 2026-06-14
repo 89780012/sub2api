@@ -120,10 +120,13 @@ func accountMonitorQualityReason(ctx context.Context, scorer *ChannelMonitorQual
 		score = scorer.ScoreAccount(ctx, account)
 	}
 	return map[string]any{
-		"known":    score.Known,
-		"counts_3": monitorStatusCountsReason(score.Counts3),
-		"counts_5": monitorStatusCountsReason(score.Counts5),
-		"counts_7": monitorStatusCountsReason(score.Counts7),
+		"known":          score.Known,
+		"order":          "checked_at_desc",
+		"latest_first":   true,
+		"recent_7":       monitorStatusSamplesReason(score.Recent7),
+		"counts_3":       monitorStatusCountsReason(score.Counts3),
+		"counts_5":       monitorStatusCountsReason(score.Counts5),
+		"counts_7":       monitorStatusCountsReason(score.Counts7),
 	}
 }
 
@@ -134,4 +137,21 @@ func monitorStatusCountsReason(counts monitorStatusCounts) map[string]any {
 		"red":     counts.Red,
 		"unknown": counts.Unknown,
 	}
+}
+
+func monitorStatusSamplesReason(samples []monitorStatusSample) []map[string]any {
+	if len(samples) == 0 {
+		return nil
+	}
+	out := make([]map[string]any, 0, len(samples))
+	for _, sample := range samples {
+		item := map[string]any{
+			"status": sample.Status,
+		}
+		if !sample.CheckedAt.IsZero() {
+			item["checked_at"] = sample.CheckedAt.Format(time.RFC3339Nano)
+		}
+		out = append(out, item)
+	}
+	return out
 }

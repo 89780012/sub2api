@@ -1214,6 +1214,11 @@ export interface MonitorStatusCounts {
   unknown?: number
 }
 
+export interface MonitorStatusSample {
+  status?: string
+  checked_at?: string
+}
+
 export interface UsageSelectionReason {
   summary?: string
   layer?: string
@@ -1230,6 +1235,9 @@ export interface UsageSelectionReason {
   load_skew?: number
   monitor_quality?: {
     known?: boolean
+    order?: string
+    latest_first?: boolean
+    recent_7?: MonitorStatusSample[] | null
     counts_3?: MonitorStatusCounts
     counts_5?: MonitorStatusCounts
     counts_7?: MonitorStatusCounts

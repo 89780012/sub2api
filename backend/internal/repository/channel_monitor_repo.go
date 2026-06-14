@@ -231,7 +231,10 @@ func (r *channelMonitorRepository) ListHistory(ctx context.Context, monitorID in
 		q = q.Where(channelmonitorhistory.ModelEQ(model))
 	}
 	rows, err := q.
-		Order(dbent.Desc(channelmonitorhistory.FieldCheckedAt)).
+		Order(
+			dbent.Desc(channelmonitorhistory.FieldCheckedAt),
+			dbent.Desc(channelmonitorhistory.FieldID),
+		).
 		Limit(limit).
 		All(ctx)
 	if err != nil {
@@ -422,19 +425,20 @@ func (r *channelMonitorRepository) ListRecentHistoryForMonitors(
 		),
 		ranked AS (
 		    SELECT h.monitor_id,
+		           h.id,
 		           h.status,
 		           h.latency_ms,
 		           h.ping_latency_ms,
 		           h.checked_at,
-		           ROW_NUMBER() OVER (PARTITION BY h.monitor_id ORDER BY h.checked_at DESC) AS rn
+		           ROW_NUMBER() OVER (PARTITION BY h.monitor_id ORDER BY h.checked_at DESC, h.id DESC) AS rn
 		    FROM channel_monitor_histories h
 		    JOIN targets t
 		      ON t.monitor_id = h.monitor_id AND t.model = h.model
 		)
-		SELECT monitor_id, status, latency_ms, ping_latency_ms, checked_at
+		SELECT monitor_id, id, status, latency_ms, ping_latency_ms, checked_at
 		FROM ranked
 		WHERE rn <= $3
-		ORDER BY monitor_id, checked_at DESC
+		ORDER BY monitor_id, checked_at DESC, id DESC
 	`
 	rows, err := r.db.QueryContext(ctx, q, pq.Array(pairIDs), pq.Array(pairModels), perMonitorLimit)
 	if err != nil {
@@ -446,7 +450,7 @@ func (r *channelMonitorRepository) ListRecentHistoryForMonitors(
 		var monitorID int64
 		entry := &service.ChannelMonitorHistoryEntry{}
 		var latency, ping sql.NullInt64
-		if err := rows.Scan(&monitorID, &entry.Status, &latency, &ping, &entry.CheckedAt); err != nil {
+		if err := rows.Scan(&monitorID, &entry.ID, &entry.Status, &latency, &ping, &entry.CheckedAt); err != nil {
 			return nil, fmt.Errorf("scan recent history row: %w", err)
 		}
 		assignNullInt(&entry.LatencyMs, latency)

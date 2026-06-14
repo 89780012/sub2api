@@ -94,7 +94,7 @@ async function reload(silent = false) {
   try {
     const res = await listChannelMonitorViews({ signal: ctrl.signal })
     if (ctrl.signal.aborted || abortController !== ctrl) return
-    items.value = res.items || []
+    items.value = sortMonitorViewsByString(res.items || [])
   } catch (err: unknown) {
     const e = err as { name?: string; code?: string }
     if (e?.name === 'AbortError' || e?.code === 'ERR_CANCELED') return
@@ -145,6 +145,23 @@ function openDetail(row: UserMonitorView) {
 function closeDetail() {
   showDetail.value = false
   detailTarget.value = null
+}
+
+function compareString(left: string | null | undefined, right: string | null | undefined): number {
+  return String(left || '').localeCompare(String(right || ''), undefined, {
+    numeric: false,
+    sensitivity: 'base',
+  })
+}
+
+function sortMonitorViewsByString(rows: UserMonitorView[]): UserMonitorView[] {
+  return [...rows].sort((left, right) =>
+    compareString(left.name, right.name) ||
+    compareString(left.group_name, right.group_name) ||
+    compareString(left.provider, right.provider) ||
+    compareString(left.primary_model, right.primary_model) ||
+    left.id - right.id
+  )
 }
 
 watch(items, () => {
