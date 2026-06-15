@@ -2182,6 +2182,7 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 		}
 
 		qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccountsWithLoad(available), "service.gateway")
+		traceCandidates := buildQualityScheduleCandidates(available, qualitySnapshots, 0, "available")
 
 		// 分层过滤选择：优先级 → 近期质量 → 负载率 → LRU
 		for len(available) > 0 {
@@ -2212,8 +2213,13 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 					}
 					trace := newUsageScheduleTrace("quality_load_balance", selected.account)
 					trace.CandidateCount = len(candidates)
+					trace.ScoreFormula = "layered: min priority -> max quality; quality = 0.40*success_rate + 0.40*ttft<=5s + 0.20*ttft<=10s -> min load -> LRU"
 					trace.applyLoad(selected.loadInfo)
 					trace.applyQuality(qualitySnapshots[selected.account.ID])
+					for i := range traceCandidates {
+						traceCandidates[i].Selected = traceCandidates[i].AccountID == selected.account.ID
+					}
+					trace.setCandidates(traceCandidates)
 					return attachUsageScheduleTrace(selection, trace), nil
 				}
 			}
@@ -2233,6 +2239,7 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 	// ============ Layer 3: 兜底排队 ============
 	qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccounts(candidates), "service.gateway")
 	s.sortCandidatesForFallback(candidates, preferOAuth, cfg.FallbackSelectionMode, qualitySnapshots)
+	traceCandidates := buildQualityScheduleCandidatesFromAccounts(candidates, qualitySnapshots, 0, "fallback")
 	for _, acc := range candidates {
 		// 会话数量限制检查（等待计划也需要占用会话配额）
 		if !s.checkAndRegisterSession(ctx, acc, sessionHash) {
@@ -2250,7 +2257,12 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 		trace := newUsageScheduleTrace("fallback_wait", acc)
 		trace.WaitPlan = true
 		trace.CandidateCount = len(candidates)
+		trace.ScoreFormula = "fallback order: priority -> quality -> last_used/random"
 		trace.applyQuality(qualitySnapshots[acc.ID])
+		for i := range traceCandidates {
+			traceCandidates[i].Selected = traceCandidates[i].AccountID == acc.ID
+		}
+		trace.setCandidates(traceCandidates)
 		return attachUsageScheduleTrace(selection, trace), nil
 	}
 	return nil, ErrNoAvailableAccounts
@@ -2260,6 +2272,7 @@ func (s *GatewayService) tryAcquireByLegacyOrder(ctx context.Context, candidates
 	ordered := append([]*Account(nil), candidates...)
 	qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccounts(ordered), "service.gateway")
 	sortAccountsByPriorityQualityAndLastUsed(ordered, preferOAuth, qualitySnapshots)
+	traceCandidates := buildQualityScheduleCandidatesFromAccounts(ordered, qualitySnapshots, 0, "legacy_order")
 
 	for _, acc := range ordered {
 		result, err := s.tryAcquireAccountSlot(ctx, acc.ID, acc.Concurrency)
@@ -2278,7 +2291,12 @@ func (s *GatewayService) tryAcquireByLegacyOrder(ctx context.Context, candidates
 			}
 			trace := newUsageScheduleTrace("legacy_order", acc)
 			trace.CandidateCount = len(candidates)
+			trace.ScoreFormula = "legacy order: priority -> quality -> last_used"
 			trace.applyQuality(qualitySnapshots[acc.ID])
+			for i := range traceCandidates {
+				traceCandidates[i].Selected = traceCandidates[i].AccountID == acc.ID
+			}
+			trace.setCandidates(traceCandidates)
 			selection.ScheduleTrace = trace
 			return selection, true, nil
 		}

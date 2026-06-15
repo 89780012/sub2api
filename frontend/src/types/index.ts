@@ -1297,6 +1297,31 @@ export interface UsageScheduleTrace {
   total_requests?: number
   load_rate?: number | null
   load_skew?: number | null
+  score_formula?: string | null
+  score?: number | null
+  candidates?: UsageScheduleCandidateScore[]
+}
+
+export interface UsageScheduleCandidateScore {
+  account_id?: number
+  account_name?: string | null
+  platform?: string | null
+  account_type?: string | null
+  priority?: number
+  selected?: boolean
+  quality_known?: boolean
+  quality_score?: number | null
+  recent_success_rate?: number | null
+  ttft_le_5s_rate?: number | null
+  ttft_le_10s_rate?: number | null
+  ttft_sample_count?: number
+  total_requests?: number
+  load_rate?: number | null
+  waiting_count?: number | null
+  last_used_at?: string | null
+  computed_score?: number | null
+  score_breakdown?: string | null
+  selection_stage?: string | null
 }
 
 export interface AdminUsageLog extends UsageLog {

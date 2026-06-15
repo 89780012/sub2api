@@ -424,16 +424,24 @@
       class="fixed z-[9999] pointer-events-none -translate-y-1/2"
       :style="{ left: scheduleTooltipPosition.x + 'px', top: scheduleTooltipPosition.y + 'px' }"
     >
-      <div class="whitespace-nowrap rounded-lg border border-gray-700 bg-gray-900 px-3 py-2.5 text-xs text-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
-        <div class="space-y-1.5">
+      <div class="w-[440px] max-w-[min(90vw,440px)] rounded-lg border border-gray-700 bg-gray-900 px-3 py-2.5 text-xs text-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
+        <div class="space-y-2">
           <div class="text-xs font-semibold text-gray-300">{{ t('admin.usage.scheduleDetail') }}</div>
           <div v-if="scheduleTooltipData?.schedule_trace?.reason" class="flex items-center justify-between gap-4">
             <span class="text-gray-400">{{ t('admin.usage.scheduleReason') }}</span>
-            <span class="font-medium text-white">{{ scheduleTooltipData.schedule_trace.reason }}</span>
+            <span class="text-right font-medium text-white">{{ scheduleTooltipData.schedule_trace.reason }}</span>
           </div>
           <div v-if="scheduleTooltipData?.schedule_trace?.candidate_count" class="flex items-center justify-between gap-4">
             <span class="text-gray-400">{{ t('admin.usage.scheduleCandidates') }}</span>
             <span class="font-medium text-white">{{ scheduleTooltipData.schedule_trace.candidate_count }}</span>
+          </div>
+          <div v-if="scheduleTooltipData?.schedule_trace?.score_formula" class="space-y-1 border-t border-gray-700 pt-2">
+            <div class="text-gray-400">{{ t('admin.usage.scheduleFormula') }}</div>
+            <div class="break-words leading-5 text-gray-200">{{ scheduleTooltipData.schedule_trace.score_formula }}</div>
+          </div>
+          <div v-if="scheduleTooltipData?.schedule_trace?.score != null" class="flex items-center justify-between gap-4">
+            <span class="text-gray-400">{{ t('admin.usage.scheduleFinalScore') }}</span>
+            <span class="font-semibold text-emerald-300">{{ scheduleTooltipData.schedule_trace.score.toFixed(4) }}</span>
           </div>
           <div v-if="scheduleTooltipData?.schedule_trace?.priority != null" class="flex items-center justify-between gap-4">
             <span class="text-gray-400">{{ t('admin.usage.schedulePriority') }}</span>
@@ -462,6 +470,54 @@
           <div v-if="scheduleTooltipData?.schedule_trace?.sticky_escape" class="flex items-center justify-between gap-4 border-t border-gray-700 pt-1.5">
             <span class="text-gray-400">{{ t('admin.usage.scheduleStickyEscape') }}</span>
             <span class="font-medium text-amber-300">{{ scheduleTooltipData.schedule_trace.sticky_escape_reason || 'yes' }}</span>
+          </div>
+          <div v-if="scheduleTooltipData?.schedule_trace?.candidates?.length" class="space-y-2 border-t border-gray-700 pt-2">
+            <div class="text-gray-400">{{ t('admin.usage.scheduleCandidateScores') }}</div>
+            <div class="max-h-72 space-y-2 overflow-y-auto pr-1">
+              <div
+                v-for="candidate in scheduleTooltipData.schedule_trace.candidates"
+                :key="candidate.account_id"
+                class="rounded-md border px-2.5 py-2"
+                :class="candidate.selected ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-gray-700 bg-gray-800/70'"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="truncate font-medium text-white">{{ candidate.account_name || `#${candidate.account_id}` }}</span>
+                      <span v-if="candidate.selected" class="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                        {{ t('admin.usage.scheduleSelected') }}
+                      </span>
+                    </div>
+                    <div class="mt-0.5 text-[11px] text-gray-400">
+                      #{{ candidate.account_id }}
+                      <span v-if="candidate.platform"> · {{ candidate.platform }}</span>
+                      <span v-if="candidate.account_type"> · {{ candidate.account_type }}</span>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-[11px] text-gray-400">{{ t('admin.usage.scheduleComputedScore') }}</div>
+                    <div class="font-semibold text-cyan-300">{{ candidate.computed_score != null ? candidate.computed_score.toFixed(4) : '-' }}</div>
+                  </div>
+                </div>
+                <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-gray-300">
+                  <div>{{ t('admin.usage.schedulePriority') }}: <span class="text-white">{{ candidate.priority }}</span></div>
+                  <div>{{ t('admin.usage.scheduleQualityScore') }}: <span class="text-white">{{ candidate.quality_score != null ? candidate.quality_score.toFixed(4) : '-' }}</span></div>
+                  <div>{{ t('admin.usage.scheduleRecentSuccessRate') }}: <span class="text-white">{{ formatRate(candidate.recent_success_rate) }}</span></div>
+                  <div>{{ t('admin.usage.scheduleTtft5s') }}: <span class="text-white">{{ formatRate(candidate.ttft_le_5s_rate) }}</span></div>
+                  <div>{{ t('admin.usage.scheduleTtft10s') }}: <span class="text-white">{{ formatRate(candidate.ttft_le_10s_rate) }}</span></div>
+                  <div>{{ t('admin.usage.scheduleLoadRate') }}: <span class="text-white">{{ candidate.load_rate != null ? formatRate(candidate.load_rate / 100) : '-' }}</span></div>
+                </div>
+                <div v-if="candidate.waiting_count != null || candidate.total_requests != null || candidate.ttft_sample_count != null" class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
+                  <span v-if="candidate.waiting_count != null">{{ t('admin.usage.scheduleWaitingCount') }}: {{ candidate.waiting_count }}</span>
+                  <span v-if="candidate.ttft_sample_count != null">{{ t('admin.usage.scheduleTtftSampleCount') }}: {{ candidate.ttft_sample_count }}</span>
+                  <span v-if="candidate.total_requests != null">{{ t('admin.usage.scheduleTotalRequests') }}: {{ candidate.total_requests }}</span>
+                </div>
+                <div v-if="candidate.score_breakdown" class="mt-2 border-t border-gray-700 pt-2">
+                  <div class="text-[11px] text-gray-400">{{ t('admin.usage.scheduleScoreBreakdown') }}</div>
+                  <div class="mt-1 break-words leading-5 text-[11px] text-gray-200">{{ candidate.score_breakdown }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-b-[6px] border-r-[6px] border-t-[6px] border-b-transparent border-r-gray-900 border-t-transparent dark:border-r-gray-800"></div>

@@ -525,26 +525,51 @@ type AdminUsageLog struct {
 }
 
 type UsageScheduleTrace struct {
-	Layer              string   `json:"layer,omitempty"`
-	Reason             string   `json:"reason,omitempty"`
-	Platform           string   `json:"platform,omitempty"`
-	AccountType        string   `json:"account_type,omitempty"`
-	SelectedAccountID  int64    `json:"selected_account_id,omitempty"`
-	Priority           *int     `json:"priority,omitempty"`
-	StickyHit          bool     `json:"sticky_hit,omitempty"`
-	StickyEscape       bool     `json:"sticky_escape,omitempty"`
-	StickyEscapeReason string   `json:"sticky_escape_reason,omitempty"`
-	WaitPlan           bool     `json:"wait_plan,omitempty"`
-	CandidateCount     int      `json:"candidate_count,omitempty"`
-	TopK               int      `json:"top_k,omitempty"`
-	QualityScore       *float64 `json:"quality_score,omitempty"`
-	RecentSuccessRate  *float64 `json:"recent_success_rate,omitempty"`
-	TTFTLE5sRate       *float64 `json:"ttft_le_5s_rate,omitempty"`
-	TTFTLE10sRate      *float64 `json:"ttft_le_10s_rate,omitempty"`
-	TTFTSampleCount    int64    `json:"ttft_sample_count,omitempty"`
-	TotalRequests      int64    `json:"total_requests,omitempty"`
-	LoadRate           *float64 `json:"load_rate,omitempty"`
-	LoadSkew           *float64 `json:"load_skew,omitempty"`
+	Layer              string                        `json:"layer,omitempty"`
+	Reason             string                        `json:"reason,omitempty"`
+	Platform           string                        `json:"platform,omitempty"`
+	AccountType        string                        `json:"account_type,omitempty"`
+	SelectedAccountID  int64                         `json:"selected_account_id,omitempty"`
+	Priority           *int                          `json:"priority,omitempty"`
+	StickyHit          bool                          `json:"sticky_hit,omitempty"`
+	StickyEscape       bool                          `json:"sticky_escape,omitempty"`
+	StickyEscapeReason string                        `json:"sticky_escape_reason,omitempty"`
+	WaitPlan           bool                          `json:"wait_plan,omitempty"`
+	CandidateCount     int                           `json:"candidate_count,omitempty"`
+	TopK               int                           `json:"top_k,omitempty"`
+	QualityScore       *float64                      `json:"quality_score,omitempty"`
+	RecentSuccessRate  *float64                      `json:"recent_success_rate,omitempty"`
+	TTFTLE5sRate       *float64                      `json:"ttft_le_5s_rate,omitempty"`
+	TTFTLE10sRate      *float64                      `json:"ttft_le_10s_rate,omitempty"`
+	TTFTSampleCount    int64                         `json:"ttft_sample_count,omitempty"`
+	TotalRequests      int64                         `json:"total_requests,omitempty"`
+	LoadRate           *float64                      `json:"load_rate,omitempty"`
+	LoadSkew           *float64                      `json:"load_skew,omitempty"`
+	ScoreFormula       string                        `json:"score_formula,omitempty"`
+	Score              *float64                      `json:"score,omitempty"`
+	Candidates         []UsageScheduleCandidateScore `json:"candidates,omitempty"`
+}
+
+type UsageScheduleCandidateScore struct {
+	AccountID         int64      `json:"account_id,omitempty"`
+	AccountName       string     `json:"account_name,omitempty"`
+	Platform          string     `json:"platform,omitempty"`
+	AccountType       string     `json:"account_type,omitempty"`
+	Priority          int        `json:"priority,omitempty"`
+	Selected          bool       `json:"selected,omitempty"`
+	QualityKnown      bool       `json:"quality_known,omitempty"`
+	QualityScore      *float64   `json:"quality_score,omitempty"`
+	RecentSuccessRate *float64   `json:"recent_success_rate,omitempty"`
+	TTFTLE5sRate      *float64   `json:"ttft_le_5s_rate,omitempty"`
+	TTFTLE10sRate     *float64   `json:"ttft_le_10s_rate,omitempty"`
+	TTFTSampleCount   int64      `json:"ttft_sample_count,omitempty"`
+	TotalRequests     int64      `json:"total_requests,omitempty"`
+	LoadRate          *float64   `json:"load_rate,omitempty"`
+	WaitingCount      *int       `json:"waiting_count,omitempty"`
+	LastUsedAt        *time.Time `json:"last_used_at,omitempty"`
+	ComputedScore     *float64   `json:"computed_score,omitempty"`
+	ScoreBreakdown    string     `json:"score_breakdown,omitempty"`
+	SelectionStage    string     `json:"selection_stage,omitempty"`
 }
 
 type UsageCleanupFilters struct {

@@ -576,6 +576,30 @@ func usageScheduleTraceFromService(trace *service.UsageScheduleTrace) *UsageSche
 	if trace == nil {
 		return nil
 	}
+	candidates := make([]UsageScheduleCandidateScore, 0, len(trace.Candidates))
+	for _, candidate := range trace.Candidates {
+		candidates = append(candidates, UsageScheduleCandidateScore{
+			AccountID:         candidate.AccountID,
+			AccountName:       candidate.AccountName,
+			Platform:          candidate.Platform,
+			AccountType:       candidate.AccountType,
+			Priority:          candidate.Priority,
+			Selected:          candidate.Selected,
+			QualityKnown:      candidate.QualityKnown,
+			QualityScore:      candidate.QualityScore,
+			RecentSuccessRate: candidate.RecentSuccessRate,
+			TTFTLE5sRate:      candidate.TTFTLE5sRate,
+			TTFTLE10sRate:     candidate.TTFTLE10sRate,
+			TTFTSampleCount:   candidate.TTFTSampleCount,
+			TotalRequests:     candidate.TotalRequests,
+			LoadRate:          candidate.LoadRate,
+			WaitingCount:      candidate.WaitingCount,
+			LastUsedAt:        candidate.LastUsedAt,
+			ComputedScore:     candidate.ComputedScore,
+			ScoreBreakdown:    candidate.ScoreBreakdown,
+			SelectionStage:    candidate.SelectionStage,
+		})
+	}
 	out := &UsageScheduleTrace{
 		Layer:              trace.Layer,
 		Reason:             trace.Reason,
@@ -597,6 +621,9 @@ func usageScheduleTraceFromService(trace *service.UsageScheduleTrace) *UsageSche
 		TotalRequests:      trace.TotalRequests,
 		LoadRate:           trace.LoadRate,
 		LoadSkew:           trace.LoadSkew,
+		ScoreFormula:       trace.ScoreFormula,
+		Score:              trace.Score,
+		Candidates:         candidates,
 	}
 	return out
 }

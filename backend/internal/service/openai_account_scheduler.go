@@ -63,6 +63,9 @@ type OpenAIAccountScheduleDecision struct {
 	LoadSkew            float64
 	SelectedAccountID   int64
 	SelectedAccountType string
+	ScoreFormula        string
+	SelectedScore       *float64
+	Candidates          []UsageScheduleCandidateScore
 }
 
 func (d OpenAIAccountScheduleDecision) usageScheduleTrace(account *Account) *UsageScheduleTrace {
@@ -84,6 +87,11 @@ func (d OpenAIAccountScheduleDecision) usageScheduleTrace(account *Account) *Usa
 	if account == nil && d.SelectedAccountID > 0 {
 		trace.SelectedAccountID = d.SelectedAccountID
 	}
+	trace.ScoreFormula = d.ScoreFormula
+	if d.SelectedScore != nil {
+		trace.Score = cloneFloat64Ptr(d.SelectedScore)
+	}
+	trace.setCandidates(d.Candidates)
 	return trace
 }
 
@@ -123,6 +131,8 @@ type openAIAccountLoadPlan struct {
 	candidates                []openAIAccountCandidateScore
 	staleSnapshotCompactRetry []openAIAccountCandidateScore
 	selectionOrder            []openAIAccountCandidateScore
+	traceCandidates           []UsageScheduleCandidateScore
+	scoreFormula              string
 	candidateCount            int
 	topK                      int
 	loadSkew                  float64
@@ -346,17 +356,25 @@ func (s *defaultOpenAIAccountScheduler) Select(
 		req.PreserveStickyBinding = true
 	}
 
-	selection, candidateCount, topK, loadSkew, err := s.selectByLoadBalance(ctx, req)
+	selection, candidateCount, topK, loadSkew, traceCandidates, scoreFormula, err := s.selectByLoadBalance(ctx, req)
 	decision.Layer = openAIAccountScheduleLayerLoadBalance
 	decision.CandidateCount = candidateCount
 	decision.TopK = topK
 	decision.LoadSkew = loadSkew
+	decision.ScoreFormula = scoreFormula
 	if err != nil {
 		return nil, decision, err
 	}
 	if selection != nil && selection.Account != nil {
 		decision.SelectedAccountID = selection.Account.ID
 		decision.SelectedAccountType = selection.Account.Type
+		for i := range traceCandidates {
+			traceCandidates[i].Selected = traceCandidates[i].AccountID == selection.Account.ID
+			if traceCandidates[i].Selected && traceCandidates[i].ComputedScore != nil {
+				decision.SelectedScore = cloneFloat64Ptr(traceCandidates[i].ComputedScore)
+			}
+		}
+		decision.Candidates = traceCandidates
 		selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
 	}
 	return selection, decision, nil
@@ -505,14 +523,25 @@ func (s *defaultOpenAIAccountScheduler) shouldEscapeStickyAccount(accountID int6
 }
 
 type openAIAccountCandidateScore struct {
-	account    *Account
-	loadInfo   *AccountLoadInfo
-	score      float64
-	errorRate  float64
-	ttft       float64
-	hasTTFT    bool
-	quality    float64
-	hasQuality bool
+	account           *Account
+	loadInfo          *AccountLoadInfo
+	score             float64
+	errorRate         float64
+	ttft              float64
+	hasTTFT           bool
+	quality           float64
+	hasQuality        bool
+	recentSuccessRate float64
+	ttftLE5sRate      float64
+	ttftLE10sRate     float64
+	ttftSampleCount   int64
+	totalRequests     int64
+	priorityFactor    float64
+	loadFactor        float64
+	queueFactor       float64
+	errorFactor       float64
+	ttftFactor        float64
+	scoreBreakdown    string
 }
 
 type openAIAccountCandidateHeap []openAIAccountCandidateScore
@@ -727,7 +756,8 @@ func (s *defaultOpenAIAccountScheduler) buildOpenAIAccountLoadPlan(
 		if s.stats != nil {
 			errorRate, ttft, hasTTFT = s.stats.snapshot(account.ID)
 		}
-		quality, hasQuality := effectiveAccountQualityScore(qualitySnapshots[account.ID])
+		snapshot := qualitySnapshots[account.ID]
+		quality, hasQuality := effectiveAccountQualityScore(snapshot)
 		allCandidates = append(allCandidates, openAIAccountCandidateScore{
 			account:    account,
 			loadInfo:   loadInfo,
@@ -799,6 +829,15 @@ func (s *defaultOpenAIAccountScheduler) buildOpenAIAccountLoadPlan(
 	plan.loadSkew = calcLoadSkewByMoments(loadRateSum, loadRateSumSquares, len(candidates))
 
 	weights := s.service.openAIWSSchedulerWeights()
+	plan.scoreFormula = fmt.Sprintf(
+		"score = priority*%.2f + load*%.2f + queue*%.2f + error*%.2f + ttft*%.2f; final = base*0.75 + quality*0.25 when quality is known",
+		weights.Priority,
+		weights.Load,
+		weights.Queue,
+		weights.ErrorRate,
+		weights.TTFT,
+	)
+	plan.traceCandidates = make([]UsageScheduleCandidateScore, 0, len(candidates))
 	for i := range candidates {
 		item := &candidates[i]
 		priorityFactor := 1.0
@@ -813,14 +852,68 @@ func (s *defaultOpenAIAccountScheduler) buildOpenAIAccountLoadPlan(
 			ttftFactor = 1 - clamp01((item.ttft-minTTFT)/(maxTTFT-minTTFT))
 		}
 
-		item.score = weights.Priority*priorityFactor +
+		item.priorityFactor = priorityFactor
+		item.loadFactor = loadFactor
+		item.queueFactor = queueFactor
+		item.errorFactor = errorFactor
+		item.ttftFactor = ttftFactor
+		baseScore := weights.Priority*priorityFactor +
 			weights.Load*loadFactor +
 			weights.Queue*queueFactor +
 			weights.ErrorRate*errorFactor +
 			weights.TTFT*ttftFactor
+		item.score = baseScore
 		if item.hasQuality {
 			item.score = item.score*0.75 + item.quality*0.25
 		}
+		item.scoreBreakdown = fmt.Sprintf(
+			"base=%s (priority=%s*%s + load=%s*%s + queue=%s*%s + error=%s*%s + ttft=%s*%s); quality=%s; final=%s",
+			formatScheduleScore(baseScore),
+			formatScheduleScore(priorityFactor),
+			formatScheduleScore(weights.Priority),
+			formatScheduleScore(loadFactor),
+			formatScheduleScore(weights.Load),
+			formatScheduleScore(queueFactor),
+			formatScheduleScore(weights.Queue),
+			formatScheduleScore(errorFactor),
+			formatScheduleScore(weights.ErrorRate),
+			formatScheduleScore(ttftFactor),
+			formatScheduleScore(weights.TTFT),
+			formatScheduleScore(item.quality),
+			formatScheduleScore(item.score),
+		)
+		if !item.hasQuality {
+			item.scoreBreakdown = fmt.Sprintf(
+				"base=%s (priority=%s*%s + load=%s*%s + queue=%s*%s + error=%s*%s + ttft=%s*%s); quality unknown -> final=%s",
+				formatScheduleScore(baseScore),
+				formatScheduleScore(priorityFactor),
+				formatScheduleScore(weights.Priority),
+				formatScheduleScore(loadFactor),
+				formatScheduleScore(weights.Load),
+				formatScheduleScore(queueFactor),
+				formatScheduleScore(weights.Queue),
+				formatScheduleScore(errorFactor),
+				formatScheduleScore(weights.ErrorRate),
+				formatScheduleScore(ttftFactor),
+				formatScheduleScore(weights.TTFT),
+				formatScheduleScore(item.score),
+			)
+		}
+		traceItem := newUsageScheduleCandidateScore(item.account)
+		traceItem.Selected = false
+		traceItem.SelectionStage = "load_balance"
+		traceItem.QualityKnown = item.hasQuality
+		traceItem.QualityScore = float64Ptr(item.quality)
+		traceItem.RecentSuccessRate = float64Ptr(item.recentSuccessRate)
+		traceItem.TTFTLE5sRate = float64Ptr(item.ttftLE5sRate)
+		traceItem.TTFTLE10sRate = float64Ptr(item.ttftLE10sRate)
+		traceItem.TTFTSampleCount = item.ttftSampleCount
+		traceItem.TotalRequests = item.totalRequests
+		traceItem.LoadRate = float64Ptr(float64(item.loadInfo.LoadRate))
+		traceItem.WaitingCount = intPtr(item.loadInfo.WaitingCount)
+		traceItem.ComputedScore = float64Ptr(item.score)
+		traceItem.ScoreBreakdown = item.scoreBreakdown
+		plan.traceCandidates = append(plan.traceCandidates, traceItem)
 	}
 	plan.candidates = candidates
 
@@ -946,13 +1039,13 @@ func (s *defaultOpenAIAccountScheduler) tryAcquireOpenAISelectionOrder(
 func (s *defaultOpenAIAccountScheduler) selectByLoadBalance(
 	ctx context.Context,
 	req OpenAIAccountScheduleRequest,
-) (*AccountSelectionResult, int, int, float64, error) {
+) (*AccountSelectionResult, int, int, float64, []UsageScheduleCandidateScore, string, error) {
 	accounts, err := s.service.listSchedulableAccounts(ctx, req.GroupID)
 	if err != nil {
-		return nil, 0, 0, 0, err
+		return nil, 0, 0, 0, nil, "", err
 	}
 	if len(accounts) == 0 {
-		return nil, 0, 0, 0, noAvailableOpenAISelectionError(req.RequestedModel, false)
+		return nil, 0, 0, 0, nil, "", noAvailableOpenAISelectionError(req.RequestedModel, false)
 	}
 
 	// require_privacy_set: 获取分组信息
@@ -996,7 +1089,7 @@ func (s *defaultOpenAIAccountScheduler) selectByLoadBalance(
 		})
 	}
 	if len(filtered) == 0 {
-		return nil, 0, 0, 0, noAvailableOpenAISelectionError(req.RequestedModel, false)
+		return nil, 0, 0, 0, nil, "", noAvailableOpenAISelectionError(req.RequestedModel, false)
 	}
 
 	loadMap := map[int64]*AccountLoadInfo{}
@@ -1011,34 +1104,38 @@ func (s *defaultOpenAIAccountScheduler) selectByLoadBalance(
 	topK := plan.topK
 	loadSkew := plan.loadSkew
 	selectionOrder := plan.selectionOrder
+	traceCandidates := plan.traceCandidates
+	scoreFormula := plan.scoreFormula
 	if req.RequireCompact && len(plan.candidates) == 0 && len(plan.staleSnapshotCompactRetry) == 0 {
-		return nil, 0, 0, 0, ErrNoAvailableCompactAccounts
+		return nil, 0, 0, 0, traceCandidates, scoreFormula, ErrNoAvailableCompactAccounts
 	}
 	if req.RequireCompact && len(selectionOrder) == 0 && s.service.schedulerSnapshot == nil {
-		return nil, candidateCount, topK, loadSkew, ErrNoAvailableCompactAccounts
+		return nil, candidateCount, topK, loadSkew, traceCandidates, scoreFormula, ErrNoAvailableCompactAccounts
 	}
 	if len(selectionOrder) == 0 {
-		return nil, candidateCount, topK, loadSkew, noAvailableOpenAISelectionError(req.RequestedModel, req.RequireCompact && len(plan.allCandidates) > 0)
+		return nil, candidateCount, topK, loadSkew, traceCandidates, scoreFormula, noAvailableOpenAISelectionError(req.RequestedModel, req.RequireCompact && len(plan.allCandidates) > 0)
 	}
 
 	result, compactBlocked, acquireErr := s.tryAcquireOpenAISelectionOrder(ctx, req, selectionOrder)
 	if acquireErr != nil {
-		return nil, candidateCount, topK, loadSkew, acquireErr
+		return nil, candidateCount, topK, loadSkew, traceCandidates, scoreFormula, acquireErr
 	}
 	if result != nil {
-		return result, candidateCount, topK, loadSkew, nil
+		return result, candidateCount, topK, loadSkew, traceCandidates, scoreFormula, nil
 	}
 
 	if s.service.concurrencyService != nil {
 		if freshLoadMap, loadErr := s.service.concurrencyService.GetAccountsLoadBatchFresh(ctx, loadReq); loadErr == nil {
 			freshPlan := s.buildOpenAIAccountLoadPlan(ctx, req, filtered, freshLoadMap)
+			traceCandidates = freshPlan.traceCandidates
+			scoreFormula = freshPlan.scoreFormula
 			if len(freshPlan.selectionOrder) > 0 {
 				freshResult, freshCompactBlocked, freshAcquireErr := s.tryAcquireOpenAISelectionOrder(ctx, req, freshPlan.selectionOrder)
 				if freshAcquireErr != nil {
-					return nil, candidateCount, topK, loadSkew, freshAcquireErr
+					return nil, candidateCount, topK, loadSkew, traceCandidates, scoreFormula, freshAcquireErr
 				}
 				if freshResult != nil {
-					return freshResult, freshPlan.candidateCount, freshPlan.topK, freshPlan.loadSkew, nil
+					return freshResult, freshPlan.candidateCount, freshPlan.topK, freshPlan.loadSkew, traceCandidates, scoreFormula, nil
 				}
 				compactBlocked = compactBlocked || freshCompactBlocked
 				selectionOrder = freshPlan.selectionOrder
@@ -1072,10 +1169,10 @@ func (s *defaultOpenAIAccountScheduler) selectByLoadBalance(
 				Timeout:        cfg.FallbackWaitTimeout,
 				MaxWaiting:     cfg.FallbackMaxWaiting,
 			},
-		}, candidateCount, topK, loadSkew, nil
+		}, candidateCount, topK, loadSkew, traceCandidates, scoreFormula, nil
 	}
 
-	return nil, candidateCount, topK, loadSkew, noAvailableOpenAISelectionError(req.RequestedModel, compactBlocked)
+	return nil, candidateCount, topK, loadSkew, traceCandidates, scoreFormula, noAvailableOpenAISelectionError(req.RequestedModel, compactBlocked)
 }
 
 func (s *defaultOpenAIAccountScheduler) isAccountTransportCompatible(account *Account, requiredTransport OpenAIUpstreamTransport) bool {
