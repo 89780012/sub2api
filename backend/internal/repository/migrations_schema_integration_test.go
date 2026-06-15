@@ -112,6 +112,16 @@ func TestMigrationsRunner_IsIdempotent_AndSchemaIsUpToDate(t *testing.T) {
 	// account_groups: created_at should be timestamptz
 	requireColumn(t, tx, "account_groups", "created_at", "timestamp with time zone", 0, false)
 
+	// account_quality_snapshots: recent quality scheduler table
+	requireColumn(t, tx, "account_quality_snapshots", "account_id", "bigint", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "window_start", "timestamp with time zone", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "window_end", "timestamp with time zone", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "recent_success_rate", "double precision", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "ttft_le_5s_count", "bigint", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "ttft_le_10s_count", "bigint", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "quality_score", "double precision", 0, false)
+	requireIndex(t, tx, "account_quality_snapshots", "idx_account_quality_snapshots_score")
+
 	// user_allowed_groups: created_at should be timestamptz
 	requireColumn(t, tx, "user_allowed_groups", "created_at", "timestamp with time zone", 0, false)
 }

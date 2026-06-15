@@ -74,6 +74,7 @@ func TestUsageLogRepositoryCreateSyncRequestTypeAndLegacyFields(t *testing.T) {
 			sqlmock.AnyArg(), // first_token_ms
 			sqlmock.AnyArg(), // user_agent
 			sqlmock.AnyArg(), // ip_address
+			sqlmock.AnyArg(), // schedule_trace
 			log.ImageCount,
 			sqlmock.AnyArg(), // image_size
 			sqlmock.AnyArg(), // image_input_size
@@ -157,6 +158,7 @@ func TestUsageLogRepositoryCreate_PersistsServiceTier(t *testing.T) {
 			sqlmock.AnyArg(),
 			sqlmock.AnyArg(),
 			sqlmock.AnyArg(),
+			sqlmock.AnyArg(), // schedule_trace
 			log.ImageCount,
 			sqlmock.AnyArg(),
 			sqlmock.AnyArg(), // image_input_size
@@ -259,11 +261,12 @@ func TestPrepareUsageLogInsert_PersistsImageSizeMetadata(t *testing.T) {
 		CreatedAt:          time.Date(2025, 1, 6, 12, 0, 0, 0, time.UTC),
 	})
 
-	require.Equal(t, sql.NullString{String: imageSize, Valid: true}, prepared.args[34])
-	require.Equal(t, sql.NullString{String: inputSize, Valid: true}, prepared.args[35])
-	require.Equal(t, sql.NullString{String: outputSize, Valid: true}, prepared.args[36])
-	require.Equal(t, sql.NullString{String: source, Valid: true}, prepared.args[37])
-	breakdownJSON, ok := prepared.args[38].(string)
+	require.Nil(t, prepared.args[33])
+	require.Equal(t, sql.NullString{String: imageSize, Valid: true}, prepared.args[35])
+	require.Equal(t, sql.NullString{String: inputSize, Valid: true}, prepared.args[36])
+	require.Equal(t, sql.NullString{String: outputSize, Valid: true}, prepared.args[37])
+	require.Equal(t, sql.NullString{String: source, Valid: true}, prepared.args[38])
+	breakdownJSON, ok := prepared.args[39].(string)
 	require.True(t, ok)
 	require.JSONEq(t, `{"1K":1,"4K":1}`, breakdownJSON)
 }
@@ -624,6 +627,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullInt64{},
 			sql.NullString{},
 			sql.NullString{},
+			sql.NullString{},
 			2,
 			sql.NullString{Valid: true, String: "4K"},
 			sql.NullString{Valid: true, String: "1024x1024"},
@@ -692,6 +696,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullInt64{},
 			sql.NullString{},
 			sql.NullString{},
+			sql.NullString{Valid: true, String: `{"layer":"quality_load_balance","reason":"quality+load","selected_account_id":30,"sticky_hit":false,"sticky_escape":true,"sticky_escape_reason":"quality_degraded","candidate_count":3,"quality_score":0.91,"recent_success_rate":0.75,"ttft_le_5s_rate":0.5,"ttft_le_10s_rate":0.8,"load_rate":42.5}`},
 			0,
 			sql.NullString{},
 			sql.NullString{}, // image_input_size
@@ -716,6 +721,17 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 		require.Equal(t, service.RequestTypeWSV2, log.RequestType)
 		require.True(t, log.Stream)
 		require.True(t, log.OpenAIWSMode)
+		require.NotNil(t, log.ScheduleTrace)
+		require.Equal(t, "quality_load_balance", log.ScheduleTrace.Layer)
+		require.Equal(t, int64(30), log.ScheduleTrace.SelectedAccountID)
+		require.True(t, log.ScheduleTrace.StickyEscape)
+		require.Equal(t, "quality_degraded", log.ScheduleTrace.StickyEscapeReason)
+		require.NotNil(t, log.ScheduleTrace.QualityScore)
+		require.NotNil(t, log.ScheduleTrace.TTFTLE5sRate)
+		require.NotNil(t, log.ScheduleTrace.TTFTLE10sRate)
+		require.Equal(t, 0.91, *log.ScheduleTrace.QualityScore)
+		require.Equal(t, 0.5, *log.ScheduleTrace.TTFTLE5sRate)
+		require.Equal(t, 0.8, *log.ScheduleTrace.TTFTLE10sRate)
 	})
 
 	t.Run("request_type_unknown_falls_back_to_legacy", func(t *testing.T) {
@@ -742,6 +758,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			false,
 			sql.NullInt64{},
 			sql.NullInt64{},
+			sql.NullString{},
 			sql.NullString{},
 			sql.NullString{},
 			0,
@@ -794,6 +811,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			false,
 			sql.NullInt64{},
 			sql.NullInt64{},
+			sql.NullString{},
 			sql.NullString{},
 			sql.NullString{},
 			0,

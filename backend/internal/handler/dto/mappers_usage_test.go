@@ -133,6 +133,36 @@ func TestUsageLogFromService_UsesRequestedModelAndKeepsUpstreamAdminOnly(t *test
 	require.Contains(t, string(adminJSON), `"upstream_model":"claude-sonnet-4-20250514"`)
 }
 
+func TestUsageLogFromService_KeepsScheduleTraceAdminOnly(t *testing.T) {
+	t.Parallel()
+
+	log := &service.UsageLog{
+		RequestID: "req_schedule_trace",
+		Model:     "claude-sonnet-4",
+		ScheduleTrace: &service.UsageScheduleTrace{
+			Layer:             "quality_load_balance",
+			Reason:            "quality+load",
+			SelectedAccountID: int64(12),
+			QualityScore:      f64Ptr(0.91),
+			TTFTLE5sRate:      f64Ptr(0.6),
+			TTFTLE10sRate:     f64Ptr(0.8),
+		},
+	}
+
+	userJSON, err := json.Marshal(UsageLogFromService(log))
+	require.NoError(t, err)
+	require.NotContains(t, string(userJSON), `"schedule_trace"`)
+
+	adminDTO := UsageLogFromServiceAdmin(log)
+	require.NotNil(t, adminDTO.ScheduleTrace)
+	require.Equal(t, "quality_load_balance", adminDTO.ScheduleTrace.Layer)
+
+	adminJSON, err := json.Marshal(adminDTO)
+	require.NoError(t, err)
+	require.Contains(t, string(adminJSON), `"schedule_trace"`)
+	require.Contains(t, string(adminJSON), `"ttft_le_5s_rate":0.6`)
+}
+
 func TestUsageLogFromService_FallsBackToLegacyModelWhenRequestedModelMissing(t *testing.T) {
 	t.Parallel()
 

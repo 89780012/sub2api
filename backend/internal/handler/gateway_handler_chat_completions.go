@@ -317,6 +317,7 @@ func (h *GatewayHandler) ChatCompletions(c *gin.Context) {
 				IPAddress:          clientIP,
 				RequestPayloadHash: requestPayloadHash,
 				APIKeyService:      h.apiKeyService,
+				ScheduleTrace:      selection.ScheduleTrace,
 				ChannelUsageFields: channelMapping.ToUsageFields(reqModel, result.UpstreamModel),
 			}); err != nil {
 				reqLog.Error("gateway.cc.record_usage_failed",

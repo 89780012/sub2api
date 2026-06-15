@@ -295,6 +295,7 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 				UserAgent:          userAgent,
 				IPAddress:          clientIP,
 				APIKeyService:      h.apiKeyService,
+				ScheduleTrace:      selection.ScheduleTrace,
 				ChannelUsageFields: channelMapping.ToUsageFields(reqModel, result.UpstreamModel),
 			}); err != nil {
 				logger.L().With(

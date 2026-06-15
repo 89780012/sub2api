@@ -332,6 +332,7 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 				IPAddress:          clientIP,
 				RequestPayloadHash: requestPayloadHash,
 				APIKeyService:      h.apiKeyService,
+				ScheduleTrace:      selection.ScheduleTrace,
 				ChannelUsageFields: channelMapping.ToUsageFields(requestModel, upstreamModel),
 			}); err != nil {
 				logger.L().With(

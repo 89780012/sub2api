@@ -77,6 +77,7 @@ func provideCleanup(
 	opsAlertEvaluator *service.OpsAlertEvaluatorService,
 	opsCleanup *service.OpsCleanupService,
 	opsScheduledReport *service.OpsScheduledReportService,
+	accountQuality *service.AccountQualityService,
 	opsSystemLogSink *service.OpsSystemLogSink,
 	schedulerSnapshot *service.SchedulerSnapshotService,
 	tokenRefresh *service.TokenRefreshService,
@@ -115,6 +116,12 @@ func provideCleanup(
 			{"OpsScheduledReportService", func() error {
 				if opsScheduledReport != nil {
 					opsScheduledReport.Stop()
+				}
+				return nil
+			}},
+			{"AccountQualityService", func() error {
+				if accountQuality != nil {
+					accountQuality.Stop()
 				}
 				return nil
 			}},

@@ -355,6 +355,7 @@ type OpenAIGatewayService struct {
 	balanceNotifyService  *BalanceNotifyService
 	settingService        *SettingService
 	userPlatformQuotaRepo UserPlatformQuotaRepository
+	accountQualityReader  AccountQualityReader
 
 	openaiWSPoolOnce              sync.Once
 	openaiWSStateStoreOnce        sync.Once
@@ -443,6 +444,12 @@ func NewOpenAIGatewayService(
 	}
 	svc.logOpenAIWSModeBootstrap()
 	return svc
+}
+
+func (s *OpenAIGatewayService) SetAccountQualityReader(reader AccountQualityReader) {
+	if s != nil {
+		s.accountQualityReader = reader
+	}
 }
 
 // ResolveChannelMapping 解析渠道级模型映射（代理到 ChannelService）
@@ -1721,6 +1728,9 @@ func (s *OpenAIGatewayService) tryStickySessionHit(ctx context.Context, groupID 
 		_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
 		return nil
 	}
+	if qualityEscape, _, _ := shouldEscapeStickyAccountByQuality(ctx, s.accountQualityReader, account.ID, "service.openai_gateway"); qualityEscape {
+		return nil
+	}
 
 	// 刷新会话 TTL 并返回账号
 	// Refresh session TTL and return account
@@ -1904,7 +1914,8 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 				if clearSticky {
 					_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
 				}
-				if !clearSticky && isOpenAIAccountEligibleForRequest(ctx, account, requestedModel, false, requiredCapability) {
+				qualityEscape, _, _ := shouldEscapeStickyAccountByQuality(ctx, s.accountQualityReader, account.ID, "service.openai_gateway")
+				if !clearSticky && !qualityEscape && isOpenAIAccountEligibleForRequest(ctx, account, requestedModel, false, requiredCapability) {
 					account = s.recheckSelectedOpenAIAccountFromDB(ctx, account, requestedModel, requireCompact, requiredCapability)
 					if account == nil {
 						_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
@@ -1994,11 +2005,15 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 		if len(available) == 0 {
 			return nil, false, nil
 		}
+		qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccountsWithLoad(available), "service.openai_gateway")
 
 		sort.SliceStable(available, func(i, j int) bool {
 			a, b := available[i], available[j]
 			if a.account.Priority != b.account.Priority {
 				return a.account.Priority < b.account.Priority
+			}
+			if cmp := compareAccountsByQuality(a.account, b.account, qualitySnapshots); cmp != 0 {
+				return cmp < 0
 			}
 			if a.loadInfo.LoadRate != b.loadInfo.LoadRate {
 				return a.loadInfo.LoadRate < b.loadInfo.LoadRate
@@ -2065,7 +2080,8 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 	loadMap, err := s.concurrencyService.GetAccountsLoadBatch(ctx, accountLoads)
 	if err != nil {
 		ordered := append([]*Account(nil), candidates...)
-		sortAccountsByPriorityAndLastUsed(ordered, false)
+		qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccounts(ordered), "service.openai_gateway")
+		sortAccountsByPriorityQualityAndLastUsed(ordered, false, qualitySnapshots)
 		if requireCompact {
 			ordered = prioritizeOpenAICompactAccounts(ordered)
 		}
@@ -2110,7 +2126,8 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 	}
 
 	// ============ Layer 3: Fallback wait ============
-	sortAccountsByPriorityAndLastUsed(candidates, false)
+	qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccounts(candidates), "service.openai_gateway")
+	sortAccountsByPriorityQualityAndLastUsed(candidates, false, qualitySnapshots)
 	if requireCompact {
 		candidates = prioritizeOpenAICompactAccounts(candidates)
 	}
@@ -2250,10 +2267,11 @@ func (s *OpenAIGatewayService) newSelectionResult(ctx context.Context, account *
 		return nil, err
 	}
 	return &AccountSelectionResult{
-		Account:     hydrated,
-		Acquired:    acquired,
-		ReleaseFunc: release,
-		WaitPlan:    waitPlan,
+		Account:       hydrated,
+		Acquired:      acquired,
+		ReleaseFunc:   release,
+		WaitPlan:      waitPlan,
+		ScheduleTrace: newUsageScheduleTrace("unknown", hydrated),
 	}, nil
 }
 
@@ -5731,6 +5749,7 @@ type OpenAIRecordUsageInput struct {
 	IPAddress          string // 请求的客户端 IP 地址
 	RequestPayloadHash string
 	APIKeyService      APIKeyQuotaUpdater
+	ScheduleTrace      *UsageScheduleTrace
 	ChannelUsageFields
 }
 
@@ -5870,6 +5889,7 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 		ImageOutputSize:     optionalTrimmedStringPtr(result.ImageOutputSize),
 		ImageSizeSource:     optionalTrimmedStringPtr(result.ImageSizeSource),
 		ImageSizeBreakdown:  result.ImageSizeBreakdown,
+		ScheduleTrace:       input.ScheduleTrace.clone(),
 	}
 	if cost != nil {
 		usageLog.InputCost = cost.InputCost

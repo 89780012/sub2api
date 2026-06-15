@@ -149,14 +149,15 @@ type UsageLog struct {
 	// AccountStatsCost 账号统计定价预计算费用（nil = 使用默认公式 total_cost × account_rate_multiplier）
 	AccountStatsCost *float64
 
-	BillingType  int8
-	RequestType  RequestType
-	Stream       bool
-	OpenAIWSMode bool
-	DurationMs   *int
-	FirstTokenMs *int
-	UserAgent    *string
-	IPAddress    *string
+	BillingType   int8
+	RequestType   RequestType
+	Stream        bool
+	OpenAIWSMode  bool
+	DurationMs    *int
+	FirstTokenMs  *int
+	UserAgent     *string
+	IPAddress     *string
+	ScheduleTrace *UsageScheduleTrace
 
 	// Cache TTL Override 标记（管理员强制替换了缓存 TTL 计费）
 	CacheTTLOverridden bool
@@ -177,6 +178,29 @@ type UsageLog struct {
 	Account      *Account
 	Group        *Group
 	Subscription *UserSubscription
+}
+
+type UsageScheduleTrace struct {
+	Layer              string   `json:"layer,omitempty"`
+	Reason             string   `json:"reason,omitempty"`
+	Platform           string   `json:"platform,omitempty"`
+	AccountType        string   `json:"account_type,omitempty"`
+	SelectedAccountID  int64    `json:"selected_account_id,omitempty"`
+	Priority           *int     `json:"priority,omitempty"`
+	StickyHit          bool     `json:"sticky_hit,omitempty"`
+	StickyEscape       bool     `json:"sticky_escape,omitempty"`
+	StickyEscapeReason string   `json:"sticky_escape_reason,omitempty"`
+	WaitPlan           bool     `json:"wait_plan,omitempty"`
+	CandidateCount     int      `json:"candidate_count,omitempty"`
+	TopK               int      `json:"top_k,omitempty"`
+	QualityScore       *float64 `json:"quality_score,omitempty"`
+	RecentSuccessRate  *float64 `json:"recent_success_rate,omitempty"`
+	TTFTLE5sRate       *float64 `json:"ttft_le_5s_rate,omitempty"`
+	TTFTLE10sRate      *float64 `json:"ttft_le_10s_rate,omitempty"`
+	TTFTSampleCount    int64    `json:"ttft_sample_count,omitempty"`
+	TotalRequests      int64    `json:"total_requests,omitempty"`
+	LoadRate           *float64 `json:"load_rate,omitempty"`
+	LoadSkew           *float64 `json:"load_skew,omitempty"`
 }
 
 func (u *UsageLog) TotalTokens() int {

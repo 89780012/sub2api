@@ -94,6 +94,24 @@
           </span>
         </template>
 
+        <template #cell-schedule_trace="{ row }">
+          <div v-if="row.schedule_trace" class="flex items-center gap-1.5">
+            <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium" :class="getScheduleBadgeClass(row)">
+              {{ getScheduleLabel(row) }}
+            </span>
+            <div
+              class="group relative"
+              @mouseenter="showScheduleTooltip($event, row)"
+              @mouseleave="hideScheduleTooltip"
+            >
+              <div class="flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-100 transition-colors group-hover:bg-blue-100 dark:bg-gray-700 dark:group-hover:bg-blue-900/50">
+                <Icon name="infoCircle" size="xs" class="text-gray-400 group-hover:text-blue-500 dark:text-gray-500 dark:group-hover:text-blue-400" />
+              </div>
+            </div>
+          </div>
+          <span v-else class="text-sm text-gray-400 dark:text-gray-500">-</span>
+        </template>
+
         <template #cell-tokens="{ row }">
           <!-- 图片生成请求（仅按次计费时显示图片格式） -->
           <div v-if="isImageUsage(row)" class="flex items-center gap-1.5">
@@ -399,6 +417,57 @@
       </div>
     </div>
   </Teleport>
+
+  <Teleport to="body">
+    <div
+      v-if="scheduleTooltipVisible"
+      class="fixed z-[9999] pointer-events-none -translate-y-1/2"
+      :style="{ left: scheduleTooltipPosition.x + 'px', top: scheduleTooltipPosition.y + 'px' }"
+    >
+      <div class="whitespace-nowrap rounded-lg border border-gray-700 bg-gray-900 px-3 py-2.5 text-xs text-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
+        <div class="space-y-1.5">
+          <div class="text-xs font-semibold text-gray-300">{{ t('admin.usage.scheduleDetail') }}</div>
+          <div v-if="scheduleTooltipData?.schedule_trace?.reason" class="flex items-center justify-between gap-4">
+            <span class="text-gray-400">{{ t('admin.usage.scheduleReason') }}</span>
+            <span class="font-medium text-white">{{ scheduleTooltipData.schedule_trace.reason }}</span>
+          </div>
+          <div v-if="scheduleTooltipData?.schedule_trace?.candidate_count" class="flex items-center justify-between gap-4">
+            <span class="text-gray-400">{{ t('admin.usage.scheduleCandidates') }}</span>
+            <span class="font-medium text-white">{{ scheduleTooltipData.schedule_trace.candidate_count }}</span>
+          </div>
+          <div v-if="scheduleTooltipData?.schedule_trace?.priority != null" class="flex items-center justify-between gap-4">
+            <span class="text-gray-400">{{ t('admin.usage.schedulePriority') }}</span>
+            <span class="font-medium text-white">{{ scheduleTooltipData.schedule_trace.priority }}</span>
+          </div>
+          <div v-if="scheduleTooltipData?.schedule_trace?.recent_success_rate != null" class="flex items-center justify-between gap-4">
+            <span class="text-gray-400">{{ t('admin.usage.scheduleRecentSuccessRate') }}</span>
+            <span class="font-medium text-white">{{ formatRate(scheduleTooltipData.schedule_trace.recent_success_rate) }}</span>
+          </div>
+          <div v-if="scheduleTooltipData?.schedule_trace?.ttft_le_5s_rate != null" class="flex items-center justify-between gap-4">
+            <span class="text-gray-400">{{ t('admin.usage.scheduleTtft5s') }}</span>
+            <span class="font-medium text-white">{{ formatRate(scheduleTooltipData.schedule_trace.ttft_le_5s_rate) }}</span>
+          </div>
+          <div v-if="scheduleTooltipData?.schedule_trace?.ttft_le_10s_rate != null" class="flex items-center justify-between gap-4">
+            <span class="text-gray-400">{{ t('admin.usage.scheduleTtft10s') }}</span>
+            <span class="font-medium text-white">{{ formatRate(scheduleTooltipData.schedule_trace.ttft_le_10s_rate) }}</span>
+          </div>
+          <div v-if="scheduleTooltipData?.schedule_trace?.quality_score != null" class="flex items-center justify-between gap-4">
+            <span class="text-gray-400">{{ t('admin.usage.scheduleQualityScore') }}</span>
+            <span class="font-medium text-white">{{ scheduleTooltipData.schedule_trace.quality_score.toFixed(2) }}</span>
+          </div>
+          <div v-if="scheduleTooltipData?.schedule_trace?.load_rate != null" class="flex items-center justify-between gap-4">
+            <span class="text-gray-400">{{ t('admin.usage.scheduleLoadRate') }}</span>
+            <span class="font-medium text-white">{{ formatRate(scheduleTooltipData.schedule_trace.load_rate / 100) }}</span>
+          </div>
+          <div v-if="scheduleTooltipData?.schedule_trace?.sticky_escape" class="flex items-center justify-between gap-4 border-t border-gray-700 pt-1.5">
+            <span class="text-gray-400">{{ t('admin.usage.scheduleStickyEscape') }}</span>
+            <span class="font-medium text-amber-300">{{ scheduleTooltipData.schedule_trace.sticky_escape_reason || 'yes' }}</span>
+          </div>
+        </div>
+        <div class="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-b-[6px] border-r-[6px] border-t-[6px] border-b-transparent border-r-gray-900 border-t-transparent dark:border-r-gray-800"></div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -472,6 +541,9 @@ const tooltipData = ref<AdminUsageLog | null>(null)
 const tokenTooltipVisible = ref(false)
 const tokenTooltipPosition = ref({ x: 0, y: 0 })
 const tokenTooltipData = ref<AdminUsageLog | null>(null)
+const scheduleTooltipVisible = ref(false)
+const scheduleTooltipPosition = ref({ x: 0, y: 0 })
+const scheduleTooltipData = ref<AdminUsageLog | null>(null)
 
 const getRequestTypeLabel = (row: AdminUsageLog): string => {
   const requestType = resolveUsageRequestType(row)
@@ -499,6 +571,31 @@ const formatDuration = (ms: number | null | undefined): string => {
   if (ms == null) return '-'
   if (ms < 1000) return `${ms}ms`
   return `${(ms / 1000).toFixed(2)}s`
+}
+
+const formatRate = (value: number | null | undefined): string => {
+  if (value == null || Number.isNaN(value)) return '-'
+  return `${(value * 100).toFixed(0)}%`
+}
+
+const getScheduleLabel = (row: AdminUsageLog): string => {
+  const layer = row.schedule_trace?.layer || ''
+  if (layer.includes('sticky')) return t('admin.usage.scheduleSticky')
+  if (layer.includes('routing')) return t('admin.usage.scheduleRouting')
+  if (layer.includes('quality') || layer.includes('load')) return t('admin.usage.scheduleQuality')
+  if (layer.includes('fallback') || row.schedule_trace?.wait_plan) return t('admin.usage.scheduleFallback')
+  if (layer.includes('legacy')) return t('admin.usage.scheduleLegacy')
+  return layer || '-'
+}
+
+const getScheduleBadgeClass = (row: AdminUsageLog): string => {
+  const layer = row.schedule_trace?.layer || ''
+  if (layer.includes('sticky')) return 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200'
+  if (layer.includes('routing')) return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+  if (layer.includes('quality') || layer.includes('load')) return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
+  if (layer.includes('fallback') || row.schedule_trace?.wait_plan) return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+  if (layer.includes('legacy')) return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+  return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
 }
 
 // Cost tooltip functions
@@ -529,5 +626,19 @@ const showTokenTooltip = (event: MouseEvent, row: AdminUsageLog) => {
 const hideTokenTooltip = () => {
   tokenTooltipVisible.value = false
   tokenTooltipData.value = null
+}
+
+const showScheduleTooltip = (event: MouseEvent, row: AdminUsageLog) => {
+  const target = event.currentTarget as HTMLElement
+  const rect = target.getBoundingClientRect()
+  scheduleTooltipData.value = row
+  scheduleTooltipPosition.value.x = rect.right + 8
+  scheduleTooltipPosition.value.y = rect.top + rect.height / 2
+  scheduleTooltipVisible.value = true
+}
+
+const hideScheduleTooltip = () => {
+  scheduleTooltipVisible.value = false
+  scheduleTooltipData.value = null
 }
 </script>

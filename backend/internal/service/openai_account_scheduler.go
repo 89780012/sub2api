@@ -55,12 +55,36 @@ type OpenAIAccountScheduleDecision struct {
 	Layer               string
 	StickyPreviousHit   bool
 	StickySessionHit    bool
+	StickyEscape        bool
+	StickyEscapeReason  string
 	CandidateCount      int
 	TopK                int
 	LatencyMs           int64
 	LoadSkew            float64
 	SelectedAccountID   int64
 	SelectedAccountType string
+}
+
+func (d OpenAIAccountScheduleDecision) usageScheduleTrace(account *Account) *UsageScheduleTrace {
+	trace := newUsageScheduleTrace(d.Layer, account)
+	trace.StickyHit = d.StickyPreviousHit || d.StickySessionHit
+	trace.StickyEscape = d.StickyEscape
+	trace.StickyEscapeReason = d.StickyEscapeReason
+	trace.CandidateCount = d.CandidateCount
+	trace.TopK = d.TopK
+	if d.LoadSkew != 0 {
+		trace.LoadSkew = float64Ptr(d.LoadSkew)
+	}
+	if d.SelectedAccountID > 0 {
+		trace.SelectedAccountID = d.SelectedAccountID
+	}
+	if d.SelectedAccountType != "" {
+		trace.AccountType = d.SelectedAccountType
+	}
+	if account == nil && d.SelectedAccountID > 0 {
+		trace.SelectedAccountID = d.SelectedAccountID
+	}
+	return trace
 }
 
 type OpenAIAccountSchedulerMetricsSnapshot struct {
@@ -299,6 +323,7 @@ func (s *defaultOpenAIAccountScheduler) Select(
 			if req.SessionHash != "" {
 				_ = s.service.BindStickySession(ctx, req.GroupID, req.SessionHash, selection.Account.ID)
 			}
+			selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
 			return selection, decision, nil
 		}
 	}
@@ -312,9 +337,12 @@ func (s *defaultOpenAIAccountScheduler) Select(
 		decision.StickySessionHit = true
 		decision.SelectedAccountID = selection.Account.ID
 		decision.SelectedAccountType = selection.Account.Type
+		selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
 		return selection, decision, nil
 	}
 	if escapedSticky {
+		decision.StickyEscape = true
+		decision.StickyEscapeReason = "quality_or_runtime"
 		req.PreserveStickyBinding = true
 	}
 
@@ -329,6 +357,7 @@ func (s *defaultOpenAIAccountScheduler) Select(
 	if selection != nil && selection.Account != nil {
 		decision.SelectedAccountID = selection.Account.ID
 		decision.SelectedAccountType = selection.Account.Type
+		selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
 	}
 	return selection, decision, nil
 }
@@ -387,6 +416,21 @@ func (s *defaultOpenAIAccountScheduler) selectBySessionHash(
 			"reason", reason,
 			"error_rate", errorRate,
 			"ttft", ttft,
+		)
+		return nil, true, nil
+	}
+	if qualityEscape, reason, snapshot := shouldEscapeStickyAccountByQuality(ctx, s.service.accountQualityReader, accountID, "service.openai_scheduler"); qualityEscape {
+		score := 0.0
+		successRate := 0.0
+		if snapshot != nil {
+			score = snapshot.QualityScore
+			successRate = snapshot.RecentSuccessRate
+		}
+		slog.Info("sticky_escape_triggered",
+			"account_id", accountID,
+			"reason", reason,
+			"quality_score", score,
+			"recent_success_rate", successRate,
 		)
 		return nil, true, nil
 	}
@@ -461,12 +505,14 @@ func (s *defaultOpenAIAccountScheduler) shouldEscapeStickyAccount(accountID int6
 }
 
 type openAIAccountCandidateScore struct {
-	account   *Account
-	loadInfo  *AccountLoadInfo
-	score     float64
-	errorRate float64
-	ttft      float64
-	hasTTFT   bool
+	account    *Account
+	loadInfo   *AccountLoadInfo
+	score      float64
+	errorRate  float64
+	ttft       float64
+	hasTTFT    bool
+	quality    float64
+	hasQuality bool
 }
 
 type openAIAccountCandidateHeap []openAIAccountCandidateScore
@@ -662,11 +708,16 @@ func buildOpenAIWeightedSelectionOrder(
 }
 
 func (s *defaultOpenAIAccountScheduler) buildOpenAIAccountLoadPlan(
+	ctx context.Context,
 	req OpenAIAccountScheduleRequest,
 	filtered []*Account,
 	loadMap map[int64]*AccountLoadInfo,
 ) openAIAccountLoadPlan {
 	allCandidates := make([]openAIAccountCandidateScore, 0, len(filtered))
+	var qualitySnapshots map[int64]*AccountQualitySnapshot
+	if s != nil && s.service != nil {
+		qualitySnapshots = accountQualitySnapshotsForReader(ctx, s.service.accountQualityReader, accountIDsFromAccounts(filtered), "service.openai_scheduler")
+	}
 	for _, account := range filtered {
 		loadInfo := loadMap[account.ID]
 		if loadInfo == nil {
@@ -676,12 +727,15 @@ func (s *defaultOpenAIAccountScheduler) buildOpenAIAccountLoadPlan(
 		if s.stats != nil {
 			errorRate, ttft, hasTTFT = s.stats.snapshot(account.ID)
 		}
+		quality, hasQuality := effectiveAccountQualityScore(qualitySnapshots[account.ID])
 		allCandidates = append(allCandidates, openAIAccountCandidateScore{
-			account:   account,
-			loadInfo:  loadInfo,
-			errorRate: errorRate,
-			ttft:      ttft,
-			hasTTFT:   hasTTFT,
+			account:    account,
+			loadInfo:   loadInfo,
+			errorRate:  errorRate,
+			ttft:       ttft,
+			hasTTFT:    hasTTFT,
+			quality:    quality,
+			hasQuality: hasQuality,
 		})
 	}
 
@@ -764,6 +818,9 @@ func (s *defaultOpenAIAccountScheduler) buildOpenAIAccountLoadPlan(
 			weights.Queue*queueFactor +
 			weights.ErrorRate*errorFactor +
 			weights.TTFT*ttftFactor
+		if item.hasQuality {
+			item.score = item.score*0.75 + item.quality*0.25
+		}
 	}
 	plan.candidates = candidates
 
@@ -949,7 +1006,7 @@ func (s *defaultOpenAIAccountScheduler) selectByLoadBalance(
 		}
 	}
 
-	plan := s.buildOpenAIAccountLoadPlan(req, filtered, loadMap)
+	plan := s.buildOpenAIAccountLoadPlan(ctx, req, filtered, loadMap)
 	candidateCount := plan.candidateCount
 	topK := plan.topK
 	loadSkew := plan.loadSkew
@@ -974,7 +1031,7 @@ func (s *defaultOpenAIAccountScheduler) selectByLoadBalance(
 
 	if s.service.concurrencyService != nil {
 		if freshLoadMap, loadErr := s.service.concurrencyService.GetAccountsLoadBatchFresh(ctx, loadReq); loadErr == nil {
-			freshPlan := s.buildOpenAIAccountLoadPlan(req, filtered, freshLoadMap)
+			freshPlan := s.buildOpenAIAccountLoadPlan(ctx, req, filtered, freshLoadMap)
 			if len(freshPlan.selectionOrder) > 0 {
 				freshResult, freshCompactBlocked, freshAcquireErr := s.tryAcquireOpenAISelectionOrder(ctx, req, freshPlan.selectionOrder)
 				if freshAcquireErr != nil {
@@ -1240,6 +1297,9 @@ func (s *OpenAIGatewayService) selectAccountWithScheduler(
 					return selection, decision, nil
 				}
 				if accountSupportsOpenAICapabilities(selection.Account, requiredCapability, requiredImageCapability) {
+					decision.SelectedAccountID = selection.Account.ID
+					decision.SelectedAccountType = selection.Account.Type
+					selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
 					return selection, decision, nil
 				}
 				if selection.ReleaseFunc != nil {
@@ -1266,6 +1326,9 @@ func (s *OpenAIGatewayService) selectAccountWithScheduler(
 			}
 			if s.isOpenAIAccountTransportCompatible(selection.Account, requiredTransport) &&
 				accountSupportsOpenAICapabilities(selection.Account, requiredCapability, requiredImageCapability) {
+				decision.SelectedAccountID = selection.Account.ID
+				decision.SelectedAccountType = selection.Account.Type
+				selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
 				return selection, decision, nil
 			}
 			if selection.ReleaseFunc != nil {

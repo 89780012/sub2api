@@ -572,6 +572,35 @@ func AccountSummaryFromService(a *service.Account) *AccountSummary {
 	}
 }
 
+func usageScheduleTraceFromService(trace *service.UsageScheduleTrace) *UsageScheduleTrace {
+	if trace == nil {
+		return nil
+	}
+	out := &UsageScheduleTrace{
+		Layer:              trace.Layer,
+		Reason:             trace.Reason,
+		Platform:           trace.Platform,
+		AccountType:        trace.AccountType,
+		SelectedAccountID:  trace.SelectedAccountID,
+		Priority:           trace.Priority,
+		StickyHit:          trace.StickyHit,
+		StickyEscape:       trace.StickyEscape,
+		StickyEscapeReason: trace.StickyEscapeReason,
+		WaitPlan:           trace.WaitPlan,
+		CandidateCount:     trace.CandidateCount,
+		TopK:               trace.TopK,
+		QualityScore:       trace.QualityScore,
+		RecentSuccessRate:  trace.RecentSuccessRate,
+		TTFTLE5sRate:       trace.TTFTLE5sRate,
+		TTFTLE10sRate:      trace.TTFTLE10sRate,
+		TTFTSampleCount:    trace.TTFTSampleCount,
+		TotalRequests:      trace.TotalRequests,
+		LoadRate:           trace.LoadRate,
+		LoadSkew:           trace.LoadSkew,
+	}
+	return out
+}
+
 func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 	// 普通用户 DTO：严禁包含管理员字段（例如 account_rate_multiplier、ip_address、account）。
 	requestType := l.EffectiveRequestType()
@@ -657,6 +686,7 @@ func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
 		AccountRateMultiplier: l.AccountRateMultiplier,
 		AccountStatsCost:      l.AccountStatsCost,
 		IPAddress:             l.IPAddress,
+		ScheduleTrace:         usageScheduleTraceFromService(l.ScheduleTrace),
 		Account:               AccountSummaryFromService(l.Account),
 	}
 }

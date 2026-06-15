@@ -531,10 +531,11 @@ type AccountWaitPlan struct {
 }
 
 type AccountSelectionResult struct {
-	Account     *Account
-	Acquired    bool
-	ReleaseFunc func()
-	WaitPlan    *AccountWaitPlan // nil means no wait allowed
+	Account       *Account
+	Acquired      bool
+	ReleaseFunc   func()
+	WaitPlan      *AccountWaitPlan // nil means no wait allowed
+	ScheduleTrace *UsageScheduleTrace
 }
 
 // ClaudeUsage 表示Claude API返回的usage信息
@@ -638,6 +639,7 @@ type GatewayService struct {
 	tlsFPProfileService   *TLSFingerprintProfileService
 	balanceNotifyService  *BalanceNotifyService
 	userPlatformQuotaRepo UserPlatformQuotaRepository
+	accountQualityReader  AccountQualityReader
 }
 
 // NewGatewayService creates a new GatewayService
@@ -719,6 +721,12 @@ func NewGatewayService(
 		svc.initDebugGatewayBodyFile(path)
 	}
 	return svc
+}
+
+func (s *GatewayService) SetAccountQualityReader(reader AccountQualityReader) {
+	if s != nil {
+		s.accountQualityReader = reader
+	}
 }
 
 // GenerateSessionHash 从预解析请求计算粘性会话 hash
@@ -1798,7 +1806,13 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 									if s.debugModelRoutingEnabled() {
 										logger.LegacyPrintf("service.gateway", "[ModelRoutingDebug] routed sticky hit: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), stickyAccountID)
 									}
-									return s.newSelectionResult(ctx, stickyAccount, true, result.ReleaseFunc, nil)
+									selection, err := s.newSelectionResult(ctx, stickyAccount, true, result.ReleaseFunc, nil)
+									if err != nil {
+										return nil, err
+									}
+									trace := newUsageScheduleTrace("model_routing_sticky", stickyAccount)
+									trace.StickyHit = true
+									return attachUsageScheduleTrace(selection, trace), nil
 								}
 							}
 
@@ -1818,6 +1832,12 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 												Timeout:        cfg.StickySessionWaitTimeout,
 												MaxWaiting:     cfg.StickySessionMaxWaiting,
 											},
+											ScheduleTrace: func() *UsageScheduleTrace {
+												trace := newUsageScheduleTrace("model_routing_sticky", stickyAccount)
+												trace.StickyHit = true
+												trace.WaitPlan = true
+												return trace
+											}(),
 										}, nil
 									}
 								} else {
@@ -1909,7 +1929,14 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 						if s.debugModelRoutingEnabled() {
 							logger.LegacyPrintf("service.gateway", "[ModelRoutingDebug] routed select: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), item.account.ID)
 						}
-						return s.newSelectionResult(ctx, item.account, true, result.ReleaseFunc, nil)
+						selection, err := s.newSelectionResult(ctx, item.account, true, result.ReleaseFunc, nil)
+						if err != nil {
+							return nil, err
+						}
+						trace := newUsageScheduleTrace("model_routing_load_balance", item.account)
+						trace.CandidateCount = len(routingCandidates)
+						trace.applyLoad(item.loadInfo)
+						return attachUsageScheduleTrace(selection, trace), nil
 					}
 				}
 
@@ -1922,12 +1949,20 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 					if s.debugModelRoutingEnabled() {
 						logger.LegacyPrintf("service.gateway", "[ModelRoutingDebug] routed wait: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), item.account.ID)
 					}
-					return s.newSelectionResult(ctx, item.account, false, nil, &AccountWaitPlan{
+					selection, err := s.newSelectionResult(ctx, item.account, false, nil, &AccountWaitPlan{
 						AccountID:      item.account.ID,
 						MaxConcurrency: item.account.Concurrency,
 						Timeout:        cfg.StickySessionWaitTimeout,
 						MaxWaiting:     cfg.StickySessionMaxWaiting,
 					})
+					if err != nil {
+						return nil, err
+					}
+					trace := newUsageScheduleTrace("model_routing_wait", item.account)
+					trace.WaitPlan = true
+					trace.CandidateCount = len(routingCandidates)
+					trace.applyLoad(item.loadInfo)
+					return attachUsageScheduleTrace(selection, trace), nil
 				}
 				// 所有路由账号会话限制都已满，继续到 Layer 2 回退
 			}
@@ -1963,6 +1998,7 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 				windowCostOK := s.isAccountSchedulableForWindowCost(ctx, account, true)
 				rpmOK := s.isAccountSchedulableForRPM(ctx, account, true)
 				schedulable := s.isAccountSchedulableForSelection(account)
+				qualityEscape, _, _ := shouldEscapeStickyAccountByQuality(ctx, s.accountQualityReader, accountID, "service.gateway")
 
 				slog.Debug("sticky.layer1_5_no_routing_checks",
 					"account_id", accountID,
@@ -1975,9 +2011,10 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 					"quota_ok", quotaOK,
 					"window_cost_ok", windowCostOK,
 					"rpm_ok", rpmOK,
+					"quality_escape", qualityEscape,
 				)
 
-				if !clearSticky && platformOK && modelSupported && modelSchedulable && quotaOK && windowCostOK && rpmOK && schedulable {
+				if !clearSticky && !qualityEscape && platformOK && modelSupported && modelSchedulable && quotaOK && windowCostOK && rpmOK && schedulable {
 					result, err := s.tryAcquireAccountSlot(ctx, accountID, account.Concurrency)
 					if err == nil && result.Acquired {
 						// 会话数量限制检查
@@ -1997,7 +2034,13 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 							if s.cache != nil {
 								_ = s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL)
 							}
-							return s.newSelectionResult(ctx, account, true, result.ReleaseFunc, nil)
+							selection, err := s.newSelectionResult(ctx, account, true, result.ReleaseFunc, nil)
+							if err != nil {
+								return nil, err
+							}
+							trace := newUsageScheduleTrace("sticky", account)
+							trace.StickyHit = true
+							return attachUsageScheduleTrace(selection, trace), nil
 						}
 					} else {
 						slog.Debug("sticky.layer1_5_no_routing_slot_busy",
@@ -2017,12 +2060,19 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 								"session", shortSessionHash(sessionHash),
 								"result", "wait_plan",
 							)
-							return s.newSelectionResult(ctx, account, false, nil, &AccountWaitPlan{
+							selection, err := s.newSelectionResult(ctx, account, false, nil, &AccountWaitPlan{
 								AccountID:      accountID,
 								MaxConcurrency: account.Concurrency,
 								Timeout:        cfg.StickySessionWaitTimeout,
 								MaxWaiting:     cfg.StickySessionMaxWaiting,
 							})
+							if err != nil {
+								return nil, err
+							}
+							trace := newUsageScheduleTrace("sticky", account)
+							trace.StickyHit = true
+							trace.WaitPlan = true
+							return attachUsageScheduleTrace(selection, trace), nil
 						}
 					}
 				} else if !clearSticky {
@@ -2131,13 +2181,17 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 			}
 		}
 
-		// 分层过滤选择：优先级 → 负载率 → LRU
+		qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccountsWithLoad(available), "service.gateway")
+
+		// 分层过滤选择：优先级 → 近期质量 → 负载率 → LRU
 		for len(available) > 0 {
 			// 1. 取优先级最小的集合
 			candidates := filterByMinPriority(available)
-			// 2. 取负载率最低的集合
+			// 2. 取近期质量最高的集合（5s TTFT 权重大于 10s）
+			candidates = filterByMaxQuality(candidates, qualitySnapshots)
+			// 3. 取负载率最低的集合
 			candidates = filterByMinLoadRate(candidates)
-			// 3. LRU 选择最久未用的账号
+			// 4. LRU 选择最久未用的账号
 			selected := selectByLRU(candidates, preferOAuth)
 			if selected == nil {
 				break
@@ -2152,7 +2206,15 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 					if sessionHash != "" && s.cache != nil {
 						_ = s.cache.SetSessionAccountID(ctx, derefGroupID(groupID), sessionHash, selected.account.ID, stickySessionTTL)
 					}
-					return s.newSelectionResult(ctx, selected.account, true, result.ReleaseFunc, nil)
+					selection, err := s.newSelectionResult(ctx, selected.account, true, result.ReleaseFunc, nil)
+					if err != nil {
+						return nil, err
+					}
+					trace := newUsageScheduleTrace("quality_load_balance", selected.account)
+					trace.CandidateCount = len(candidates)
+					trace.applyLoad(selected.loadInfo)
+					trace.applyQuality(qualitySnapshots[selected.account.ID])
+					return attachUsageScheduleTrace(selection, trace), nil
 				}
 			}
 
@@ -2169,25 +2231,35 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 	}
 
 	// ============ Layer 3: 兜底排队 ============
-	s.sortCandidatesForFallback(candidates, preferOAuth, cfg.FallbackSelectionMode)
+	qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccounts(candidates), "service.gateway")
+	s.sortCandidatesForFallback(candidates, preferOAuth, cfg.FallbackSelectionMode, qualitySnapshots)
 	for _, acc := range candidates {
 		// 会话数量限制检查（等待计划也需要占用会话配额）
 		if !s.checkAndRegisterSession(ctx, acc, sessionHash) {
 			continue // 会话限制已满，尝试下一个账号
 		}
-		return s.newSelectionResult(ctx, acc, false, nil, &AccountWaitPlan{
+		selection, err := s.newSelectionResult(ctx, acc, false, nil, &AccountWaitPlan{
 			AccountID:      acc.ID,
 			MaxConcurrency: acc.Concurrency,
 			Timeout:        cfg.FallbackWaitTimeout,
 			MaxWaiting:     cfg.FallbackMaxWaiting,
 		})
+		if err != nil {
+			return nil, err
+		}
+		trace := newUsageScheduleTrace("fallback_wait", acc)
+		trace.WaitPlan = true
+		trace.CandidateCount = len(candidates)
+		trace.applyQuality(qualitySnapshots[acc.ID])
+		return attachUsageScheduleTrace(selection, trace), nil
 	}
 	return nil, ErrNoAvailableAccounts
 }
 
 func (s *GatewayService) tryAcquireByLegacyOrder(ctx context.Context, candidates []*Account, groupID *int64, sessionHash string, preferOAuth bool) (*AccountSelectionResult, bool, error) {
 	ordered := append([]*Account(nil), candidates...)
-	sortAccountsByPriorityAndLastUsed(ordered, preferOAuth)
+	qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccounts(ordered), "service.gateway")
+	sortAccountsByPriorityQualityAndLastUsed(ordered, preferOAuth, qualitySnapshots)
 
 	for _, acc := range ordered {
 		result, err := s.tryAcquireAccountSlot(ctx, acc.ID, acc.Concurrency)
@@ -2204,6 +2276,10 @@ func (s *GatewayService) tryAcquireByLegacyOrder(ctx context.Context, candidates
 			if err != nil {
 				return nil, false, err
 			}
+			trace := newUsageScheduleTrace("legacy_order", acc)
+			trace.CandidateCount = len(candidates)
+			trace.applyQuality(qualitySnapshots[acc.ID])
+			selection.ScheduleTrace = trace
 			return selection, true, nil
 		}
 	}
@@ -2849,10 +2925,11 @@ func (s *GatewayService) newSelectionResult(ctx context.Context, account *Accoun
 		return nil, err
 	}
 	return &AccountSelectionResult{
-		Account:     hydrated,
-		Acquired:    acquired,
-		ReleaseFunc: release,
-		WaitPlan:    waitPlan,
+		Account:       hydrated,
+		Acquired:      acquired,
+		ReleaseFunc:   release,
+		WaitPlan:      waitPlan,
+		ScheduleTrace: newUsageScheduleTrace("unknown", hydrated),
 	}, nil
 }
 
@@ -2979,6 +3056,82 @@ func sortAccountsByPriorityAndLastUsed(accounts []*Account, preferOAuth bool) {
 	shuffleWithinPriorityAndLastUsed(accounts, preferOAuth)
 }
 
+func sortAccountsByPriorityQualityAndLastUsed(accounts []*Account, preferOAuth bool, snapshots map[int64]*AccountQualitySnapshot) {
+	if len(snapshots) == 0 {
+		sortAccountsByPriorityAndLastUsed(accounts, preferOAuth)
+		return
+	}
+	sort.SliceStable(accounts, func(i, j int) bool {
+		a, b := accounts[i], accounts[j]
+		if a.Priority != b.Priority {
+			return a.Priority < b.Priority
+		}
+		if cmp := compareAccountsByQuality(a, b, snapshots); cmp != 0 {
+			return cmp < 0
+		}
+		switch {
+		case a.LastUsedAt == nil && b.LastUsedAt != nil:
+			return true
+		case a.LastUsedAt != nil && b.LastUsedAt == nil:
+			return false
+		case a.LastUsedAt == nil && b.LastUsedAt == nil:
+			if preferOAuth && a.Type != b.Type {
+				return a.Type == AccountTypeOAuth
+			}
+			return false
+		default:
+			return a.LastUsedAt.Before(*b.LastUsedAt)
+		}
+	})
+	shuffleWithinPriorityQualityAndLastUsed(accounts, preferOAuth, snapshots)
+}
+
+func shuffleWithinPriorityQualityAndLastUsed(accounts []*Account, preferOAuth bool, snapshots map[int64]*AccountQualitySnapshot) {
+	if len(accounts) <= 1 {
+		return
+	}
+	i := 0
+	for i < len(accounts) {
+		j := i + 1
+		for j < len(accounts) && sameAccountQualityGroup(accounts[i], accounts[j], snapshots) {
+			j++
+		}
+		if j-i > 1 {
+			if preferOAuth {
+				oauth := make([]*Account, 0, j-i)
+				others := make([]*Account, 0, j-i)
+				for _, acc := range accounts[i:j] {
+					if acc.Type == AccountTypeOAuth {
+						oauth = append(oauth, acc)
+					} else {
+						others = append(others, acc)
+					}
+				}
+				if len(oauth) > 1 {
+					mathrand.Shuffle(len(oauth), func(a, b int) { oauth[a], oauth[b] = oauth[b], oauth[a] })
+				}
+				if len(others) > 1 {
+					mathrand.Shuffle(len(others), func(a, b int) { others[a], others[b] = others[b], others[a] })
+				}
+				copy(accounts[i:], oauth)
+				copy(accounts[i+len(oauth):], others)
+			} else {
+				mathrand.Shuffle(j-i, func(a, b int) {
+					accounts[i+a], accounts[i+b] = accounts[i+b], accounts[i+a]
+				})
+			}
+		}
+		i = j
+	}
+}
+
+func sameAccountQualityGroup(a, b *Account, snapshots map[int64]*AccountQualitySnapshot) bool {
+	if !sameAccountGroup(a, b) {
+		return false
+	}
+	return compareAccountsByQuality(a, b, snapshots) == 0
+}
+
 // shuffleWithinSortGroups 对排序后的 accountWithLoad 切片，按 (Priority, LoadRate, LastUsedAt) 分组后组内随机打乱。
 // 防止并发请求读取同一快照时，确定性排序导致所有请求命中相同账号。
 func shuffleWithinSortGroups(accounts []accountWithLoad) {
@@ -3076,17 +3229,61 @@ func sameLastUsedAt(a, b *time.Time) bool {
 	}
 }
 
+func shouldReplaceSelectedAccount(candidate, selected *Account, preferOAuth bool, snapshots map[int64]*AccountQualitySnapshot) bool {
+	if candidate == nil {
+		return false
+	}
+	if selected == nil {
+		return true
+	}
+	if candidate.Priority != selected.Priority {
+		return candidate.Priority < selected.Priority
+	}
+	if cmp := compareAccountsByQuality(candidate, selected, snapshots); cmp != 0 {
+		return cmp < 0
+	}
+	switch {
+	case candidate.LastUsedAt == nil && selected.LastUsedAt != nil:
+		return true
+	case candidate.LastUsedAt != nil && selected.LastUsedAt == nil:
+		return false
+	case candidate.LastUsedAt == nil && selected.LastUsedAt == nil:
+		return preferOAuth && candidate.Type != selected.Type && candidate.Type == AccountTypeOAuth
+	default:
+		return candidate.LastUsedAt.Before(*selected.LastUsedAt)
+	}
+}
+
 // sortCandidatesForFallback 根据配置选择排序策略
 // mode: "last_used"(按最后使用时间) 或 "random"(随机)
-func (s *GatewayService) sortCandidatesForFallback(accounts []*Account, preferOAuth bool, mode string) {
+func (s *GatewayService) sortCandidatesForFallback(accounts []*Account, preferOAuth bool, mode string, snapshots map[int64]*AccountQualitySnapshot) {
 	if mode == "random" {
-		// 先按优先级排序，然后在同优先级内随机打乱
-		sortAccountsByPriorityOnly(accounts, preferOAuth)
-		shuffleWithinPriority(accounts)
+		sortAccountsByPriorityQualityOnly(accounts, preferOAuth, snapshots)
+		shuffleWithinPriorityQuality(accounts, snapshots)
 	} else {
 		// 默认按最后使用时间排序
-		sortAccountsByPriorityAndLastUsed(accounts, preferOAuth)
+		sortAccountsByPriorityQualityAndLastUsed(accounts, preferOAuth, snapshots)
 	}
+}
+
+func sortAccountsByPriorityQualityOnly(accounts []*Account, preferOAuth bool, snapshots map[int64]*AccountQualitySnapshot) {
+	if len(snapshots) == 0 {
+		sortAccountsByPriorityOnly(accounts, preferOAuth)
+		return
+	}
+	sort.SliceStable(accounts, func(i, j int) bool {
+		a, b := accounts[i], accounts[j]
+		if a.Priority != b.Priority {
+			return a.Priority < b.Priority
+		}
+		if cmp := compareAccountsByQuality(a, b, snapshots); cmp != 0 {
+			return cmp < 0
+		}
+		if preferOAuth && a.Type != b.Type {
+			return a.Type == AccountTypeOAuth
+		}
+		return false
+	})
 }
 
 // sortAccountsByPriorityOnly 仅按优先级排序
@@ -3101,6 +3298,32 @@ func sortAccountsByPriorityOnly(accounts []*Account, preferOAuth bool) {
 		}
 		return false
 	})
+}
+
+func shuffleWithinPriorityQuality(accounts []*Account, snapshots map[int64]*AccountQualitySnapshot) {
+	if len(snapshots) == 0 {
+		shuffleWithinPriority(accounts)
+		return
+	}
+	if len(accounts) <= 1 {
+		return
+	}
+	r := mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
+	start := 0
+	for start < len(accounts) {
+		end := start + 1
+		for end < len(accounts) &&
+			accounts[end].Priority == accounts[start].Priority &&
+			compareAccountsByQuality(accounts[end], accounts[start], snapshots) == 0 {
+			end++
+		}
+		if end-start > 1 {
+			r.Shuffle(end-start, func(i, j int) {
+				accounts[start+i], accounts[start+j] = accounts[start+j], accounts[start+i]
+			})
+		}
+		start = end
+	}
 }
 
 // shuffleWithinPriority 在同优先级内随机打乱顺序
@@ -3160,7 +3383,8 @@ func (s *GatewayService) selectAccountForModelWithPlatform(ctx context.Context, 
 						if clearSticky {
 							_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 						}
-						if !clearSticky && s.isAccountInGroup(account, groupID) && account.Platform == platform && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && s.isAccountSchedulableForModelSelection(ctx, account, requestedModel) && s.isAccountSchedulableForQuota(account) && s.isAccountSchedulableForWindowCost(ctx, account, true) && s.isAccountSchedulableForRPM(ctx, account, true) && !s.isStickyAccountUpstreamRestricted(ctx, groupID, account, requestedModel) {
+						qualityEscape, _, _ := shouldEscapeStickyAccountByQuality(ctx, s.accountQualityReader, account.ID, "service.gateway")
+						if !clearSticky && !qualityEscape && s.isAccountInGroup(account, groupID) && account.Platform == platform && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && s.isAccountSchedulableForModelSelection(ctx, account, requestedModel) && s.isAccountSchedulableForQuota(account) && s.isAccountSchedulableForWindowCost(ctx, account, true) && s.isAccountSchedulableForRPM(ctx, account, true) && !s.isStickyAccountUpstreamRestricted(ctx, groupID, account, requestedModel) {
 							if s.debugModelRoutingEnabled() {
 								logger.LegacyPrintf("service.gateway", "[ModelRoutingDebug] legacy routed sticky hit: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), accountID)
 							}
@@ -3194,6 +3418,7 @@ func (s *GatewayService) selectAccountForModelWithPlatform(ctx context.Context, 
 			}
 		}
 
+		qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccountValues(accounts), "service.gateway")
 		var selected *Account
 		for i := range accounts {
 			acc := &accounts[i]
@@ -3229,27 +3454,8 @@ func (s *GatewayService) selectAccountForModelWithPlatform(ctx context.Context, 
 			if !s.isAccountSchedulableForRPM(ctx, acc, false) {
 				continue
 			}
-			if selected == nil {
+			if shouldReplaceSelectedAccount(acc, selected, preferOAuth, qualitySnapshots) {
 				selected = acc
-				continue
-			}
-			if acc.Priority < selected.Priority {
-				selected = acc
-			} else if acc.Priority == selected.Priority {
-				switch {
-				case acc.LastUsedAt == nil && selected.LastUsedAt != nil:
-					selected = acc
-				case acc.LastUsedAt != nil && selected.LastUsedAt == nil:
-					// keep selected (never used is preferred)
-				case acc.LastUsedAt == nil && selected.LastUsedAt == nil:
-					if preferOAuth && acc.Type != selected.Type && acc.Type == AccountTypeOAuth {
-						selected = acc
-					}
-				default:
-					if acc.LastUsedAt.Before(*selected.LastUsedAt) {
-						selected = acc
-					}
-				}
 			}
 		}
 
@@ -3279,7 +3485,8 @@ func (s *GatewayService) selectAccountForModelWithPlatform(ctx context.Context, 
 					if clearSticky {
 						_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 					}
-					if !clearSticky && s.isAccountInGroup(account, groupID) && account.Platform == platform && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && s.isAccountSchedulableForModelSelection(ctx, account, requestedModel) && s.isAccountSchedulableForQuota(account) && s.isAccountSchedulableForWindowCost(ctx, account, true) && s.isAccountSchedulableForRPM(ctx, account, true) {
+					qualityEscape, _, _ := shouldEscapeStickyAccountByQuality(ctx, s.accountQualityReader, account.ID, "service.gateway")
+					if !clearSticky && !qualityEscape && s.isAccountInGroup(account, groupID) && account.Platform == platform && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && s.isAccountSchedulableForModelSelection(ctx, account, requestedModel) && s.isAccountSchedulableForQuota(account) && s.isAccountSchedulableForWindowCost(ctx, account, true) && s.isAccountSchedulableForRPM(ctx, account, true) {
 						return account, nil
 					}
 				}
@@ -3308,6 +3515,7 @@ func (s *GatewayService) selectAccountForModelWithPlatform(ctx context.Context, 
 	// needsUpstreamCheck 仅在主选择循环中使用；粘性会话命中时跳过此检查，
 	// 因为粘性会话优先保持连接一致性，且 upstream 计费基准极少使用。
 	needsUpstreamCheck := s.needsUpstreamChannelRestrictionCheck(ctx, groupID)
+	qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccountValues(accounts), "service.gateway")
 	var selected *Account
 	for i := range accounts {
 		acc := &accounts[i]
@@ -3343,27 +3551,8 @@ func (s *GatewayService) selectAccountForModelWithPlatform(ctx context.Context, 
 		if !s.isAccountSchedulableForRPM(ctx, acc, false) {
 			continue
 		}
-		if selected == nil {
+		if shouldReplaceSelectedAccount(acc, selected, preferOAuth, qualitySnapshots) {
 			selected = acc
-			continue
-		}
-		if acc.Priority < selected.Priority {
-			selected = acc
-		} else if acc.Priority == selected.Priority {
-			switch {
-			case acc.LastUsedAt == nil && selected.LastUsedAt != nil:
-				selected = acc
-			case acc.LastUsedAt != nil && selected.LastUsedAt == nil:
-				// keep selected (never used is preferred)
-			case acc.LastUsedAt == nil && selected.LastUsedAt == nil:
-				if preferOAuth && acc.Type != selected.Type && acc.Type == AccountTypeOAuth {
-					selected = acc
-				}
-			default:
-				if acc.LastUsedAt.Before(*selected.LastUsedAt) {
-					selected = acc
-				}
-			}
 		}
 	}
 
@@ -3418,7 +3607,8 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 						if clearSticky {
 							_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 						}
-						if !clearSticky && s.isAccountInGroup(account, groupID) && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && s.isAccountSchedulableForModelSelection(ctx, account, requestedModel) && s.isAccountSchedulableForQuota(account) && s.isAccountSchedulableForWindowCost(ctx, account, true) && s.isAccountSchedulableForRPM(ctx, account, true) {
+						qualityEscape, _, _ := shouldEscapeStickyAccountByQuality(ctx, s.accountQualityReader, account.ID, "service.gateway")
+						if !clearSticky && !qualityEscape && s.isAccountInGroup(account, groupID) && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && s.isAccountSchedulableForModelSelection(ctx, account, requestedModel) && s.isAccountSchedulableForQuota(account) && s.isAccountSchedulableForWindowCost(ctx, account, true) && s.isAccountSchedulableForRPM(ctx, account, true) {
 							if account.Platform == nativePlatform || (account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled()) {
 								if s.debugModelRoutingEnabled() {
 									logger.LegacyPrintf("service.gateway", "[ModelRoutingDebug] legacy mixed routed sticky hit: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), accountID)
@@ -3450,6 +3640,7 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 			}
 		}
 
+		qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccountValues(accounts), "service.gateway")
 		var selected *Account
 		for i := range accounts {
 			acc := &accounts[i]
@@ -3496,18 +3687,22 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 			if acc.Priority < selected.Priority {
 				selected = acc
 			} else if acc.Priority == selected.Priority {
-				switch {
-				case acc.LastUsedAt == nil && selected.LastUsedAt != nil:
+				if cmp := compareAccountsByQuality(acc, selected, qualitySnapshots); cmp < 0 {
 					selected = acc
-				case acc.LastUsedAt != nil && selected.LastUsedAt == nil:
-					// keep selected (never used is preferred)
-				case acc.LastUsedAt == nil && selected.LastUsedAt == nil:
-					if preferOAuth && acc.Platform == PlatformGemini && selected.Platform == PlatformGemini && acc.Type != selected.Type && acc.Type == AccountTypeOAuth {
+				} else if cmp == 0 {
+					switch {
+					case acc.LastUsedAt == nil && selected.LastUsedAt != nil:
 						selected = acc
-					}
-				default:
-					if acc.LastUsedAt.Before(*selected.LastUsedAt) {
-						selected = acc
+					case acc.LastUsedAt != nil && selected.LastUsedAt == nil:
+						// keep selected (never used is preferred)
+					case acc.LastUsedAt == nil && selected.LastUsedAt == nil:
+						if preferOAuth && acc.Platform == PlatformGemini && selected.Platform == PlatformGemini && acc.Type != selected.Type && acc.Type == AccountTypeOAuth {
+							selected = acc
+						}
+					default:
+						if acc.LastUsedAt.Before(*selected.LastUsedAt) {
+							selected = acc
+						}
 					}
 				}
 			}
@@ -3539,7 +3734,8 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 					if clearSticky {
 						_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 					}
-					if !clearSticky && s.isAccountInGroup(account, groupID) && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && s.isAccountSchedulableForModelSelection(ctx, account, requestedModel) && s.isAccountSchedulableForQuota(account) && s.isAccountSchedulableForWindowCost(ctx, account, true) && s.isAccountSchedulableForRPM(ctx, account, true) && !s.isStickyAccountUpstreamRestricted(ctx, groupID, account, requestedModel) {
+					qualityEscape, _, _ := shouldEscapeStickyAccountByQuality(ctx, s.accountQualityReader, account.ID, "service.gateway")
+					if !clearSticky && !qualityEscape && s.isAccountInGroup(account, groupID) && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && s.isAccountSchedulableForModelSelection(ctx, account, requestedModel) && s.isAccountSchedulableForQuota(account) && s.isAccountSchedulableForWindowCost(ctx, account, true) && s.isAccountSchedulableForRPM(ctx, account, true) && !s.isStickyAccountUpstreamRestricted(ctx, groupID, account, requestedModel) {
 						if account.Platform == nativePlatform || (account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled()) {
 							return account, nil
 						}
@@ -3565,6 +3761,7 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 	// 3. 按优先级+最久未用选择（考虑模型支持和混合调度）
 	// needsUpstreamCheck 仅在主选择循环中使用；粘性会话命中时跳过此检查。
 	needsUpstreamCheck := s.needsUpstreamChannelRestrictionCheck(ctx, groupID)
+	qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccountValues(accounts), "service.gateway")
 	var selected *Account
 	for i := range accounts {
 		acc := &accounts[i]
@@ -3611,18 +3808,22 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 		if acc.Priority < selected.Priority {
 			selected = acc
 		} else if acc.Priority == selected.Priority {
-			switch {
-			case acc.LastUsedAt == nil && selected.LastUsedAt != nil:
+			if cmp := compareAccountsByQuality(acc, selected, qualitySnapshots); cmp < 0 {
 				selected = acc
-			case acc.LastUsedAt != nil && selected.LastUsedAt == nil:
-				// keep selected (never used is preferred)
-			case acc.LastUsedAt == nil && selected.LastUsedAt == nil:
-				if preferOAuth && acc.Platform == PlatformGemini && selected.Platform == PlatformGemini && acc.Type != selected.Type && acc.Type == AccountTypeOAuth {
+			} else if cmp == 0 {
+				switch {
+				case acc.LastUsedAt == nil && selected.LastUsedAt != nil:
 					selected = acc
-				}
-			default:
-				if acc.LastUsedAt.Before(*selected.LastUsedAt) {
-					selected = acc
+				case acc.LastUsedAt != nil && selected.LastUsedAt == nil:
+					// keep selected (never used is preferred)
+				case acc.LastUsedAt == nil && selected.LastUsedAt == nil:
+					if preferOAuth && acc.Platform == PlatformGemini && selected.Platform == PlatformGemini && acc.Type != selected.Type && acc.Type == AccountTypeOAuth {
+						selected = acc
+					}
+				default:
+					if acc.LastUsedAt.Before(*selected.LastUsedAt) {
+						selected = acc
+					}
 				}
 			}
 		}
@@ -8335,6 +8536,7 @@ type RecordUsageInput struct {
 	ForceCacheBilling  bool               // 强制缓存计费：将 input_tokens 转为 cache_read 计费（用于粘性会话切换）
 	APIKeyService      APIKeyQuotaUpdater // 可选：用于更新API Key配额
 	QuotaPlatform      string             // user×platform 配额计量平台：handler 在请求 ctx 内经 QuotaPlatform() 算定后传入（后扣运行在 worker 池 background ctx 上，取不到 ForcePlatform）
+	ScheduleTrace      *UsageScheduleTrace
 
 	ChannelUsageFields // 渠道映射信息（由 handler 在 Forward 前解析）
 }
@@ -8823,6 +9025,7 @@ func (s *GatewayService) RecordUsage(ctx context.Context, input *RecordUsageInpu
 		ForceCacheBilling:  input.ForceCacheBilling,
 		APIKeyService:      input.APIKeyService,
 		QuotaPlatform:      input.QuotaPlatform,
+		ScheduleTrace:      input.ScheduleTrace,
 		ChannelUsageFields: input.ChannelUsageFields,
 	}, &recordUsageOpts{})
 }
@@ -8844,6 +9047,7 @@ type RecordUsageLongContextInput struct {
 	ForceCacheBilling     bool               // 强制缓存计费：将 input_tokens 转为 cache_read 计费（用于粘性会话切换）
 	APIKeyService         APIKeyQuotaUpdater // API Key 配额服务（可选）
 	QuotaPlatform         string             // user×platform 配额计量平台：handler 在请求 ctx 内经 QuotaPlatform() 算定后传入（后扣运行在 worker 池 background ctx 上，取不到 ForcePlatform）
+	ScheduleTrace         *UsageScheduleTrace
 
 	ChannelUsageFields // 渠道映射信息（由 handler 在 Forward 前解析）
 }
@@ -8864,6 +9068,7 @@ func (s *GatewayService) RecordUsageWithLongContext(ctx context.Context, input *
 		ForceCacheBilling:  input.ForceCacheBilling,
 		APIKeyService:      input.APIKeyService,
 		QuotaPlatform:      input.QuotaPlatform,
+		ScheduleTrace:      input.ScheduleTrace,
 		ChannelUsageFields: input.ChannelUsageFields,
 	}, &recordUsageOpts{
 		LongContextThreshold:  input.LongContextThreshold,
@@ -8886,6 +9091,7 @@ type recordUsageCoreInput struct {
 	ForceCacheBilling  bool
 	APIKeyService      APIKeyQuotaUpdater
 	QuotaPlatform      string
+	ScheduleTrace      *UsageScheduleTrace
 	ChannelUsageFields
 }
 
@@ -9194,6 +9400,7 @@ func (s *GatewayService) buildRecordUsageLog(
 		ImageSizeSource:       optionalTrimmedStringPtr(result.ImageSizeSource),
 		ImageSizeBreakdown:    result.ImageSizeBreakdown,
 		CacheTTLOverridden:    cacheTTLOverridden,
+		ScheduleTrace:         input.ScheduleTrace.clone(),
 		ChannelID:             optionalInt64Ptr(input.ChannelID),
 		ModelMappingChain:     optionalTrimmedStringPtr(input.ModelMappingChain),
 		UserAgent:             optionalTrimmedStringPtr(input.UserAgent),

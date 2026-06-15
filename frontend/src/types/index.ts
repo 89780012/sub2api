@@ -1276,6 +1276,29 @@ export interface UsageLogAccountSummary {
   name: string
 }
 
+export interface UsageScheduleTrace {
+  layer?: string | null
+  reason?: string | null
+  platform?: string | null
+  account_type?: string | null
+  selected_account_id?: number
+  priority?: number | null
+  sticky_hit?: boolean
+  sticky_escape?: boolean
+  sticky_escape_reason?: string | null
+  wait_plan?: boolean
+  candidate_count?: number
+  top_k?: number
+  quality_score?: number | null
+  recent_success_rate?: number | null
+  ttft_le_5s_rate?: number | null
+  ttft_le_10s_rate?: number | null
+  ttft_sample_count?: number
+  total_requests?: number
+  load_rate?: number | null
+  load_skew?: number | null
+}
+
 export interface AdminUsageLog extends UsageLog {
   upstream_model?: string | null
   model_mapping_chain?: string | null
@@ -1291,6 +1314,8 @@ export interface AdminUsageLog extends UsageLog {
 
   // 用户请求 IP（仅管理员可见）
   ip_address?: string | null
+
+  schedule_trace?: UsageScheduleTrace | null
 
   // 最小账号信息（仅管理员接口返回）
   account?: UsageLogAccountSummary
