@@ -8,12 +8,29 @@ import (
 )
 
 func TestComputeAccountQualityScoreWeightsFiveSecondTTFTHigher(t *testing.T) {
-	scoreFast5s := ComputeAccountQualityScore(1, 1, 1)
-	scoreFast10sOnly := ComputeAccountQualityScore(1, 0, 1)
+	scoreFast5s := ComputeAccountQualityScore(1, 1, 1, 0, 0, 0, 0, 12)
+	scoreFast10sOnly := ComputeAccountQualityScore(1, 0, 1, 0, 0, 0, 0, 12)
 
-	require.Equal(t, 1.0, scoreFast5s)
-	require.Equal(t, 0.6, scoreFast10sOnly)
-	require.Greater(t, scoreFast5s-scoreFast10sOnly, 0.2)
+	require.Greater(t, scoreFast5s.TTFT5sComponent, scoreFast10sOnly.TTFT5sComponent)
+	require.Greater(t, scoreFast5s.FastBonus, scoreFast10sOnly.FastBonus)
+}
+
+func TestComputeAccountQualityScoreLongTTFTPunishesHard(t *testing.T) {
+	fastStable := ComputeAccountQualityScore(1, 1, 1, 0, 0, 0, 0, 12)
+	oneVerySlow := ComputeAccountQualityScore(1, 0.8, 0.8, 0.2, 0.2, 0.2, 0, 12)
+
+	require.Greater(t, oneVerySlow.SlowPenalty, 0.1)
+	require.Greater(t, fastStable.TTFT5sComponent, oneVerySlow.TTFT5sComponent)
+	require.Greater(t, fastStable.FastBonus, oneVerySlow.FastBonus)
+}
+
+func TestEffectiveAccountQualityScoreUsesNeutralBaseForUnknown(t *testing.T) {
+	score, known := effectiveAccountQualityScore(&AccountQualitySnapshot{
+		TotalRequests: accountQualityMinSamples - 1,
+	})
+
+	require.False(t, known)
+	require.Equal(t, accountQualityNeutralBase, score)
 }
 
 func TestFilterByMaxQualityWithinSamePriority(t *testing.T) {
@@ -92,7 +109,7 @@ func TestShouldEscapeStickyByAccountQualityOnRecentFailure(t *testing.T) {
 		RecentSuccessRate: 0.5,
 		TTFTLE5sRate:      1,
 		TTFTLE10sRate:     1,
-		QualityScore:      ComputeAccountQualityScore(0.5, 1, 1),
+		QualityScore:      ComputeAccountQualityScore(0.5, 1, 1, 0, 0, 0, 0, accountQualityMinSamples).FinalScore,
 	})
 
 	require.True(t, escape)

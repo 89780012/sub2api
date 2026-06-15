@@ -505,12 +505,22 @@
                   <div>{{ t('admin.usage.scheduleRecentSuccessRate') }}: <span class="text-white">{{ formatRate(candidate.recent_success_rate) }}</span></div>
                   <div>{{ t('admin.usage.scheduleTtft5s') }}: <span class="text-white">{{ formatRate(candidate.ttft_le_5s_rate) }}</span></div>
                   <div>{{ t('admin.usage.scheduleTtft10s') }}: <span class="text-white">{{ formatRate(candidate.ttft_le_10s_rate) }}</span></div>
+                  <div>{{ t('admin.usage.scheduleTtftGt10s') }}: <span class="text-white">{{ formatRate(candidate.ttft_gt_10s_rate) }}</span></div>
+                  <div>{{ t('admin.usage.scheduleTtftGt20s') }}: <span class="text-white">{{ formatRate(candidate.ttft_gt_20s_rate) }}</span></div>
+                  <div>{{ t('admin.usage.scheduleTtftGt40s') }}: <span class="text-white">{{ formatRate(candidate.ttft_gt_40s_rate) }}</span></div>
+                  <div>{{ t('admin.usage.scheduleErrorRate') }}: <span class="text-white">{{ formatRate(candidate.error_rate) }}</span></div>
+                  <div>{{ t('admin.usage.scheduleSampleConfidence') }}: <span class="text-white">{{ candidate.sample_confidence != null ? candidate.sample_confidence.toFixed(4) : '-' }}</span></div>
+                  <div>{{ t('admin.usage.scheduleFastBonus') }}: <span class="text-emerald-300">{{ candidate.fast_bonus != null ? `+${candidate.fast_bonus.toFixed(4)}` : '-' }}</span></div>
+                  <div>{{ t('admin.usage.scheduleSlowPenalty') }}: <span class="text-amber-300">{{ candidate.slow_penalty != null ? `-${candidate.slow_penalty.toFixed(4)}` : '-' }}</span></div>
+                  <div>{{ t('admin.usage.scheduleErrorPenalty') }}: <span class="text-rose-300">{{ candidate.error_penalty != null ? `-${candidate.error_penalty.toFixed(4)}` : '-' }}</span></div>
+                  <div>{{ t('admin.usage.scheduleNeutralBase') }}: <span class="text-white">{{ candidate.neutral_base != null ? candidate.neutral_base.toFixed(4) : '-' }}</span></div>
                   <div>{{ t('admin.usage.scheduleLoadRate') }}: <span class="text-white">{{ candidate.load_rate != null ? formatRate(candidate.load_rate / 100) : '-' }}</span></div>
                 </div>
-                <div v-if="candidate.waiting_count != null || candidate.total_requests != null || candidate.ttft_sample_count != null" class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
+                <div v-if="candidate.waiting_count != null || candidate.total_requests != null || candidate.failure_requests != null || candidate.ttft_sample_count != null" class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
                   <span v-if="candidate.waiting_count != null">{{ t('admin.usage.scheduleWaitingCount') }}: {{ candidate.waiting_count }}</span>
                   <span v-if="candidate.ttft_sample_count != null">{{ t('admin.usage.scheduleTtftSampleCount') }}: {{ candidate.ttft_sample_count }}</span>
                   <span v-if="candidate.total_requests != null">{{ t('admin.usage.scheduleTotalRequests') }}: {{ candidate.total_requests }}</span>
+                  <span v-if="candidate.failure_requests != null">{{ t('admin.usage.scheduleFailureRequests') }}: {{ candidate.failure_requests }}</span>
                 </div>
                 <div v-if="candidate.score_breakdown" class="mt-2 border-t border-gray-700 pt-2">
                   <div class="text-[11px] text-gray-400">{{ t('admin.usage.scheduleScoreBreakdown') }}</div>

@@ -60,8 +60,18 @@ func (t *UsageScheduleTrace) applyQuality(snapshot *AccountQualitySnapshot) {
 	t.RecentSuccessRate = float64Ptr(snapshot.RecentSuccessRate)
 	t.TTFTLE5sRate = float64Ptr(snapshot.TTFTLE5sRate)
 	t.TTFTLE10sRate = float64Ptr(snapshot.TTFTLE10sRate)
+	t.TTFTGT10sRate = float64Ptr(snapshot.TTFTGT10sRate)
+	t.TTFTGT20sRate = float64Ptr(snapshot.TTFTGT20sRate)
+	t.TTFTGT40sRate = float64Ptr(snapshot.TTFTGT40sRate)
 	t.TTFTSampleCount = snapshot.TTFTSampleCount
 	t.TotalRequests = snapshot.TotalRequests
+	t.FailureRequests = snapshot.FailureRequests
+	t.ErrorRate = float64Ptr(snapshot.ErrorRate)
+	t.SampleConfidence = float64Ptr(snapshot.SampleConfidence)
+	t.FastBonus = float64Ptr(snapshot.FastBonus)
+	t.SlowPenalty = float64Ptr(snapshot.SlowPenalty)
+	t.ErrorPenalty = float64Ptr(snapshot.ErrorPenalty)
+	t.NeutralBase = float64Ptr(snapshot.NeutralBase)
 }
 
 func (t *UsageScheduleTrace) applyLoad(loadInfo *AccountLoadInfo) {
@@ -102,8 +112,17 @@ func cloneUsageScheduleCandidateScore(in UsageScheduleCandidateScore) UsageSched
 	out.RecentSuccessRate = cloneFloat64Ptr(in.RecentSuccessRate)
 	out.TTFTLE5sRate = cloneFloat64Ptr(in.TTFTLE5sRate)
 	out.TTFTLE10sRate = cloneFloat64Ptr(in.TTFTLE10sRate)
+	out.TTFTGT10sRate = cloneFloat64Ptr(in.TTFTGT10sRate)
+	out.TTFTGT20sRate = cloneFloat64Ptr(in.TTFTGT20sRate)
+	out.TTFTGT40sRate = cloneFloat64Ptr(in.TTFTGT40sRate)
 	out.LoadRate = cloneFloat64Ptr(in.LoadRate)
 	out.ComputedScore = cloneFloat64Ptr(in.ComputedScore)
+	out.ErrorRate = cloneFloat64Ptr(in.ErrorRate)
+	out.SampleConfidence = cloneFloat64Ptr(in.SampleConfidence)
+	out.FastBonus = cloneFloat64Ptr(in.FastBonus)
+	out.SlowPenalty = cloneFloat64Ptr(in.SlowPenalty)
+	out.ErrorPenalty = cloneFloat64Ptr(in.ErrorPenalty)
+	out.NeutralBase = cloneFloat64Ptr(in.NeutralBase)
 	out.LastUsedAt = cloneTimePtr(in.LastUsedAt)
 	if in.WaitingCount != nil {
 		waiting := *in.WaitingCount
@@ -156,13 +175,34 @@ func newScheduleCandidateFromQuality(account *Account, snapshot *AccountQualityS
 		candidate.RecentSuccessRate = float64Ptr(snapshot.RecentSuccessRate)
 		candidate.TTFTLE5sRate = float64Ptr(snapshot.TTFTLE5sRate)
 		candidate.TTFTLE10sRate = float64Ptr(snapshot.TTFTLE10sRate)
+		candidate.TTFTGT10sRate = float64Ptr(snapshot.TTFTGT10sRate)
+		candidate.TTFTGT20sRate = float64Ptr(snapshot.TTFTGT20sRate)
+		candidate.TTFTGT40sRate = float64Ptr(snapshot.TTFTGT40sRate)
 		candidate.TTFTSampleCount = snapshot.TTFTSampleCount
 		candidate.TotalRequests = snapshot.TotalRequests
+		candidate.FailureRequests = snapshot.FailureRequests
+		candidate.ErrorRate = float64Ptr(snapshot.ErrorRate)
+		candidate.SampleConfidence = float64Ptr(snapshot.SampleConfidence)
+		candidate.FastBonus = float64Ptr(snapshot.FastBonus)
+		candidate.SlowPenalty = float64Ptr(snapshot.SlowPenalty)
+		candidate.ErrorPenalty = float64Ptr(snapshot.ErrorPenalty)
+		candidate.NeutralBase = float64Ptr(snapshot.NeutralBase)
 	}
 	if known {
-		candidate.ScoreBreakdown = fmt.Sprintf("quality=%s = 0.40*success_rate + 0.40*ttft<=5s + 0.20*ttft<=10s", formatScheduleScore(score))
+		candidate.ScoreBreakdown = fmt.Sprintf(
+			"final=%s = neutral=%s + success=%s + ttft5=%s + ttft10=%s + fast_bonus=%s - slow_penalty=%s - error_penalty=%s (confidence=%s)",
+			formatScheduleScore(score),
+			formatScheduleScore(snapshot.NeutralBase),
+			formatScheduleScore(0.25*clampQualityRate(snapshot.RecentSuccessRate)),
+			formatScheduleScore(0.35*clampQualityRate(snapshot.TTFTLE5sRate)),
+			formatScheduleScore(0.20*clampQualityRate(snapshot.TTFTLE10sRate)),
+			formatScheduleScore(snapshot.FastBonus),
+			formatScheduleScore(snapshot.SlowPenalty),
+			formatScheduleScore(snapshot.ErrorPenalty),
+			formatScheduleScore(snapshot.SampleConfidence),
+		)
 	} else {
-		candidate.ScoreBreakdown = "quality unknown: treated as 1.0000 until at least 3 recent samples"
+		candidate.ScoreBreakdown = fmt.Sprintf("quality unknown: neutral score %s until at least %d recent samples", formatScheduleScore(accountQualityNeutralBase), accountQualityMinSamples)
 	}
 	if loadInfo != nil {
 		loadRate := float64(loadInfo.LoadRate)

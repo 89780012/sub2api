@@ -541,8 +541,18 @@ type UsageScheduleTrace struct {
 	RecentSuccessRate  *float64                      `json:"recent_success_rate,omitempty"`
 	TTFTLE5sRate       *float64                      `json:"ttft_le_5s_rate,omitempty"`
 	TTFTLE10sRate      *float64                      `json:"ttft_le_10s_rate,omitempty"`
+	TTFTGT10sRate      *float64                      `json:"ttft_gt_10s_rate,omitempty"`
+	TTFTGT20sRate      *float64                      `json:"ttft_gt_20s_rate,omitempty"`
+	TTFTGT40sRate      *float64                      `json:"ttft_gt_40s_rate,omitempty"`
 	TTFTSampleCount    int64                         `json:"ttft_sample_count,omitempty"`
 	TotalRequests      int64                         `json:"total_requests,omitempty"`
+	FailureRequests    int64                         `json:"failure_requests,omitempty"`
+	ErrorRate          *float64                      `json:"error_rate,omitempty"`
+	SampleConfidence   *float64                      `json:"sample_confidence,omitempty"`
+	FastBonus          *float64                      `json:"fast_bonus,omitempty"`
+	SlowPenalty        *float64                      `json:"slow_penalty,omitempty"`
+	ErrorPenalty       *float64                      `json:"error_penalty,omitempty"`
+	NeutralBase        *float64                      `json:"neutral_base,omitempty"`
 	LoadRate           *float64                      `json:"load_rate,omitempty"`
 	LoadSkew           *float64                      `json:"load_skew,omitempty"`
 	ScoreFormula       string                        `json:"score_formula,omitempty"`
@@ -562,8 +572,18 @@ type UsageScheduleCandidateScore struct {
 	RecentSuccessRate *float64   `json:"recent_success_rate,omitempty"`
 	TTFTLE5sRate      *float64   `json:"ttft_le_5s_rate,omitempty"`
 	TTFTLE10sRate     *float64   `json:"ttft_le_10s_rate,omitempty"`
+	TTFTGT10sRate     *float64   `json:"ttft_gt_10s_rate,omitempty"`
+	TTFTGT20sRate     *float64   `json:"ttft_gt_20s_rate,omitempty"`
+	TTFTGT40sRate     *float64   `json:"ttft_gt_40s_rate,omitempty"`
 	TTFTSampleCount   int64      `json:"ttft_sample_count,omitempty"`
 	TotalRequests     int64      `json:"total_requests,omitempty"`
+	FailureRequests   int64      `json:"failure_requests,omitempty"`
+	ErrorRate         *float64   `json:"error_rate,omitempty"`
+	SampleConfidence  *float64   `json:"sample_confidence,omitempty"`
+	FastBonus         *float64   `json:"fast_bonus,omitempty"`
+	SlowPenalty       *float64   `json:"slow_penalty,omitempty"`
+	ErrorPenalty      *float64   `json:"error_penalty,omitempty"`
+	NeutralBase       *float64   `json:"neutral_base,omitempty"`
 	LoadRate          *float64   `json:"load_rate,omitempty"`
 	WaitingCount      *int       `json:"waiting_count,omitempty"`
 	LastUsedAt        *time.Time `json:"last_used_at,omitempty"`

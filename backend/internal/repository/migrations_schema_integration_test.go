@@ -119,6 +119,12 @@ func TestMigrationsRunner_IsIdempotent_AndSchemaIsUpToDate(t *testing.T) {
 	requireColumn(t, tx, "account_quality_snapshots", "recent_success_rate", "double precision", 0, false)
 	requireColumn(t, tx, "account_quality_snapshots", "ttft_le_5s_count", "bigint", 0, false)
 	requireColumn(t, tx, "account_quality_snapshots", "ttft_le_10s_count", "bigint", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "ttft_gt_20s_count", "bigint", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "ttft_gt_40s_count", "bigint", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "error_rate", "double precision", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "fast_bonus", "double precision", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "slow_penalty", "double precision", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "error_penalty", "double precision", 0, false)
 	requireColumn(t, tx, "account_quality_snapshots", "quality_score", "double precision", 0, false)
 	requireIndex(t, tx, "account_quality_snapshots", "idx_account_quality_snapshots_score")
 

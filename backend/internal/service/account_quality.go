@@ -11,14 +11,21 @@ import (
 )
 
 const (
-	accountQualityWindow          = 5 * time.Minute
-	accountQualityRefreshInterval = time.Minute
-	accountQualityRefreshTimeout  = 20 * time.Second
-	accountQualityMinSamples      = 3
+	accountQualityWindow               = 5 * time.Minute
+	accountQualityRefreshInterval      = time.Minute
+	accountQualityRefreshTimeout       = 20 * time.Second
+	accountQualityMinSamples           = 3
+	accountQualityConfidenceMaxSamples = 12
 
-	accountQualitySuccessWeight = 0.40
-	accountQualityTTFT5sWeight  = 0.40
-	accountQualityTTFT10sWeight = 0.20
+	accountQualityNeutralBase        = 0.60
+	accountQualitySuccessWeight      = 0.25
+	accountQualityTTFT5sWeight       = 0.35
+	accountQualityTTFT10sWeight      = 0.20
+	accountQualityFastBonusWeight    = 0.20
+	accountQualitySlow10sPenalty     = 0.10
+	accountQualitySlow20sPenalty     = 0.30
+	accountQualitySlow40sPenalty     = 0.60
+	accountQualityErrorPenaltyWeight = 0.70
 
 	accountQualityStickyEscapeScoreThreshold       = 0.70
 	accountQualityStickyEscapeSuccessRateThreshold = 0.80
@@ -30,12 +37,25 @@ type AccountQualitySnapshot struct {
 	WindowEnd         time.Time
 	TotalRequests     int64
 	SuccessRequests   int64
+	FailureRequests   int64
 	RecentSuccessRate float64
+	ErrorRate         float64
 	TTFTSampleCount   int64
 	TTFTLE5sCount     int64
 	TTFTLE10sCount    int64
+	TTFTGT10sCount    int64
+	TTFTGT20sCount    int64
+	TTFTGT40sCount    int64
 	TTFTLE5sRate      float64
 	TTFTLE10sRate     float64
+	TTFTGT10sRate     float64
+	TTFTGT20sRate     float64
+	TTFTGT40sRate     float64
+	SampleConfidence  float64
+	FastBonus         float64
+	SlowPenalty       float64
+	ErrorPenalty      float64
+	NeutralBase       float64
 	QualityScore      float64
 	UpdatedAt         time.Time
 }
@@ -49,11 +69,53 @@ type AccountQualityReader interface {
 	GetSnapshotsByAccountIDs(ctx context.Context, accountIDs []int64) (map[int64]*AccountQualitySnapshot, error)
 }
 
-func ComputeAccountQualityScore(successRate, ttftLE5sRate, ttftLE10sRate float64) float64 {
-	score := accountQualitySuccessWeight*clampQualityRate(successRate) +
-		accountQualityTTFT5sWeight*clampQualityRate(ttftLE5sRate) +
-		accountQualityTTFT10sWeight*clampQualityRate(ttftLE10sRate)
-	return math.Round(score*10000) / 10000
+type AccountQualityComponents struct {
+	NeutralBase      float64
+	SuccessComponent float64
+	TTFT5sComponent  float64
+	TTFT10sComponent float64
+	FastBonus        float64
+	SlowPenalty      float64
+	ErrorPenalty     float64
+	SampleConfidence float64
+	FinalScore       float64
+}
+
+func ComputeAccountQualityScore(
+	successRate float64,
+	ttftLE5sRate float64,
+	ttftLE10sRate float64,
+	ttftGT10sRate float64,
+	ttftGT20sRate float64,
+	ttftGT40sRate float64,
+	errorRate float64,
+	totalRequests int64,
+) AccountQualityComponents {
+	confidence := 0.0
+	if totalRequests > 0 {
+		confidence = clampQualityRate(float64(totalRequests) / float64(accountQualityConfidenceMaxSamples))
+	}
+	successComponent := accountQualitySuccessWeight * clampQualityRate(successRate)
+	ttft5sComponent := accountQualityTTFT5sWeight * clampQualityRate(ttftLE5sRate)
+	ttft10sComponent := accountQualityTTFT10sWeight * clampQualityRate(ttftLE10sRate)
+	fastBonus := accountQualityFastBonusWeight * confidence * clampQualityRate((ttftLE5sRate*0.7)+(ttftLE10sRate*0.3))
+	slowPenalty := confidence * (accountQualitySlow10sPenalty*clampQualityRate(ttftGT10sRate) +
+		accountQualitySlow20sPenalty*clampQualityRate(ttftGT20sRate) +
+		accountQualitySlow40sPenalty*clampQualityRate(ttftGT40sRate))
+	errorPenalty := accountQualityErrorPenaltyWeight * clampQualityRate(errorRate)
+	finalScore := accountQualityNeutralBase + successComponent + ttft5sComponent + ttft10sComponent + fastBonus - slowPenalty - errorPenalty
+
+	return AccountQualityComponents{
+		NeutralBase:      accountQualityNeutralBase,
+		SuccessComponent: math.Round(successComponent*10000) / 10000,
+		TTFT5sComponent:  math.Round(ttft5sComponent*10000) / 10000,
+		TTFT10sComponent: math.Round(ttft10sComponent*10000) / 10000,
+		FastBonus:        math.Round(fastBonus*10000) / 10000,
+		SlowPenalty:      math.Round(slowPenalty*10000) / 10000,
+		ErrorPenalty:     math.Round(errorPenalty*10000) / 10000,
+		SampleConfidence: math.Round(confidence*10000) / 10000,
+		FinalScore:       math.Round(clampQualityRate(finalScore)*10000) / 10000,
+	}
 }
 
 func clampQualityRate(v float64) float64 {
@@ -68,7 +130,7 @@ func clampQualityRate(v float64) float64 {
 
 func effectiveAccountQualityScore(snapshot *AccountQualitySnapshot) (float64, bool) {
 	if snapshot == nil || snapshot.TotalRequests < accountQualityMinSamples {
-		return 1, false
+		return accountQualityNeutralBase, false
 	}
 	return clampQualityRate(snapshot.QualityScore), true
 }

@@ -146,6 +146,11 @@ func TestUsageLogFromService_KeepsScheduleTraceAdminOnly(t *testing.T) {
 			QualityScore:      f64Ptr(0.91),
 			TTFTLE5sRate:      f64Ptr(0.6),
 			TTFTLE10sRate:     f64Ptr(0.8),
+			TTFTGT20sRate:     f64Ptr(0.1),
+			ErrorRate:         f64Ptr(0.05),
+			FastBonus:         f64Ptr(0.12),
+			SlowPenalty:       f64Ptr(0.08),
+			ErrorPenalty:      f64Ptr(0.035),
 		},
 	}
 
@@ -161,6 +166,8 @@ func TestUsageLogFromService_KeepsScheduleTraceAdminOnly(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(adminJSON), `"schedule_trace"`)
 	require.Contains(t, string(adminJSON), `"ttft_le_5s_rate":0.6`)
+	require.Contains(t, string(adminJSON), `"ttft_gt_20s_rate":0.1`)
+	require.Contains(t, string(adminJSON), `"fast_bonus":0.12`)
 }
 
 func TestUsageLogFromService_FallsBackToLegacyModelWhenRequestedModelMissing(t *testing.T) {

@@ -1314,8 +1314,18 @@ export interface UsageScheduleCandidateScore {
   recent_success_rate?: number | null
   ttft_le_5s_rate?: number | null
   ttft_le_10s_rate?: number | null
+  ttft_gt_10s_rate?: number | null
+  ttft_gt_20s_rate?: number | null
+  ttft_gt_40s_rate?: number | null
   ttft_sample_count?: number
   total_requests?: number
+  failure_requests?: number
+  error_rate?: number | null
+  sample_confidence?: number | null
+  fast_bonus?: number | null
+  slow_penalty?: number | null
+  error_penalty?: number | null
+  neutral_base?: number | null
   load_rate?: number | null
   waiting_count?: number | null
   last_used_at?: string | null

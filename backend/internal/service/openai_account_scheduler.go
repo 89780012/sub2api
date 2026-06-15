@@ -534,8 +534,18 @@ type openAIAccountCandidateScore struct {
 	recentSuccessRate float64
 	ttftLE5sRate      float64
 	ttftLE10sRate     float64
+	ttftGT10sRate     float64
+	ttftGT20sRate     float64
+	ttftGT40sRate     float64
 	ttftSampleCount   int64
 	totalRequests     int64
+	failureRequests   int64
+	errorRateScore    float64
+	sampleConfidence  float64
+	fastBonus         float64
+	slowPenalty       float64
+	errorPenalty      float64
+	neutralBase       float64
 	priorityFactor    float64
 	loadFactor        float64
 	queueFactor       float64
@@ -736,6 +746,20 @@ func buildOpenAIWeightedSelectionOrder(
 	return order
 }
 
+func snapshotFloat64(snapshot *AccountQualitySnapshot, getter func(*AccountQualitySnapshot) float64) float64 {
+	if snapshot == nil || getter == nil {
+		return 0
+	}
+	return getter(snapshot)
+}
+
+func snapshotInt64(snapshot *AccountQualitySnapshot, getter func(*AccountQualitySnapshot) int64) int64 {
+	if snapshot == nil || getter == nil {
+		return 0
+	}
+	return getter(snapshot)
+}
+
 func (s *defaultOpenAIAccountScheduler) buildOpenAIAccountLoadPlan(
 	ctx context.Context,
 	req OpenAIAccountScheduleRequest,
@@ -759,13 +783,28 @@ func (s *defaultOpenAIAccountScheduler) buildOpenAIAccountLoadPlan(
 		snapshot := qualitySnapshots[account.ID]
 		quality, hasQuality := effectiveAccountQualityScore(snapshot)
 		allCandidates = append(allCandidates, openAIAccountCandidateScore{
-			account:    account,
-			loadInfo:   loadInfo,
-			errorRate:  errorRate,
-			ttft:       ttft,
-			hasTTFT:    hasTTFT,
-			quality:    quality,
-			hasQuality: hasQuality,
+			account:           account,
+			loadInfo:          loadInfo,
+			errorRate:         errorRate,
+			ttft:              ttft,
+			hasTTFT:           hasTTFT,
+			quality:           quality,
+			hasQuality:        hasQuality,
+			recentSuccessRate: snapshotFloat64(snapshot, func(s *AccountQualitySnapshot) float64 { return s.RecentSuccessRate }),
+			ttftLE5sRate:      snapshotFloat64(snapshot, func(s *AccountQualitySnapshot) float64 { return s.TTFTLE5sRate }),
+			ttftLE10sRate:     snapshotFloat64(snapshot, func(s *AccountQualitySnapshot) float64 { return s.TTFTLE10sRate }),
+			ttftGT10sRate:     snapshotFloat64(snapshot, func(s *AccountQualitySnapshot) float64 { return s.TTFTGT10sRate }),
+			ttftGT20sRate:     snapshotFloat64(snapshot, func(s *AccountQualitySnapshot) float64 { return s.TTFTGT20sRate }),
+			ttftGT40sRate:     snapshotFloat64(snapshot, func(s *AccountQualitySnapshot) float64 { return s.TTFTGT40sRate }),
+			ttftSampleCount:   snapshotInt64(snapshot, func(s *AccountQualitySnapshot) int64 { return s.TTFTSampleCount }),
+			totalRequests:     snapshotInt64(snapshot, func(s *AccountQualitySnapshot) int64 { return s.TotalRequests }),
+			failureRequests:   snapshotInt64(snapshot, func(s *AccountQualitySnapshot) int64 { return s.FailureRequests }),
+			errorRateScore:    snapshotFloat64(snapshot, func(s *AccountQualitySnapshot) float64 { return s.ErrorRate }),
+			sampleConfidence:  snapshotFloat64(snapshot, func(s *AccountQualitySnapshot) float64 { return s.SampleConfidence }),
+			fastBonus:         snapshotFloat64(snapshot, func(s *AccountQualitySnapshot) float64 { return s.FastBonus }),
+			slowPenalty:       snapshotFloat64(snapshot, func(s *AccountQualitySnapshot) float64 { return s.SlowPenalty }),
+			errorPenalty:      snapshotFloat64(snapshot, func(s *AccountQualitySnapshot) float64 { return s.ErrorPenalty }),
+			neutralBase:       snapshotFloat64(snapshot, func(s *AccountQualitySnapshot) float64 { return s.NeutralBase }),
 		})
 	}
 
@@ -907,8 +946,18 @@ func (s *defaultOpenAIAccountScheduler) buildOpenAIAccountLoadPlan(
 		traceItem.RecentSuccessRate = float64Ptr(item.recentSuccessRate)
 		traceItem.TTFTLE5sRate = float64Ptr(item.ttftLE5sRate)
 		traceItem.TTFTLE10sRate = float64Ptr(item.ttftLE10sRate)
+		traceItem.TTFTGT10sRate = float64Ptr(item.ttftGT10sRate)
+		traceItem.TTFTGT20sRate = float64Ptr(item.ttftGT20sRate)
+		traceItem.TTFTGT40sRate = float64Ptr(item.ttftGT40sRate)
 		traceItem.TTFTSampleCount = item.ttftSampleCount
 		traceItem.TotalRequests = item.totalRequests
+		traceItem.FailureRequests = item.failureRequests
+		traceItem.ErrorRate = float64Ptr(item.errorRateScore)
+		traceItem.SampleConfidence = float64Ptr(item.sampleConfidence)
+		traceItem.FastBonus = float64Ptr(item.fastBonus)
+		traceItem.SlowPenalty = float64Ptr(item.slowPenalty)
+		traceItem.ErrorPenalty = float64Ptr(item.errorPenalty)
+		traceItem.NeutralBase = float64Ptr(item.neutralBase)
 		traceItem.LoadRate = float64Ptr(float64(item.loadInfo.LoadRate))
 		traceItem.WaitingCount = intPtr(item.loadInfo.WaitingCount)
 		traceItem.ComputedScore = float64Ptr(item.score)
