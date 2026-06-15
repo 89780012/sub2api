@@ -35,6 +35,7 @@ func setupAdminRouter() (*gin.Engine, *stubAdminService) {
 	router.GET("/api/v1/admin/groups/all", groupHandler.GetAll)
 	router.GET("/api/v1/admin/groups/:id/models-list-candidates", groupHandler.GetModelsListCandidates)
 	router.GET("/api/v1/admin/groups/:id", groupHandler.GetByID)
+	router.GET("/api/v1/admin/groups/:id/account-quality", groupHandler.GetAccountQuality)
 	router.POST("/api/v1/admin/groups", groupHandler.Create)
 	router.PUT("/api/v1/admin/groups/:id", groupHandler.Update)
 	router.DELETE("/api/v1/admin/groups/:id", groupHandler.Delete)
@@ -210,6 +211,11 @@ func TestGroupHandlerEndpoints(t *testing.T) {
 
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/groups/2/api-keys", nil)
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/admin/groups/2/account-quality", nil)
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
 }

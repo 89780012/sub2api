@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -69,6 +70,11 @@ type AccountQualityReader interface {
 	GetSnapshotsByAccountIDs(ctx context.Context, accountIDs []int64) (map[int64]*AccountQualitySnapshot, error)
 }
 
+var (
+	defaultAccountQualityReaderMu sync.RWMutex
+	defaultAccountQualityReader   AccountQualityReader
+)
+
 type AccountQualityComponents struct {
 	NeutralBase      float64
 	SuccessComponent float64
@@ -126,6 +132,67 @@ func clampQualityRate(v float64) float64 {
 		return 1
 	}
 	return v
+}
+
+func SetDefaultAccountQualityReader(reader AccountQualityReader) {
+	defaultAccountQualityReaderMu.Lock()
+	defer defaultAccountQualityReaderMu.Unlock()
+	defaultAccountQualityReader = reader
+}
+
+func DefaultAccountQualityReader() AccountQualityReader {
+	defaultAccountQualityReaderMu.RLock()
+	defer defaultAccountQualityReaderMu.RUnlock()
+	return defaultAccountQualityReader
+}
+
+func DescribeAccountQualitySnapshot(snapshot *AccountQualitySnapshot) (float64, bool, string, AccountQualityComponents) {
+	if snapshot == nil {
+		components := AccountQualityComponents{
+			NeutralBase:      accountQualityNeutralBase,
+			SampleConfidence: 0,
+			FinalScore:       accountQualityNeutralBase,
+		}
+		return accountQualityNeutralBase, false, fmt.Sprintf(
+			"quality unknown: neutral score %.4f until at least %d recent samples",
+			accountQualityNeutralBase,
+			accountQualityMinSamples,
+		), components
+	}
+
+	components := ComputeAccountQualityScore(
+		snapshot.RecentSuccessRate,
+		snapshot.TTFTLE5sRate,
+		snapshot.TTFTLE10sRate,
+		snapshot.TTFTGT10sRate,
+		snapshot.TTFTGT20sRate,
+		snapshot.TTFTGT40sRate,
+		snapshot.ErrorRate,
+		snapshot.TotalRequests,
+	)
+
+	score, known := effectiveAccountQualityScore(snapshot)
+	if !known {
+		components.FinalScore = accountQualityNeutralBase
+		return accountQualityNeutralBase, false, fmt.Sprintf(
+			"quality unknown: neutral score %.4f until at least %d recent samples",
+			accountQualityNeutralBase,
+			accountQualityMinSamples,
+		), components
+	}
+
+	return score, true, fmt.Sprintf(
+		"final=%.4f = neutral=%.4f + success=%.4f + ttft5=%.4f + ttft10=%.4f + fast_bonus=%.4f - slow_penalty=%.4f - error_penalty=%.4f (confidence=%.4f)",
+		score,
+		components.NeutralBase,
+		components.SuccessComponent,
+		components.TTFT5sComponent,
+		components.TTFT10sComponent,
+		components.FastBonus,
+		components.SlowPenalty,
+		components.ErrorPenalty,
+		components.SampleConfidence,
+	), components
 }
 
 func effectiveAccountQualityScore(snapshot *AccountQualitySnapshot) (float64, bool) {
@@ -376,6 +443,7 @@ func ProvideAccountQualityService(repo AccountQualityRepository, gateway *Gatewa
 	if openaiGateway != nil {
 		openaiGateway.SetAccountQualityReader(svc)
 	}
+	SetDefaultAccountQualityReader(svc)
 	svc.Start()
 	return svc
 }

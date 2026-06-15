@@ -557,6 +557,60 @@ export interface AdminGroup extends Group {
   sort_order: number
 }
 
+export interface GroupAccountQualityItem {
+  account_id: number
+  account_name: string
+  platform: string
+  account_type: string
+  status: string
+  schedulable: boolean
+  priority: number
+  concurrency: number
+  group_ids?: number[]
+  last_used_at?: string | null
+  updated_at: string
+  quality_known: boolean
+  quality_score: number
+  score_breakdown: string
+  window_start?: string | null
+  window_end?: string | null
+  snapshot_updated_at?: string | null
+  total_requests: number
+  success_requests: number
+  failure_requests: number
+  recent_success_rate: number
+  error_rate: number
+  ttft_sample_count: number
+  ttft_le_5s_count: number
+  ttft_le_10s_count: number
+  ttft_gt_10s_count: number
+  ttft_gt_20s_count: number
+  ttft_gt_40s_count: number
+  ttft_le_5s_rate: number
+  ttft_le_10s_rate: number
+  ttft_gt_10s_rate: number
+  ttft_gt_20s_rate: number
+  ttft_gt_40s_rate: number
+  sample_confidence: number
+  neutral_base: number
+  success_component: number
+  ttft_5s_component: number
+  ttft_10s_component: number
+  fast_bonus: number
+  slow_penalty: number
+  error_penalty: number
+}
+
+export interface GroupAccountQualityResponse {
+  group_id: number
+  group_name: string
+  group_platform: string
+  account_count: number
+  known_account_count: number
+  unknown_account_count: number
+  items: GroupAccountQualityItem[]
+}
+
 export interface ModelsListConfig {
   enabled: boolean
   models: string[]

@@ -9,7 +9,8 @@ import type {
   GroupPlatform,
   CreateGroupRequest,
   UpdateGroupRequest,
-  PaginatedResponse
+  PaginatedResponse,
+  GroupAccountQualityResponse
 } from '@/types'
 
 /**
@@ -329,6 +330,11 @@ export async function getCapacitySummary(): Promise<
   return data
 }
 
+export async function getAccountQuality(id: number): Promise<GroupAccountQualityResponse> {
+  const { data } = await apiClient.get<GroupAccountQualityResponse>(`/admin/groups/${id}/account-quality`)
+  return data
+}
+
 export const groupsAPI = {
   list,
   getAll,
@@ -350,7 +356,8 @@ export const groupsAPI = {
   batchSetGroupRPMOverrides,
   updateSortOrder,
   getUsageSummary,
-  getCapacitySummary
+  getCapacitySummary,
+  getAccountQuality
 }
 
 export default groupsAPI

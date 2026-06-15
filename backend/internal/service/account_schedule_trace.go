@@ -167,7 +167,7 @@ func newScheduleCandidateFromQuality(account *Account, snapshot *AccountQualityS
 	candidate := newUsageScheduleCandidateScore(account)
 	candidate.Selected = selected
 	candidate.SelectionStage = stage
-	score, known := effectiveAccountQualityScore(snapshot)
+	score, known, breakdown, _ := DescribeAccountQualitySnapshot(snapshot)
 	candidate.QualityKnown = known
 	candidate.QualityScore = float64Ptr(score)
 	candidate.ComputedScore = float64Ptr(score)
@@ -188,22 +188,7 @@ func newScheduleCandidateFromQuality(account *Account, snapshot *AccountQualityS
 		candidate.ErrorPenalty = float64Ptr(snapshot.ErrorPenalty)
 		candidate.NeutralBase = float64Ptr(snapshot.NeutralBase)
 	}
-	if known {
-		candidate.ScoreBreakdown = fmt.Sprintf(
-			"final=%s = neutral=%s + success=%s + ttft5=%s + ttft10=%s + fast_bonus=%s - slow_penalty=%s - error_penalty=%s (confidence=%s)",
-			formatScheduleScore(score),
-			formatScheduleScore(snapshot.NeutralBase),
-			formatScheduleScore(0.25*clampQualityRate(snapshot.RecentSuccessRate)),
-			formatScheduleScore(0.35*clampQualityRate(snapshot.TTFTLE5sRate)),
-			formatScheduleScore(0.20*clampQualityRate(snapshot.TTFTLE10sRate)),
-			formatScheduleScore(snapshot.FastBonus),
-			formatScheduleScore(snapshot.SlowPenalty),
-			formatScheduleScore(snapshot.ErrorPenalty),
-			formatScheduleScore(snapshot.SampleConfidence),
-		)
-	} else {
-		candidate.ScoreBreakdown = fmt.Sprintf("quality unknown: neutral score %s until at least %d recent samples", formatScheduleScore(accountQualityNeutralBase), accountQualityMinSamples)
-	}
+	candidate.ScoreBreakdown = breakdown
 	if loadInfo != nil {
 		loadRate := float64(loadInfo.LoadRate)
 		candidate.LoadRate = &loadRate

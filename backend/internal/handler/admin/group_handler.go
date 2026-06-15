@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
@@ -20,6 +21,61 @@ type GroupHandler struct {
 	adminService         service.AdminService
 	dashboardService     *service.DashboardService
 	groupCapacityService *service.GroupCapacityService
+	accountQualityReader service.AccountQualityReader
+}
+
+type groupAccountQualityItem struct {
+	AccountID          int64     `json:"account_id"`
+	AccountName        string    `json:"account_name"`
+	Platform           string    `json:"platform"`
+	AccountType        string    `json:"account_type"`
+	Status             string    `json:"status"`
+	Schedulable        bool      `json:"schedulable"`
+	Priority           int       `json:"priority"`
+	Concurrency        int       `json:"concurrency"`
+	GroupIDs           []int64   `json:"group_ids,omitempty"`
+	LastUsedAt         *time.Time `json:"last_used_at,omitempty"`
+	UpdatedAt          time.Time `json:"updated_at"`
+	QualityKnown       bool      `json:"quality_known"`
+	QualityScore       float64   `json:"quality_score"`
+	ScoreBreakdown     string    `json:"score_breakdown"`
+	WindowStart        *time.Time `json:"window_start,omitempty"`
+	WindowEnd          *time.Time `json:"window_end,omitempty"`
+	SnapshotUpdatedAt  *time.Time `json:"snapshot_updated_at,omitempty"`
+	TotalRequests      int64     `json:"total_requests"`
+	SuccessRequests    int64     `json:"success_requests"`
+	FailureRequests    int64     `json:"failure_requests"`
+	RecentSuccessRate  float64   `json:"recent_success_rate"`
+	ErrorRate          float64   `json:"error_rate"`
+	TTFTSampleCount    int64     `json:"ttft_sample_count"`
+	TTFTLE5sCount      int64     `json:"ttft_le_5s_count"`
+	TTFTLE10sCount     int64     `json:"ttft_le_10s_count"`
+	TTFTGT10sCount     int64     `json:"ttft_gt_10s_count"`
+	TTFTGT20sCount     int64     `json:"ttft_gt_20s_count"`
+	TTFTGT40sCount     int64     `json:"ttft_gt_40s_count"`
+	TTFTLE5sRate       float64   `json:"ttft_le_5s_rate"`
+	TTFTLE10sRate      float64   `json:"ttft_le_10s_rate"`
+	TTFTGT10sRate      float64   `json:"ttft_gt_10s_rate"`
+	TTFTGT20sRate      float64   `json:"ttft_gt_20s_rate"`
+	TTFTGT40sRate      float64   `json:"ttft_gt_40s_rate"`
+	SampleConfidence   float64   `json:"sample_confidence"`
+	NeutralBase        float64   `json:"neutral_base"`
+	SuccessComponent   float64   `json:"success_component"`
+	TTFT5sComponent    float64   `json:"ttft_5s_component"`
+	TTFT10sComponent   float64   `json:"ttft_10s_component"`
+	FastBonus          float64   `json:"fast_bonus"`
+	SlowPenalty        float64   `json:"slow_penalty"`
+	ErrorPenalty       float64   `json:"error_penalty"`
+}
+
+type groupAccountQualityResponse struct {
+	GroupID           int64                    `json:"group_id"`
+	GroupName         string                   `json:"group_name"`
+	GroupPlatform     string                   `json:"group_platform"`
+	AccountCount      int                      `json:"account_count"`
+	KnownAccountCount int                      `json:"known_account_count"`
+	UnknownAccountCount int                    `json:"unknown_account_count"`
+	Items             []groupAccountQualityItem `json:"items"`
 }
 
 type optionalLimitField struct {
@@ -244,6 +300,130 @@ func (h *GroupHandler) GetByID(c *gin.Context) {
 	}
 
 	response.Success(c, dto.GroupFromServiceAdmin(group))
+}
+
+// GetAccountQuality handles getting current quality snapshots for all accounts in a group.
+// GET /api/v1/admin/groups/:id/account-quality
+func (h *GroupHandler) GetAccountQuality(c *gin.Context) {
+	groupID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid group ID")
+		return
+	}
+
+	group, err := h.adminService.GetGroup(c.Request.Context(), groupID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	const pageSize = 1000
+	page := 1
+	var (
+		accounts []service.Account
+		total    int64
+	)
+	for {
+		batch, batchTotal, err := h.adminService.ListAccounts(c.Request.Context(), page, pageSize, "", "", "", "", groupID, "", "priority", "asc")
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+		if page == 1 {
+			total = batchTotal
+		}
+		accounts = append(accounts, batch...)
+		if int64(len(accounts)) >= total || len(batch) == 0 {
+			break
+		}
+		page++
+	}
+
+	accountIDs := make([]int64, 0, len(accounts))
+	for i := range accounts {
+		accountIDs = append(accountIDs, accounts[i].ID)
+	}
+
+	reader := h.accountQualityReader
+	if reader == nil {
+		reader = service.DefaultAccountQualityReader()
+	}
+
+	snapshots := map[int64]*service.AccountQualitySnapshot{}
+	if reader != nil && len(accountIDs) > 0 {
+		snapshots, err = reader.GetSnapshotsByAccountIDs(c.Request.Context(), accountIDs)
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+	}
+
+	items := make([]groupAccountQualityItem, 0, len(accounts))
+	knownCount := 0
+	for i := range accounts {
+		account := &accounts[i]
+		snapshot := snapshots[account.ID]
+		score, known, breakdown, components := service.DescribeAccountQualitySnapshot(snapshot)
+		if known {
+			knownCount++
+		}
+		item := groupAccountQualityItem{
+			AccountID:         account.ID,
+			AccountName:       account.Name,
+			Platform:          account.Platform,
+			AccountType:       account.Type,
+			Status:            account.Status,
+			Schedulable:       account.Schedulable,
+			Priority:          account.Priority,
+			Concurrency:       account.Concurrency,
+			GroupIDs:          append([]int64(nil), account.GroupIDs...),
+			LastUsedAt:        account.LastUsedAt,
+			UpdatedAt:         account.UpdatedAt,
+			QualityKnown:      known,
+			QualityScore:      score,
+			ScoreBreakdown:    breakdown,
+			NeutralBase:       components.NeutralBase,
+			SuccessComponent:  components.SuccessComponent,
+			TTFT5sComponent:   components.TTFT5sComponent,
+			TTFT10sComponent:  components.TTFT10sComponent,
+			FastBonus:         components.FastBonus,
+			SlowPenalty:       components.SlowPenalty,
+			ErrorPenalty:      components.ErrorPenalty,
+			SampleConfidence:  components.SampleConfidence,
+		}
+		if snapshot != nil {
+			item.WindowStart = &snapshot.WindowStart
+			item.WindowEnd = &snapshot.WindowEnd
+			item.SnapshotUpdatedAt = &snapshot.UpdatedAt
+			item.TotalRequests = snapshot.TotalRequests
+			item.SuccessRequests = snapshot.SuccessRequests
+			item.FailureRequests = snapshot.FailureRequests
+			item.RecentSuccessRate = snapshot.RecentSuccessRate
+			item.ErrorRate = snapshot.ErrorRate
+			item.TTFTSampleCount = snapshot.TTFTSampleCount
+			item.TTFTLE5sCount = snapshot.TTFTLE5sCount
+			item.TTFTLE10sCount = snapshot.TTFTLE10sCount
+			item.TTFTGT10sCount = snapshot.TTFTGT10sCount
+			item.TTFTGT20sCount = snapshot.TTFTGT20sCount
+			item.TTFTGT40sCount = snapshot.TTFTGT40sCount
+			item.TTFTLE5sRate = snapshot.TTFTLE5sRate
+			item.TTFTLE10sRate = snapshot.TTFTLE10sRate
+			item.TTFTGT10sRate = snapshot.TTFTGT10sRate
+			item.TTFTGT20sRate = snapshot.TTFTGT20sRate
+			item.TTFTGT40sRate = snapshot.TTFTGT40sRate
+		}
+		items = append(items, item)
+	}
+
+	response.Success(c, groupAccountQualityResponse{
+		GroupID:             group.ID,
+		GroupName:           group.Name,
+		GroupPlatform:       group.Platform,
+		AccountCount:        len(items),
+		KnownAccountCount:   knownCount,
+		UnknownAccountCount: len(items) - knownCount,
+		Items:               items,
+	})
 }
 
 // GetModelsListCandidates handles getting candidate model IDs for custom /v1/models list.
