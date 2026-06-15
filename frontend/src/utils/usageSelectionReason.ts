@@ -7,6 +7,13 @@ export interface SelectionReasonDetail {
   value: string
 }
 
+export interface SelectionCandidateComparisonStep {
+  title: string
+  lines: string[]
+  selected: boolean
+  routed: boolean
+}
+
 const ruleLabelKeys: Record<string, string> = {
   monitor_quality_priority_load_lru: 'usage.selectionRules.monitorQualityPriorityLoadLru',
   monitor_quality_priority_lru: 'usage.selectionRules.monitorQualityPriorityLru',
@@ -35,6 +42,20 @@ const formatMaybeNumber = (value: unknown): string => {
 const formatAccountLabel = (name: unknown, id: unknown): string => {
   const accountName = isPresent(name) ? String(name) : '-'
   return `${accountName}${isPresent(id) ? ` #${id}` : ''}`
+}
+
+const isSameAccount = (
+  candidate: NonNullable<UsageSelectionReason['candidates']>[number],
+  accountID: unknown,
+  accountName: unknown,
+): boolean => {
+  if (isPresent(candidate.account_id) && isPresent(accountID)) {
+    return Number(candidate.account_id) === Number(accountID)
+  }
+  if (isPresent(candidate.account_name) && isPresent(accountName)) {
+    return String(candidate.account_name) === String(accountName)
+  }
+  return false
 }
 
 export const formatSelectionRule = (rule: unknown, t: Translate): string => {
@@ -127,11 +148,11 @@ export const formatSelectionCompareSummary = (
   fallback = '-',
 ): string => {
   if (!reason) return fallback
-  const candidateCount = Array.isArray(reason.candidates) ? reason.candidates.length : 0
+  const candidateCount = Array.isArray(reason.candidates) ? reason.candidates.length : undefined
   const selected = formatAccountLabel(reason.account_name, reason.account_id)
   const routed = formatAccountLabel(reason.final_account_name ?? reason.account_name, reason.final_account_id ?? reason.account_id)
   const parts = [
-    `${t('usage.selectionCandidatesCompared')}:${candidateCount || reason.candidate_count || 0}`,
+    `${t('usage.selectionCandidatesCompared')}:${candidateCount ?? reason.candidate_count ?? '-'}`,
     `${t('usage.selectionAccount')}:${selected}`,
     `${t('usage.selectionFinalAccount')}:${routed}`,
   ]
@@ -257,6 +278,32 @@ export const formatSelectionCandidateLines = (
       `5=${formatMonitorCounts(candidate.monitor_5, t)}`,
       `7=${formatMonitorCounts(candidate.monitor_7, t)}`,
     ].filter(Boolean).join(' | ')
+  })
+}
+
+export const formatSelectionCandidateComparisonSteps = (
+  reason: UsageSelectionReason | null | undefined,
+  t: Translate,
+): SelectionCandidateComparisonStep[] => {
+  if (!reason?.candidates?.length) return []
+  return reason.candidates.map((candidate, index) => {
+    const rank = candidate.rank ?? index + 1
+    const monitorLabel = isPresent(candidate.monitor_name)
+      ? String(candidate.monitor_name)
+      : (isPresent(candidate.monitor_id) ? `#${candidate.monitor_id}` : '-')
+    const selected = isSameAccount(candidate, reason.account_id, reason.account_name)
+    const routed = isSameAccount(candidate, reason.final_account_id ?? reason.account_id, reason.final_account_name ?? reason.account_name)
+    return {
+      title: `${rank}. ${formatAccountLabel(candidate.account_name, candidate.account_id)}`,
+      selected,
+      routed,
+      lines: [
+        `${t('usage.selectionMonitor')}: ${monitorLabel}`,
+        `${t('usage.selectionMonitor3')}: ${formatMonitorCounts(candidate.monitor_3, t)}`,
+        `${t('usage.selectionMonitor5')}: ${formatMonitorCounts(candidate.monitor_5, t)}`,
+        `${t('usage.selectionMonitor7')}: ${formatMonitorCounts(candidate.monitor_7, t)}`,
+      ],
+    }
   })
 }
 

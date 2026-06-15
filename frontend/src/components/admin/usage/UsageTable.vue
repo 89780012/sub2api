@@ -340,11 +340,32 @@
           >
             <div class="mb-1 text-xs font-semibold text-gray-300">{{ t('usage.selectionCandidatesCompared') }}</div>
             <div
-              v-for="(line, index) in formatSelectionCandidateLines(selectionTooltipData.selection_reason, t)"
-              :key="`${index}-${line}`"
-              class="mb-1 break-words text-[11px] leading-5 text-gray-100"
+              v-for="(step, index) in formatSelectionCandidateComparisonSteps(selectionTooltipData.selection_reason, t)"
+              :key="`${index}-${step.title}`"
+              class="mb-2 rounded border border-gray-700/80 bg-gray-950/40 px-2 py-1.5 text-[11px] leading-5 text-gray-100"
             >
-              {{ line }}
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="font-semibold text-white">{{ step.title }}</span>
+                <span
+                  v-if="step.selected"
+                  class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-blue-500/20 text-blue-300 ring-1 ring-inset ring-blue-500/30"
+                >
+                  {{ t('usage.selectionAccount') }}
+                </span>
+                <span
+                  v-if="step.routed"
+                  class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-emerald-500/20 text-emerald-300 ring-1 ring-inset ring-emerald-500/30"
+                >
+                  {{ t('usage.selectionFinalAccount') }}
+                </span>
+              </div>
+              <div
+                v-for="line in step.lines"
+                :key="line"
+                class="break-words text-gray-200"
+              >
+                {{ line }}
+              </div>
             </div>
           </div>
         </div>
@@ -508,7 +529,7 @@ import {
   hasImageOutputCost,
 } from '@/utils/imageUsage'
 import {
-  formatSelectionCandidateLines,
+  formatSelectionCandidateComparisonSteps,
   formatSelectionCompareSummary,
   formatSelectionReasonDetails,
   formatSelectionReasonSummary,

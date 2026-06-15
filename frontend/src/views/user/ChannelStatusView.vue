@@ -155,13 +155,7 @@ function compareString(left: string | null | undefined, right: string | null | u
 }
 
 function sortMonitorViewsByString(rows: UserMonitorView[]): UserMonitorView[] {
-  return [...rows].sort((left, right) =>
-    compareString(left.name, right.name) ||
-    compareString(left.group_name, right.group_name) ||
-    compareString(left.provider, right.provider) ||
-    compareString(left.primary_model, right.primary_model) ||
-    left.id - right.id
-  )
+  return [...rows]
 }
 
 watch(items, () => {

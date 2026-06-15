@@ -342,6 +342,10 @@ describe('admin UsageTable tooltip', () => {
     expect(text).toContain('Compared Accounts')
     expect(text).toContain('1. acc-a #9')
     expect(text).toContain('2. acc-final #11')
+    expect(text).toContain('Matched monitor: mon-a')
+    expect(text).toContain('Matched monitor: mon-final')
+    expect(text).toContain('Monitor 3: Green:3 Orange:0 Red:0 Unknown:0')
+    expect(text).toContain('Monitor 3: Green:2 Orange:1 Red:0 Unknown:0')
     expect(text).toContain('5=Green:4 Orange:1 Red:0 Unknown:0')
   })
 

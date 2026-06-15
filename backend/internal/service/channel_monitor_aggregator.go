@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
+	"strings"
 )
 
 // 渠道监控聚合层：把 latest + availability 拼成 admin/user 视图所需的 summary / detail。
@@ -74,7 +76,114 @@ func (s *ChannelMonitorService) ListUserView(ctx context.Context) ([]*UserMonito
 		primaryLatest := pickLatest(latestMap[m.ID], m.PrimaryModel)
 		views = append(views, buildUserViewFromSummary(m, summaries[m.ID], primaryLatest, timelineMap[m.ID]))
 	}
+	sort.SliceStable(views, func(i, j int) bool {
+		return compareUserMonitorViews(views[i], views[j]) < 0
+	})
 	return views, nil
+}
+
+func compareUserMonitorViews(a, b *UserMonitorView) int {
+	if a == nil || b == nil {
+		return 0
+	}
+	if bucketCmp := compareUserMonitorBuckets(a.Name, b.Name); bucketCmp != 0 {
+		return bucketCmp
+	}
+	for _, pair := range [][2]monitorStatusCounts{
+		{countUserMonitorStatuses(a.Timeline, 3), countUserMonitorStatuses(b.Timeline, 3)},
+		{countUserMonitorStatuses(a.Timeline, 5), countUserMonitorStatuses(b.Timeline, 5)},
+		{countUserMonitorStatuses(a.Timeline, 7), countUserMonitorStatuses(b.Timeline, 7)},
+	} {
+		if cmp := compareMonitorStatusCounts(pair[0], pair[1]); cmp != 0 {
+			return cmp
+		}
+	}
+	if a.Availability7d != b.Availability7d {
+		if a.Availability7d > b.Availability7d {
+			return -1
+		}
+		return 1
+	}
+	if latencyCmp := compareOptionalIntAsc(a.PrimaryLatencyMs, b.PrimaryLatencyMs); latencyCmp != 0 {
+		return latencyCmp
+	}
+	if pingCmp := compareOptionalIntAsc(a.PrimaryPingLatencyMs, b.PrimaryPingLatencyMs); pingCmp != 0 {
+		return pingCmp
+	}
+	if cmp := strings.Compare(strings.ToLower(strings.TrimSpace(a.Name)), strings.ToLower(strings.TrimSpace(b.Name))); cmp != 0 {
+		return cmp
+	}
+	if cmp := strings.Compare(strings.ToLower(strings.TrimSpace(a.GroupName)), strings.ToLower(strings.TrimSpace(b.GroupName))); cmp != 0 {
+		return cmp
+	}
+	if cmp := strings.Compare(strings.ToLower(strings.TrimSpace(a.Provider)), strings.ToLower(strings.TrimSpace(b.Provider))); cmp != 0 {
+		return cmp
+	}
+	if cmp := strings.Compare(strings.ToLower(strings.TrimSpace(a.PrimaryModel)), strings.ToLower(strings.TrimSpace(b.PrimaryModel))); cmp != 0 {
+		return cmp
+	}
+	if a.ID < b.ID {
+		return -1
+	}
+	if a.ID > b.ID {
+		return 1
+	}
+	return 0
+}
+
+func compareUserMonitorBuckets(left, right string) int {
+	return userMonitorBucketPriority(left) - userMonitorBucketPriority(right)
+}
+
+func userMonitorBucketPriority(name string) int {
+	normalized := strings.ToLower(strings.TrimSpace(name))
+	switch {
+	case strings.HasPrefix(normalized, "plus=="):
+		return 0
+	case strings.HasPrefix(normalized, "pro=="):
+		return 1
+	default:
+		return 2
+	}
+}
+
+func countUserMonitorStatuses(timeline []UserMonitorTimelinePoint, limit int) monitorStatusCounts {
+	counts := monitorStatusCounts{}
+	for idx, point := range timeline {
+		if idx >= limit {
+			break
+		}
+		switch strings.TrimSpace(point.Status) {
+		case MonitorStatusOperational:
+			counts.Green++
+		case MonitorStatusDegraded:
+			counts.Orange++
+		case MonitorStatusFailed, MonitorStatusError:
+			counts.Red++
+		default:
+			counts.Unknown++
+		}
+	}
+	return counts
+}
+
+func compareOptionalIntAsc(left, right *int) int {
+	if left == nil && right == nil {
+		return 0
+	}
+	if left == nil {
+		return 1
+	}
+	if right == nil {
+		return -1
+	}
+	if *left < *right {
+		return -1
+	}
+	if *left > *right {
+		return 1
+	}
+	return 0
 }
 
 // collectMonitorIndexes 把 monitors 列表按 ID 展开为聚合查询所需的三个索引结构。

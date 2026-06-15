@@ -2050,6 +2050,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 			}
 		})
 		shuffleWithinMonitorQualitySortGroups(ctx, s.monitorQualityScorer, available)
+		availableCandidateItems := buildLegacySelectionCandidateItems(ctx, s.monitorQualityScorer, available)
 
 		selectionOrder := make([]accountWithLoad, 0, len(available))
 		if requireCompact {
@@ -2084,7 +2085,15 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 			}
 			result, err := s.tryAcquireAccountSlot(ctx, fresh.ID, fresh.Concurrency)
 			if err == nil && result != nil && result.Acquired {
-				selection, selectErr := s.newAcquiredSelectionResult(ctx, fresh, result.ReleaseFunc)
+				selection, selectErr := s.newSelectionResultWithReason(ctx, fresh, true, result.ReleaseFunc, nil, accountSelectionReasonInput{
+					Layer:          "openai_load_awareness",
+					Rule:           accountSelectionRuleMonitorQualityPriorityLoadLRU,
+					FinalAccount:   fresh,
+					LoadInfo:       item.loadInfo,
+					CandidateCount: len(available),
+					TieBreakers:    []string{"monitor_quality_3_5_7", "priority", "load", "lru"},
+					Candidates:     availableCandidateItems,
+				})
 				if selectErr != nil {
 					return nil, true, selectErr
 				}
@@ -2104,6 +2113,17 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 		if requireCompact {
 			ordered = prioritizeOpenAICompactAccounts(ordered)
 		}
+		orderedCandidateItems := make([]accountWithLoad, 0, len(ordered))
+		for _, acc := range ordered {
+			if acc == nil {
+				continue
+			}
+			orderedCandidateItems = append(orderedCandidateItems, accountWithLoad{
+				account:  acc,
+				loadInfo: &AccountLoadInfo{AccountID: acc.ID},
+			})
+		}
+		candidateReasonItems := buildLegacySelectionCandidateItems(ctx, s.monitorQualityScorer, orderedCandidateItems)
 		for _, acc := range ordered {
 			fresh := s.resolveFreshSchedulableOpenAIAccount(ctx, acc, requestedModel, false, requiredCapability)
 			if fresh == nil {
@@ -2118,7 +2138,14 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 			}
 			result, err := s.tryAcquireAccountSlot(ctx, fresh.ID, fresh.Concurrency)
 			if err == nil && result != nil && result.Acquired {
-				selection, selectErr := s.newAcquiredSelectionResult(ctx, fresh, result.ReleaseFunc)
+				selection, selectErr := s.newSelectionResultWithReason(ctx, fresh, true, result.ReleaseFunc, nil, accountSelectionReasonInput{
+					Layer:          "openai_load_awareness",
+					Rule:           accountSelectionRuleLegacy,
+					FinalAccount:   fresh,
+					CandidateCount: len(ordered),
+					TieBreakers:    []string{"monitor_quality_3_5_7", "priority", "lru"},
+					Candidates:     candidateReasonItems,
+				})
 				if selectErr != nil {
 					return nil, selectErr
 				}
@@ -2149,6 +2176,17 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 	if requireCompact {
 		candidates = prioritizeOpenAICompactAccounts(candidates)
 	}
+	fallbackCandidates := make([]accountWithLoad, 0, len(candidates))
+	for _, acc := range candidates {
+		if acc == nil {
+			continue
+		}
+		fallbackCandidates = append(fallbackCandidates, accountWithLoad{
+			account:  acc,
+			loadInfo: &AccountLoadInfo{AccountID: acc.ID},
+		})
+	}
+	fallbackCandidateItems := buildLegacySelectionCandidateItems(ctx, s.monitorQualityScorer, fallbackCandidates)
 	for _, acc := range candidates {
 		fresh := s.resolveFreshSchedulableOpenAIAccount(ctx, acc, requestedModel, false, requiredCapability)
 		if fresh == nil {
@@ -2161,11 +2199,19 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 		if needsUpstreamCheck && s.isUpstreamModelRestrictedByChannel(ctx, *groupID, fresh, requestedModel, requireCompact) {
 			continue
 		}
-		return s.newSelectionResult(ctx, fresh, false, nil, &AccountWaitPlan{
+		waitPlan := &AccountWaitPlan{
 			AccountID:      fresh.ID,
 			MaxConcurrency: fresh.Concurrency,
 			Timeout:        cfg.FallbackWaitTimeout,
 			MaxWaiting:     cfg.FallbackMaxWaiting,
+		}
+		return s.newSelectionResultWithReason(ctx, fresh, false, nil, waitPlan, accountSelectionReasonInput{
+			Layer:          "openai_fallback_wait",
+			Rule:           accountSelectionRuleMonitorQualityPriorityLRU,
+			FinalAccount:   fresh,
+			CandidateCount: len(candidates),
+			TieBreakers:    []string{"monitor_quality_3_5_7", "priority", "lru", "wait_queue"},
+			Candidates:     fallbackCandidateItems,
 		})
 	}
 
@@ -2298,6 +2344,38 @@ func (s *OpenAIGatewayService) newSelectionResult(ctx context.Context, account *
 			MonitorScorer: s.monitorQualityScorer,
 			TieBreakers:   []string{"monitor_quality_3_5_7", "priority", "load", "lru"},
 		}),
+	}, nil
+}
+
+func (s *OpenAIGatewayService) newSelectionResultWithReason(ctx context.Context, account *Account, acquired bool, release func(), waitPlan *AccountWaitPlan, reasonInput accountSelectionReasonInput) (*AccountSelectionResult, error) {
+	hydrated, err := s.hydrateSelectedAccount(ctx, account)
+	if err != nil {
+		return nil, err
+	}
+	reasonInput.Account = hydrated
+	if reasonInput.FinalAccount == nil {
+		reasonInput.FinalAccount = hydrated
+	}
+	reasonInput.Acquired = acquired
+	reasonInput.WaitPlan = waitPlan
+	if reasonInput.MonitorScorer == nil {
+		reasonInput.MonitorScorer = s.monitorQualityScorer
+	}
+	if strings.TrimSpace(reasonInput.Layer) == "" {
+		reasonInput.Layer = "openai_load_awareness"
+	}
+	if strings.TrimSpace(reasonInput.Rule) == "" {
+		reasonInput.Rule = accountSelectionRuleMonitorQualityPriorityLoadLRU
+	}
+	if len(reasonInput.TieBreakers) == 0 {
+		reasonInput.TieBreakers = []string{"monitor_quality_3_5_7", "priority", "load", "lru"}
+	}
+	return &AccountSelectionResult{
+		Account:         hydrated,
+		Acquired:        acquired,
+		ReleaseFunc:     release,
+		WaitPlan:        waitPlan,
+		SelectionReason: buildAccountSelectionReason(ctx, reasonInput),
 	}, nil
 }
 
