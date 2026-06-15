@@ -96,6 +96,45 @@ type accountWithLoad struct {
 	loadInfo *AccountLoadInfo
 }
 
+func buildLegacySelectionCandidateItems(ctx context.Context, scorer *ChannelMonitorQualityScorer, candidates []accountWithLoad) []map[string]any {
+	if len(candidates) == 0 {
+		return nil
+	}
+	items := make([]map[string]any, 0, len(candidates))
+	for idx, candidate := range candidates {
+		if candidate.account == nil {
+			continue
+		}
+		loadInfo := candidate.loadInfo
+		if loadInfo == nil {
+			loadInfo = &AccountLoadInfo{AccountID: candidate.account.ID}
+		}
+		score := channelMonitorQualityScore{}
+		if scorer != nil {
+			score = scorer.ScoreAccount(ctx, candidate.account)
+		}
+		item := map[string]any{
+			"rank":         idx + 1,
+			"account_id":   candidate.account.ID,
+			"account_name": candidate.account.Name,
+			"priority":     candidate.account.Priority,
+			"load_rate":    loadInfo.LoadRate,
+			"waiting":      loadInfo.WaitingCount,
+			"monitor_3":    monitorStatusCountsReason(score.Counts3),
+			"monitor_5":    monitorStatusCountsReason(score.Counts5),
+			"monitor_7":    monitorStatusCountsReason(score.Counts7),
+		}
+		if score.MonitorID > 0 {
+			item["monitor_id"] = score.MonitorID
+		}
+		if strings.TrimSpace(score.MonitorName) != "" {
+			item["monitor_name"] = score.MonitorName
+		}
+		items = append(items, item)
+	}
+	return items
+}
+
 var ForceCacheBillingContextKey = forceCacheBillingKeyType{}
 
 var (
@@ -1917,6 +1956,7 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 					}
 				})
 				shuffleWithinMonitorQualitySortGroups(ctx, s.monitorQualityScorer, routingAvailable)
+				routingCandidateItems := buildLegacySelectionCandidateItems(ctx, s.monitorQualityScorer, routingAvailable)
 
 				// 4. 尝试获取槽位
 				for _, item := range routingAvailable {
@@ -1936,9 +1976,11 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 						return s.newSelectionResultWithReason(ctx, item.account, true, result.ReleaseFunc, nil, accountSelectionReasonInput{
 							Layer:          "model_routing_load_balance",
 							Rule:           accountSelectionRuleMonitorQualityPriorityLoadLRU,
+							FinalAccount:   item.account,
 							LoadInfo:       item.loadInfo,
 							CandidateCount: len(routingAvailable),
 							TieBreakers:    []string{"monitor_quality_3_5_7", "priority", "load", "lru"},
+							Candidates:     routingCandidateItems,
 						})
 					}
 				}
@@ -1961,9 +2003,11 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 					return s.newSelectionResultWithReason(ctx, item.account, false, nil, waitPlan, accountSelectionReasonInput{
 						Layer:          "model_routing_wait",
 						Rule:           accountSelectionRuleMonitorQualityPriorityLoadLRU,
+						FinalAccount:   item.account,
 						LoadInfo:       item.loadInfo,
 						CandidateCount: len(routingAvailable),
 						TieBreakers:    []string{"monitor_quality_3_5_7", "priority", "load", "lru", "wait_queue"},
+						Candidates:     routingCandidateItems,
 					})
 				}
 				// 所有路由账号会话限制都已满，继续到 Layer 2 回退
@@ -2179,6 +2223,7 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 
 		// 分层过滤选择：优先级 → 负载率 → LRU
 		for len(available) > 0 {
+			availableCandidateItems := buildLegacySelectionCandidateItems(ctx, s.monitorQualityScorer, available)
 			// 1. 取优先级最小的集合
 			candidates := filterByMinMonitorQuality(available, s.monitorQualityScorer, ctx)
 			candidates = filterByMinPriority(candidates)
@@ -2202,9 +2247,11 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 					return s.newSelectionResultWithReason(ctx, selected.account, true, result.ReleaseFunc, nil, accountSelectionReasonInput{
 						Layer:          "load_balance",
 						Rule:           accountSelectionRuleMonitorQualityPriorityLoadLRU,
+						FinalAccount:   selected.account,
 						LoadInfo:       selected.loadInfo,
 						CandidateCount: len(available),
 						TieBreakers:    []string{"monitor_quality_3_5_7", "priority", "load", "lru"},
+						Candidates:     availableCandidateItems,
 					})
 				}
 			}
@@ -2223,6 +2270,17 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 
 	// ============ Layer 3: 兜底排队 ============
 	s.sortCandidatesForFallback(ctx, candidates, preferOAuth, cfg.FallbackSelectionMode)
+	fallbackCandidates := make([]accountWithLoad, 0, len(candidates))
+	for _, acc := range candidates {
+		if acc == nil {
+			continue
+		}
+		fallbackCandidates = append(fallbackCandidates, accountWithLoad{
+			account:  acc,
+			loadInfo: &AccountLoadInfo{AccountID: acc.ID},
+		})
+	}
+	fallbackCandidateItems := buildLegacySelectionCandidateItems(ctx, s.monitorQualityScorer, fallbackCandidates)
 	for _, acc := range candidates {
 		// 会话数量限制检查（等待计划也需要占用会话配额）
 		if !s.checkAndRegisterSession(ctx, acc, sessionHash) {
@@ -2235,9 +2293,12 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 			MaxWaiting:     cfg.FallbackMaxWaiting,
 		}
 		return s.newSelectionResultWithReason(ctx, acc, false, nil, waitPlan, accountSelectionReasonInput{
-			Layer:       "fallback_wait",
-			Rule:        accountSelectionRuleMonitorQualityPriorityLRU,
-			TieBreakers: []string{"monitor_quality_3_5_7", "priority", "lru", "wait_queue"},
+			Layer:          "fallback_wait",
+			Rule:           accountSelectionRuleMonitorQualityPriorityLRU,
+			FinalAccount:   acc,
+			CandidateCount: len(candidates),
+			TieBreakers:    []string{"monitor_quality_3_5_7", "priority", "lru", "wait_queue"},
+			Candidates:     fallbackCandidateItems,
 		})
 	}
 	return nil, ErrNoAvailableAccounts
@@ -2246,6 +2307,17 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 func (s *GatewayService) tryAcquireByLegacyOrder(ctx context.Context, candidates []*Account, groupID *int64, sessionHash string, preferOAuth bool) (*AccountSelectionResult, bool, error) {
 	ordered := append([]*Account(nil), candidates...)
 	s.sortAccountsByMonitorQualityPriorityAndLastUsed(ctx, ordered, preferOAuth)
+	legacyCandidates := make([]accountWithLoad, 0, len(ordered))
+	for _, acc := range ordered {
+		if acc == nil {
+			continue
+		}
+		legacyCandidates = append(legacyCandidates, accountWithLoad{
+			account:  acc,
+			loadInfo: &AccountLoadInfo{AccountID: acc.ID},
+		})
+	}
+	candidateReasonItems := buildLegacySelectionCandidateItems(ctx, s.monitorQualityScorer, legacyCandidates)
 
 	for _, acc := range ordered {
 		result, err := s.tryAcquireAccountSlot(ctx, acc.ID, acc.Concurrency)
@@ -2258,7 +2330,14 @@ func (s *GatewayService) tryAcquireByLegacyOrder(ctx context.Context, candidates
 			if sessionHash != "" && s.cache != nil {
 				_ = s.cache.SetSessionAccountID(ctx, derefGroupID(groupID), sessionHash, acc.ID, stickySessionTTL)
 			}
-			selection, err := s.newSelectionResult(ctx, acc, true, result.ReleaseFunc, nil)
+			selection, err := s.newSelectionResultWithReason(ctx, acc, true, result.ReleaseFunc, nil, accountSelectionReasonInput{
+				Layer:          "legacy_order",
+				Rule:           accountSelectionRuleLegacy,
+				FinalAccount:   acc,
+				CandidateCount: len(ordered),
+				TieBreakers:    []string{"monitor_quality_3_5_7", "priority", "lru"},
+				Candidates:     candidateReasonItems,
+			})
 			if err != nil {
 				return nil, false, err
 			}

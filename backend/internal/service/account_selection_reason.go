@@ -18,6 +18,7 @@ type accountSelectionReasonInput struct {
 	Layer          string
 	Rule           string
 	Account        *Account
+	FinalAccount   *Account
 	LoadInfo       *AccountLoadInfo
 	MonitorScorer  *ChannelMonitorQualityScorer
 	Acquired       bool
@@ -26,6 +27,7 @@ type accountSelectionReasonInput struct {
 	TopK           int
 	LoadSkew       float64
 	TieBreakers    []string
+	Candidates     []map[string]any
 	Notes          map[string]any
 }
 
@@ -54,6 +56,10 @@ func buildAccountSelectionReason(ctx context.Context, in accountSelectionReasonI
 		"priority":     in.Account.Priority,
 		"acquired":     in.Acquired,
 	}
+	if in.FinalAccount != nil {
+		reason["final_account_id"] = in.FinalAccount.ID
+		reason["final_account_name"] = in.FinalAccount.Name
+	}
 	if len(in.TieBreakers) > 0 {
 		reason["tie_breakers"] = in.TieBreakers
 	}
@@ -65,6 +71,9 @@ func buildAccountSelectionReason(ctx context.Context, in accountSelectionReasonI
 	}
 	if in.LoadSkew > 0 {
 		reason["load_skew"] = in.LoadSkew
+	}
+	if len(in.Candidates) > 0 {
+		reason["candidates"] = in.Candidates
 	}
 	if in.LoadInfo != nil {
 		reason["load"] = map[string]any{

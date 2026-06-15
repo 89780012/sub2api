@@ -21,11 +21,14 @@ const messages: Record<string, string> = {
   'usage.rate': 'Rate',
   'usage.accountMultiplier': 'Account rate',
   'usage.selectionReason': 'Selection Basis',
+  'usage.selectionCompare': 'Selection Compare',
   'usage.selectionSummary': 'Summary',
   'usage.selectionRule': 'Rule',
   'usage.selectionAccount': 'Account',
+  'usage.selectionFinalAccount': 'Final Routed Account',
   'usage.selectionEndpoint': 'Endpoint',
   'usage.selectionCandidates': 'Candidates',
+  'usage.selectionCandidatesCompared': 'Compared Accounts',
   'usage.selectionTopK': 'Top K',
   'usage.selectionLoadSkew': 'Load skew',
   'usage.selectionMonitorMatched': 'Monitor matched',
@@ -103,6 +106,7 @@ const DataTableStub = {
       <div v-for="row in data" :key="row.request_id">
         <slot name="cell-model" :row="row" :value="row.model" />
         <slot name="cell-selection_reason" :row="row" />
+        <slot name="cell-selection_compare" :row="row" />
         <slot name="cell-billing_mode" :row="row" />
         <slot name="cell-tokens" :row="row" />
         <slot name="cell-cost" :row="row" />
@@ -261,6 +265,8 @@ describe('admin UsageTable tooltip', () => {
         rule: 'monitor_quality_priority_load_lru',
         account_id: 9,
         account_name: 'acc-a',
+        final_account_id: 11,
+        final_account_name: 'acc-final',
         priority: 10,
         monitor_quality: {
           known: true,
@@ -281,6 +287,26 @@ describe('admin UsageTable tooltip', () => {
         },
         load: { load_rate: 0, current_concurrency: 0, waiting_count: 0 },
         tie_breakers: ['monitor_quality_3_5_7', 'priority', 'load', 'lru'],
+        candidates: [
+          {
+            rank: 1,
+            account_id: 9,
+            account_name: 'acc-a',
+            monitor_name: 'mon-a',
+            monitor_3: { green: 3, orange: 0, red: 0, unknown: 0 },
+            monitor_5: { green: 5, orange: 0, red: 0, unknown: 0 },
+            monitor_7: { green: 7, orange: 0, red: 0, unknown: 0 },
+          },
+          {
+            rank: 2,
+            account_id: 11,
+            account_name: 'acc-final',
+            monitor_name: 'mon-final',
+            monitor_3: { green: 2, orange: 1, red: 0, unknown: 0 },
+            monitor_5: { green: 4, orange: 1, red: 0, unknown: 0 },
+            monitor_7: { green: 6, orange: 1, red: 0, unknown: 0 },
+          },
+        ],
       },
     }
 
@@ -311,6 +337,12 @@ describe('admin UsageTable tooltip', () => {
     expect(text).toContain('Priority')
     expect(text).toContain('Latest first')
     expect(text).toContain('1.Green@2026-03-08T00:07:00Z')
+    expect(text).toContain('Final Routed Account')
+    expect(text).toContain('acc-final #11')
+    expect(text).toContain('Compared Accounts')
+    expect(text).toContain('1. acc-a #9')
+    expect(text).toContain('2. acc-final #11')
+    expect(text).toContain('5=Green:4 Orange:1 Red:0 Unknown:0')
   })
 
   it.each([

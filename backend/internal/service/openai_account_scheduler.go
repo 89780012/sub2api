@@ -61,6 +61,7 @@ type OpenAIAccountScheduleDecision struct {
 	LoadSkew            float64
 	SelectedAccountID   int64
 	SelectedAccountType string
+	Candidates          []map[string]any
 }
 
 type OpenAIAccountSchedulerMetricsSnapshot struct {
@@ -331,6 +332,9 @@ func (s *defaultOpenAIAccountScheduler) Select(
 	if selection != nil && selection.Account != nil {
 		decision.SelectedAccountID = selection.Account.ID
 		decision.SelectedAccountType = selection.Account.Type
+		if candidates, ok := selection.SelectionReason["candidates"].([]map[string]any); ok {
+			decision.Candidates = candidates
+		}
 		s.ensureSelectionReason(ctx, selection, decision)
 	}
 	return selection, decision, nil
@@ -350,6 +354,7 @@ func (s *defaultOpenAIAccountScheduler) ensureSelectionReason(ctx context.Contex
 		Layer:          decision.Layer,
 		Rule:           rule,
 		Account:        selection.Account,
+		FinalAccount:   selection.Account,
 		Acquired:       selection.Acquired,
 		WaitPlan:       selection.WaitPlan,
 		CandidateCount: decision.CandidateCount,
@@ -357,6 +362,7 @@ func (s *defaultOpenAIAccountScheduler) ensureSelectionReason(ctx context.Contex
 		LoadSkew:       decision.LoadSkew,
 		MonitorScorer:  s.service.monitorQualityScorer,
 		TieBreakers:    tieBreakers,
+		Candidates:     decision.Candidates,
 	})
 }
 
@@ -428,6 +434,7 @@ func (s *defaultOpenAIAccountScheduler) selectBySessionHash(
 				Layer:         "openai_sticky",
 				Rule:          accountSelectionRuleSticky,
 				Account:       account,
+				FinalAccount:  account,
 				Acquired:      true,
 				MonitorScorer: s.service.monitorQualityScorer,
 				TieBreakers:   []string{"sticky_session"},
@@ -461,6 +468,7 @@ func (s *defaultOpenAIAccountScheduler) selectBySessionHash(
 				Layer:         "openai_sticky_wait",
 				Rule:          accountSelectionRuleSticky,
 				Account:       account,
+				FinalAccount:  account,
 				WaitPlan:      waitPlan,
 				MonitorScorer: s.service.monitorQualityScorer,
 				TieBreakers:   []string{"sticky_session", "wait_queue"},
@@ -512,6 +520,37 @@ type openAIAccountCandidateScore struct {
 	errorRate      float64
 	ttft           float64
 	hasTTFT        bool
+}
+
+func buildOpenAICandidateReasonItems(candidates []openAIAccountCandidateScore) []map[string]any {
+	if len(candidates) == 0 {
+		return nil
+	}
+	items := make([]map[string]any, 0, len(candidates))
+	for idx, candidate := range candidates {
+		if candidate.account == nil {
+			continue
+		}
+		item := map[string]any{
+			"rank":         idx + 1,
+			"account_id":   candidate.account.ID,
+			"account_name": candidate.account.Name,
+			"priority":     candidate.account.Priority,
+			"load_rate":    candidate.loadInfo.LoadRate,
+			"waiting":      candidate.loadInfo.WaitingCount,
+			"monitor_3":    monitorStatusCountsReason(candidate.monitorQuality.Counts3),
+			"monitor_5":    monitorStatusCountsReason(candidate.monitorQuality.Counts5),
+			"monitor_7":    monitorStatusCountsReason(candidate.monitorQuality.Counts7),
+		}
+		if candidate.monitorQuality.MonitorID > 0 {
+			item["monitor_id"] = candidate.monitorQuality.MonitorID
+		}
+		if strings.TrimSpace(candidate.monitorQuality.MonitorName) != "" {
+			item["monitor_name"] = candidate.monitorQuality.MonitorName
+		}
+		items = append(items, item)
+	}
+	return items
 }
 
 type openAIAccountCandidateHeap []openAIAccountCandidateScore
@@ -914,6 +953,7 @@ func (s *defaultOpenAIAccountScheduler) tryAcquireOpenAISelectionOrder(
 	loadSkew float64,
 ) (*AccountSelectionResult, bool, error) {
 	compactBlocked := false
+	candidateItems := buildOpenAICandidateReasonItems(selectionOrder)
 	for i := 0; i < len(selectionOrder); i++ {
 		candidate := selectionOrder[i]
 		fresh := s.service.resolveFreshSchedulableOpenAIAccount(ctx, candidate.account, req.RequestedModel, false, req.RequiredCapability)
@@ -944,6 +984,7 @@ func (s *defaultOpenAIAccountScheduler) tryAcquireOpenAISelectionOrder(
 					Layer:          "openai_load_balance",
 					Rule:           accountSelectionRuleAdvancedOpenAI,
 					Account:        fresh,
+					FinalAccount:   fresh,
 					Acquired:       true,
 					LoadInfo:       candidate.loadInfo,
 					CandidateCount: candidateCount,
@@ -951,6 +992,7 @@ func (s *defaultOpenAIAccountScheduler) tryAcquireOpenAISelectionOrder(
 					LoadSkew:       loadSkew,
 					MonitorScorer:  s.service.monitorQualityScorer,
 					TieBreakers:    []string{"monitor_quality_3_5_7", "priority", "load", "lru"},
+					Candidates:     candidateItems,
 				}),
 			}, compactBlocked, nil
 		}
@@ -1092,6 +1134,7 @@ func (s *defaultOpenAIAccountScheduler) selectByLoadBalance(
 				Layer:          "openai_fallback_wait",
 				Rule:           accountSelectionRuleMonitorQualityPriorityLoadLRU,
 				Account:        fresh,
+				FinalAccount:   fresh,
 				LoadInfo:       candidate.loadInfo,
 				WaitPlan:       waitPlan,
 				CandidateCount: candidateCount,
@@ -1099,6 +1142,7 @@ func (s *defaultOpenAIAccountScheduler) selectByLoadBalance(
 				LoadSkew:       loadSkew,
 				MonitorScorer:  s.service.monitorQualityScorer,
 				TieBreakers:    []string{"monitor_quality_3_5_7", "priority", "load", "lru", "wait_queue"},
+				Candidates:     buildOpenAICandidateReasonItems(selectionOrder),
 			}),
 		}, candidateCount, topK, loadSkew, nil
 	}

@@ -1225,6 +1225,8 @@ export interface UsageSelectionReason {
   rule?: string
   account_id?: number
   account_name?: string
+  final_account_id?: number
+  final_account_name?: string
   platform?: string
   provider?: string
   endpoint?: string
@@ -1253,6 +1255,19 @@ export interface UsageSelectionReason {
   }
   wait_plan?: Record<string, unknown>
   tie_breakers?: string[]
+  candidates?: Array<{
+    rank?: number
+    account_id?: number
+    account_name?: string
+    priority?: number
+    load_rate?: number
+    waiting?: number
+    monitor_id?: number
+    monitor_name?: string
+    monitor_3?: MonitorStatusCounts
+    monitor_5?: MonitorStatusCounts
+    monitor_7?: MonitorStatusCounts
+  }>
   [key: string]: unknown
 }
 

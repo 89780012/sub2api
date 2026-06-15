@@ -93,6 +93,24 @@
           <span v-else class="text-sm text-gray-400 dark:text-gray-500">-</span>
         </template>
 
+        <template #cell-selection_compare="{ row }">
+          <div
+            v-if="row.selection_reason"
+            class="group relative inline-flex max-w-[380px] items-center gap-1.5"
+            @mouseenter="showSelectionTooltip($event, row)"
+            @mouseleave="hideSelectionTooltip"
+          >
+            <Icon name="document" size="sm" class="text-blue-500" />
+            <span class="truncate text-sm text-gray-600 dark:text-gray-300">
+              {{ formatSelectionCompareSummary(row.selection_reason, t) }}
+            </span>
+            <div class="flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-100 transition-colors group-hover:bg-blue-100 dark:bg-gray-700 dark:group-hover:bg-blue-900/50">
+              <Icon name="infoCircle" size="xs" class="text-gray-400 group-hover:text-blue-500 dark:text-gray-500 dark:group-hover:text-blue-400" />
+            </div>
+          </div>
+          <span v-else class="text-sm text-gray-400 dark:text-gray-500">-</span>
+        </template>
+
         <template #cell-group="{ row }">
           <span v-if="row.group" class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
             {{ row.group.name }}
@@ -316,6 +334,19 @@
             <span class="text-gray-400">{{ item.label }}</span>
             <span class="max-w-[260px] text-right font-medium text-white break-words">{{ item.value }}</span>
           </div>
+          <div
+            v-if="selectionTooltipData?.selection_reason?.candidates?.length"
+            class="mt-2 border-t border-gray-700 pt-2"
+          >
+            <div class="mb-1 text-xs font-semibold text-gray-300">{{ t('usage.selectionCandidatesCompared') }}</div>
+            <div
+              v-for="(line, index) in formatSelectionCandidateLines(selectionTooltipData.selection_reason, t)"
+              :key="`${index}-${line}`"
+              class="mb-1 break-words text-[11px] leading-5 text-gray-100"
+            >
+              {{ line }}
+            </div>
+          </div>
         </div>
         <div class="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-b-[6px] border-r-[6px] border-t-[6px] border-b-transparent border-r-gray-900 border-t-transparent dark:border-r-gray-800"></div>
       </div>
@@ -477,6 +508,8 @@ import {
   hasImageOutputCost,
 } from '@/utils/imageUsage'
 import {
+  formatSelectionCandidateLines,
+  formatSelectionCompareSummary,
   formatSelectionReasonDetails,
   formatSelectionReasonSummary,
 } from '@/utils/usageSelectionReason'

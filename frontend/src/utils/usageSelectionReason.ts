@@ -32,6 +32,11 @@ const formatMaybeNumber = (value: unknown): string => {
   return isPresent(value) ? String(value) : '-'
 }
 
+const formatAccountLabel = (name: unknown, id: unknown): string => {
+  const accountName = isPresent(name) ? String(name) : '-'
+  return `${accountName}${isPresent(id) ? ` #${id}` : ''}`
+}
+
 export const formatSelectionRule = (rule: unknown, t: Translate): string => {
   const key = typeof rule === 'string' ? rule : ''
   return ruleLabelKeys[key] ? t(ruleLabelKeys[key]) : (key || '-')
@@ -62,12 +67,6 @@ const formatMatchedMonitor = (quality: NonNullable<UsageSelectionReason['monitor
   return [name, id].filter(Boolean).join(' ')
 }
 
-const formatMonitorStatusSample = (sample: MonitorStatusSample, index: number, t: Translate): string => {
-  const status = String(sample.status || 'unknown')
-  const checkedAt = sample.checked_at ? `@${sample.checked_at}` : ''
-  return `${index + 1}.${formatMonitorStatusLabel(status, t)}${checkedAt}`
-}
-
 const formatMonitorStatusLabel = (status: string, t: Translate): string => {
   switch (status) {
     case 'operational':
@@ -82,25 +81,18 @@ const formatMonitorStatusLabel = (status: string, t: Translate): string => {
   }
 }
 
+const formatMonitorStatusSample = (sample: MonitorStatusSample, index: number, t: Translate): string => {
+  const status = String(sample.status || 'unknown')
+  const checkedAt = sample.checked_at ? `@${sample.checked_at}` : ''
+  return `${index + 1}.${formatMonitorStatusLabel(status, t)}${checkedAt}`
+}
+
 export const formatMonitorRecentSamples = (
   samples: MonitorStatusSample[] | null | undefined,
   t: Translate,
 ): string => {
   if (!samples || samples.length === 0) return '-'
   return samples.map((sample, index) => formatMonitorStatusSample(sample, index, t)).join(' ')
-}
-
-export const formatSelectionReasonSummary = (
-  reason: UsageSelectionReason | null | undefined,
-  t: Translate,
-  fallback = '-',
-): string => {
-  if (!reason) return fallback
-  const parts = [formatSelectionRule(reason.rule, t)]
-  const monitor = formatMonitorSummary(reason, t)
-  if (monitor) parts.push(monitor)
-  if (isPresent(reason.priority)) parts.push(`${t('usage.priority')} ${reason.priority}`)
-  return parts.filter(Boolean).join(' | ')
 }
 
 export const formatSelectionTieBreakers = (
@@ -116,6 +108,36 @@ export const formatSelectionTieBreakers = (
     .join(' > ')
 }
 
+export const formatSelectionReasonSummary = (
+  reason: UsageSelectionReason | null | undefined,
+  t: Translate,
+  fallback = '-',
+): string => {
+  if (!reason) return fallback
+  const parts = [formatSelectionRule(reason.rule, t)]
+  const monitor = formatMonitorSummary(reason, t)
+  if (monitor) parts.push(monitor)
+  if (isPresent(reason.priority)) parts.push(`${t('usage.priority')} ${reason.priority}`)
+  return parts.filter(Boolean).join(' | ')
+}
+
+export const formatSelectionCompareSummary = (
+  reason: UsageSelectionReason | null | undefined,
+  t: Translate,
+  fallback = '-',
+): string => {
+  if (!reason) return fallback
+  const candidateCount = Array.isArray(reason.candidates) ? reason.candidates.length : 0
+  const selected = formatAccountLabel(reason.account_name, reason.account_id)
+  const routed = formatAccountLabel(reason.final_account_name ?? reason.account_name, reason.final_account_id ?? reason.account_id)
+  const parts = [
+    `${t('usage.selectionCandidatesCompared')}:${candidateCount || reason.candidate_count || 0}`,
+    `${t('usage.selectionAccount')}:${selected}`,
+    `${t('usage.selectionFinalAccount')}:${routed}`,
+  ]
+  return parts.join(' | ')
+}
+
 export const formatSelectionReasonDetails = (
   reason: UsageSelectionReason | null | undefined,
   t: Translate,
@@ -128,8 +150,21 @@ export const formatSelectionReasonDetails = (
   ]
 
   if (isPresent(reason.account_name) || isPresent(reason.account_id)) {
-    const name = isPresent(reason.account_name) ? String(reason.account_name) : '-'
-    details.push({ label: t('usage.selectionAccount'), value: `${name}${isPresent(reason.account_id) ? ` #${reason.account_id}` : ''}` })
+    details.push({
+      label: t('usage.selectionAccount'),
+      value: formatAccountLabel(reason.account_name, reason.account_id),
+    })
+  }
+  if (
+    isPresent(reason.final_account_name) ||
+    isPresent(reason.final_account_id) ||
+    isPresent(reason.account_name) ||
+    isPresent(reason.account_id)
+  ) {
+    details.push({
+      label: t('usage.selectionFinalAccount'),
+      value: formatAccountLabel(reason.final_account_name ?? reason.account_name, reason.final_account_id ?? reason.account_id),
+    })
   }
   if (isPresent(reason.endpoint)) {
     details.push({ label: t('usage.selectionEndpoint'), value: String(reason.endpoint) })
@@ -205,12 +240,46 @@ export const formatSelectionReasonDetails = (
   return details
 }
 
+export const formatSelectionCandidateLines = (
+  reason: UsageSelectionReason | null | undefined,
+  t: Translate,
+): string[] => {
+  if (!reason?.candidates?.length) return []
+  return reason.candidates.map((candidate, index) => {
+    const monitorName = isPresent(candidate.monitor_name)
+      ? ` ${String(candidate.monitor_name)}`
+      : (isPresent(candidate.monitor_id) ? ` #${candidate.monitor_id}` : '')
+    const rank = candidate.rank ?? index + 1
+    return [
+      `${rank}. ${formatAccountLabel(candidate.account_name, candidate.account_id)}`,
+      monitorName.trim(),
+      `3=${formatMonitorCounts(candidate.monitor_3, t)}`,
+      `5=${formatMonitorCounts(candidate.monitor_5, t)}`,
+      `7=${formatMonitorCounts(candidate.monitor_7, t)}`,
+    ].filter(Boolean).join(' | ')
+  })
+}
+
+export const formatSelectionCompareExport = (
+  reason: UsageSelectionReason | null | undefined,
+  t: Translate,
+): string => {
+  if (!reason) return ''
+  const candidates = formatSelectionCandidateLines(reason, t).join(' || ')
+  return [
+    `${t('usage.selectionAccount')}: ${formatAccountLabel(reason.account_name, reason.account_id)}`,
+    `${t('usage.selectionFinalAccount')}: ${formatAccountLabel(reason.final_account_name ?? reason.account_name, reason.final_account_id ?? reason.account_id)}`,
+    `${t('usage.selectionCandidatesCompared')}: ${candidates || '-'}`,
+  ].join('; ')
+}
+
 export const formatSelectionReasonExport = (
   reason: UsageSelectionReason | null | undefined,
   t: Translate,
 ): string => {
   if (!reason) return ''
-  return formatSelectionReasonDetails(reason, t)
-    .map(({ label, value }) => `${label}: ${value}`)
-    .join('; ')
+  return [
+    ...formatSelectionReasonDetails(reason, t).map(({ label, value }) => `${label}: ${value}`),
+    `${t('usage.selectionCompare')}: ${formatSelectionCompareExport(reason, t)}`,
+  ].join('; ')
 }
