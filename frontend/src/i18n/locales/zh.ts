@@ -2308,6 +2308,20 @@ export default {
           risk: '当前风险',
           lowConfidence: '样本偏少'
         },
+        rankReasonTitle: '为什么在这里',
+        rankReasons: {
+          unknown: '已知样本还不够，先按观察位置排序。',
+          lowConfidence: '样本量还偏少，现在的排序只是暂时结果。',
+          errorStreak: '最近有连续错误，即使基础分不低也会被往后推。',
+          highPenalty: '累计扣分还比较大，在当前分组里会更晚被选中。',
+          severeSlow: '慢响应比例较高，所以刻意被往后放。',
+          slowStreak: '最近的连续慢响应还在影响排序。',
+          penaltyActive: '临时扣分还没有消化，同分时会排在更干净的账号后面。',
+          elevatedRisk: '慢响应或错误信号偏高，所以还在更稳定的账号后面。',
+          recovering: '已经开始恢复，但剩余扣分还在，所以暂时不会在最前面。',
+          stableRecoveryEdge: '质量比较稳定，恢复相关指标让它在接近分数里更占优。',
+          stableLeading: '当前质量稳定、拖累少，所以在这个分组里会比较靠前。'
+        },
         states: {
           stable: '稳定',
           watch: '观察中',

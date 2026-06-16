@@ -2213,6 +2213,20 @@ export default {
           risk: 'At Risk',
           lowConfidence: 'Low Confidence'
         },
+        rankReasonTitle: 'Why here',
+        rankReasons: {
+          unknown: 'Too few known samples for a strong rank, so it stays in the observation bucket first.',
+          lowConfidence: 'Sample size is still thin, so this rank is provisional and may move quickly with more traffic.',
+          errorStreak: 'Recent consecutive errors are pushing it back even if its base quality was previously good.',
+          highPenalty: 'A large accumulated penalty is still weighing it down, so it should be picked later in this group.',
+          severeSlow: 'Very slow responses are frequent enough that the account is intentionally pushed back.',
+          slowStreak: 'Recent slow streak is still active, so the scheduler is holding it behind cleaner accounts.',
+          penaltyActive: 'It still carries a temporary penalty, so same-score accounts without penalties will stay ahead.',
+          elevatedRisk: 'Slow or error signals are elevated, so it is still behind the more stable accounts.',
+          recovering: 'Recovery has started, but remaining penalty still keeps it behind fully clean accounts.',
+          stableRecoveryEdge: 'Quality is stable and the recovery tie-break gives it a slight edge among close scores.',
+          stableLeading: 'Quality is stable with little drag, so it stays near the front of this group.'
+        },
         states: {
           stable: 'Stable',
           watch: 'Watch',

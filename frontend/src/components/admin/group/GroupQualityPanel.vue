@@ -131,6 +131,13 @@
                         {{ chip.label }}
                       </span>
                     </div>
+                    <div class="mt-3 flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <Icon name="infoCircle" size="xs" class="mt-0.5 shrink-0 text-gray-400 dark:text-gray-500" />
+                      <div class="min-w-0">
+                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ t('admin.groups.qualityPanel.rankReasonTitle') }}:</span>
+                        <span class="ml-1">{{ rankReason(item) }}</span>
+                      </div>
+                    </div>
                   </div>
 
                   <div class="space-y-1">
@@ -426,6 +433,30 @@ const mainStateClass = (item: GroupAccountQualityItem) => {
   if (state === 'risk') return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
   if (state === 'lowConfidence') return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
   return 'bg-gray-200 text-gray-700 dark:bg-dark-600 dark:text-gray-300'
+}
+
+const rankReason = (item: GroupAccountQualityItem) => {
+  if (!item.quality_known) return t('admin.groups.qualityPanel.rankReasons.unknown')
+
+  const state = getMainState(item)
+
+  if (state === 'lowConfidence') return t('admin.groups.qualityPanel.rankReasons.lowConfidence')
+  if (item.error_streak > 0) return t('admin.groups.qualityPanel.rankReasons.errorStreak')
+  if (item.applied_penalty >= 0.35) {
+    return item.recovery_credit > 0
+      ? t('admin.groups.qualityPanel.rankReasons.recovering')
+      : t('admin.groups.qualityPanel.rankReasons.highPenalty')
+  }
+  if (item.ttft_gt_40s_rate >= 0.15) return t('admin.groups.qualityPanel.rankReasons.severeSlow')
+  if (item.slow_streak > 0) return t('admin.groups.qualityPanel.rankReasons.slowStreak')
+  if (item.applied_penalty > 0) {
+    return item.recovery_credit > 0
+      ? t('admin.groups.qualityPanel.rankReasons.recovering')
+      : t('admin.groups.qualityPanel.rankReasons.penaltyActive')
+  }
+  if (item.ttft_gt_20s_rate >= 0.2 || item.error_rate >= 0.12) return t('admin.groups.qualityPanel.rankReasons.elevatedRisk')
+  if (item.recovery_credit > 0 || getRecoveryTieBreak(item) > 0) return t('admin.groups.qualityPanel.rankReasons.stableRecoveryEdge')
+  return t('admin.groups.qualityPanel.rankReasons.stableLeading')
 }
 
 const scoreToneClass = (item: GroupAccountQualityItem) => {
