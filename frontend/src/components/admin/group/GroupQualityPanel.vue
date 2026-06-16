@@ -115,6 +115,7 @@
                     <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                       <span>{{ item.platform }}</span>
                       <span>{{ item.account_type }}</span>
+                      <span>{{ t('admin.groups.qualityPanel.scheduleRankLabel', { rank: item.schedule_rank }) }}</span>
                       <span>{{ t('admin.groups.qualityPanel.priorityLabel', { priority: item.priority }) }}</span>
                       <span>{{ t('admin.groups.qualityPanel.concurrencyLabel', { concurrency: item.concurrency }) }}</span>
                     </div>
@@ -149,6 +150,9 @@
                     </div>
                     <div class="text-xs text-gray-500 dark:text-gray-400">
                       {{ t('admin.groups.qualityPanel.baseQualityLabel', { value: formatScore(item.base_quality_score) }) }}
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ t('admin.groups.qualityPanel.transientPenaltyLabel', { value: formatScore(item.transient_penalty) }) }}
                     </div>
                     <div class="text-xs text-gray-500 dark:text-gray-400">
                       {{ t('admin.groups.qualityPanel.appliedPenaltyLabel', { value: formatScore(item.applied_penalty) }) }}
@@ -282,6 +286,9 @@
                     <div class="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-200">
                       {{ t('admin.groups.qualityPanel.formulaTitle') }}
                     </div>
+                    <div class="mb-2 text-[11px] text-gray-500 dark:text-gray-400">
+                      {{ item.schedule_sort_key }}
+                    </div>
                     <code class="block whitespace-pre-wrap break-words rounded bg-gray-100 px-2 py-1.5 text-[11px] leading-5 text-gray-700 dark:bg-dark-800 dark:text-gray-300">
                       {{ item.score_breakdown }}
                     </code>
@@ -340,7 +347,7 @@ const platformColorClass = computed(() => {
 })
 
 const getRecoveryTieBreak = (item: GroupAccountQualityItem) => {
-  return item.recovery_credit + item.recovery_success_streak * 0.01 + item.recovery_fast_streak * 0.008
+  return item.recovery_credit + Math.min(item.recovery_success_streak * 0.01, 0.04) + Math.min(item.recovery_fast_streak * 0.02, 0.08)
 }
 
 const getMainState = (item: GroupAccountQualityItem) => {
@@ -353,12 +360,7 @@ const getMainState = (item: GroupAccountQualityItem) => {
 
 const sortedItems = computed(() => {
   return [...items.value].sort((a, b) => {
-    if (b.effective_quality_score !== a.effective_quality_score) return b.effective_quality_score - a.effective_quality_score
-    if (a.applied_penalty !== b.applied_penalty) return a.applied_penalty - b.applied_penalty
-    const recoveryGap = getRecoveryTieBreak(b) - getRecoveryTieBreak(a)
-    if (recoveryGap !== 0) return recoveryGap
-    if (a.quality_known !== b.quality_known) return a.quality_known ? -1 : 1
-    if (a.priority !== b.priority) return a.priority - b.priority
+    if (a.schedule_rank !== b.schedule_rank) return a.schedule_rank - b.schedule_rank
     return a.account_id - b.account_id
   })
 })
@@ -438,9 +440,8 @@ const mainStateClass = (item: GroupAccountQualityItem) => {
 const rankReason = (item: GroupAccountQualityItem) => {
   if (!item.quality_known) return t('admin.groups.qualityPanel.rankReasons.unknown')
 
-  const state = getMainState(item)
-
-  if (state === 'lowConfidence') return t('admin.groups.qualityPanel.rankReasons.lowConfidence')
+  if (item.priority > sortedItems.value[0]?.priority) return t('admin.groups.qualityPanel.rankReasons.lowerPriority')
+  if (getMainState(item) === 'lowConfidence') return t('admin.groups.qualityPanel.rankReasons.lowConfidence')
   if (item.error_streak > 0) return t('admin.groups.qualityPanel.rankReasons.errorStreak')
   if (item.applied_penalty >= 0.35) {
     return item.recovery_credit > 0
@@ -449,6 +450,7 @@ const rankReason = (item: GroupAccountQualityItem) => {
   }
   if (item.ttft_gt_40s_rate >= 0.15) return t('admin.groups.qualityPanel.rankReasons.severeSlow')
   if (item.slow_streak > 0) return t('admin.groups.qualityPanel.rankReasons.slowStreak')
+  if (item.schedule_rank > 1 && item.last_used_at) return t('admin.groups.qualityPanel.rankReasons.recentlyUsed')
   if (item.applied_penalty > 0) {
     return item.recovery_credit > 0
       ? t('admin.groups.qualityPanel.rankReasons.recovering')

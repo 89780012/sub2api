@@ -618,6 +618,8 @@ export interface GroupAccountQualityItem {
   auxiliary_ttft_gt_20s_count: number
   auxiliary_ttft_gt_40s_count: number
   auxiliary_weight: number
+  schedule_rank: number
+  schedule_sort_key: string
 }
 
 export interface GroupAccountQualityResponse {

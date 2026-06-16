@@ -113,7 +113,7 @@ type AccountQualityComponents struct {
 	FinalScore            float64
 }
 
-func ComputeAccountQualityScore(
+func computeAccountQualityComponentsWithConfidence(
 	successRate float64,
 	ttftLE5sRate float64,
 	ttftLE10sRate float64,
@@ -121,12 +121,9 @@ func ComputeAccountQualityScore(
 	ttftGT20sRate float64,
 	ttftGT40sRate float64,
 	errorRate float64,
-	totalRequests int64,
+	confidence float64,
 ) AccountQualityComponents {
-	confidence := 0.0
-	if totalRequests > 0 {
-		confidence = clampQualityRate(float64(totalRequests) / float64(accountQualityConfidenceMaxSamples))
-	}
+	confidence = clampQualityRate(confidence)
 	ttft5To10sRate := clampQualityRate(ttftLE10sRate - ttftLE5sRate)
 	successComponent := accountQualitySuccessWeight * clampQualityRate(successRate)
 	ttft5sComponent := accountQualityTTFT5sWeight * clampQualityRate(ttftLE5sRate)
@@ -149,6 +146,32 @@ func ComputeAccountQualityScore(
 		SampleConfidence: math.Round(confidence*10000) / 10000,
 		FinalScore:       math.Round(clampQualityRate(finalScore)*10000) / 10000,
 	}
+}
+
+func ComputeAccountQualityScore(
+	successRate float64,
+	ttftLE5sRate float64,
+	ttftLE10sRate float64,
+	ttftGT10sRate float64,
+	ttftGT20sRate float64,
+	ttftGT40sRate float64,
+	errorRate float64,
+	totalRequests int64,
+) AccountQualityComponents {
+	confidence := 0.0
+	if totalRequests > 0 {
+		confidence = clampQualityRate(float64(totalRequests) / float64(accountQualityConfidenceMaxSamples))
+	}
+	return computeAccountQualityComponentsWithConfidence(
+		successRate,
+		ttftLE5sRate,
+		ttftLE10sRate,
+		ttftGT10sRate,
+		ttftGT20sRate,
+		ttftGT40sRate,
+		errorRate,
+		confidence,
+	)
 }
 
 func clampQualityRate(v float64) float64 {
@@ -189,7 +212,7 @@ func DescribeAccountQualitySnapshot(snapshot *AccountQualitySnapshot) (float64, 
 		), components
 	}
 
-	components := ComputeAccountQualityScore(
+	components := computeAccountQualityComponentsWithConfidence(
 		snapshot.RecentSuccessRate,
 		snapshot.TTFTLE5sRate,
 		snapshot.TTFTLE10sRate,
@@ -197,7 +220,7 @@ func DescribeAccountQualitySnapshot(snapshot *AccountQualitySnapshot) (float64, 
 		snapshot.TTFTGT20sRate,
 		snapshot.TTFTGT40sRate,
 		snapshot.ErrorRate,
-		snapshot.TotalRequests,
+		snapshot.SampleConfidence,
 	)
 	components.BaseQualityScore = clampQualityRate(snapshot.BaseQualityScore)
 	components.TransientPenalty = clampQualityRate(snapshot.TransientPenalty)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -85,6 +86,8 @@ type groupAccountQualityItem struct {
 	AuxiliaryTTFTGT20sCount  int64      `json:"auxiliary_ttft_gt_20s_count"`
 	AuxiliaryTTFTGT40sCount  int64      `json:"auxiliary_ttft_gt_40s_count"`
 	AuxiliaryWeight          float64    `json:"auxiliary_weight"`
+	ScheduleRank             int        `json:"schedule_rank"`
+	ScheduleSortKey          string     `json:"schedule_sort_key"`
 }
 
 type groupAccountQualityResponse struct {
@@ -453,6 +456,35 @@ func (h *GroupHandler) GetAccountQuality(c *gin.Context) {
 		items = append(items, item)
 	}
 
+	sort.SliceStable(items, func(i, j int) bool {
+		a := &items[i]
+		b := &items[j]
+		if a.Priority != b.Priority {
+			return a.Priority < b.Priority
+		}
+		if cmp := compareQualityItemsForSchedule(a, b); cmp != 0 {
+			return cmp < 0
+		}
+		switch {
+		case a.LastUsedAt == nil && b.LastUsedAt != nil:
+			return true
+		case a.LastUsedAt != nil && b.LastUsedAt == nil:
+			return false
+		case a.LastUsedAt == nil && b.LastUsedAt == nil:
+			return a.AccountID < b.AccountID
+		default:
+			if !a.LastUsedAt.Equal(*b.LastUsedAt) {
+				return a.LastUsedAt.Before(*b.LastUsedAt)
+			}
+			return a.AccountID < b.AccountID
+		}
+	})
+
+	for i := range items {
+		items[i].ScheduleRank = i + 1
+		items[i].ScheduleSortKey = buildScheduleSortKey(&items[i])
+	}
+
 	response.Success(c, groupAccountQualityResponse{
 		GroupID:             group.ID,
 		GroupName:           group.Name,
@@ -462,6 +494,64 @@ func (h *GroupHandler) GetAccountQuality(c *gin.Context) {
 		UnknownAccountCount: len(items) - knownCount,
 		Items:               items,
 	})
+}
+
+func compareQualityItemsForSchedule(a, b *groupAccountQualityItem) int {
+	if a == nil || b == nil {
+		return 0
+	}
+	if a.EffectiveQualityScore > b.EffectiveQualityScore {
+		return -1
+	}
+	if a.EffectiveQualityScore < b.EffectiveQualityScore {
+		return 1
+	}
+	if a.AppliedPenalty < b.AppliedPenalty {
+		return -1
+	}
+	if a.AppliedPenalty > b.AppliedPenalty {
+		return 1
+	}
+	aRecovery := a.RecoveryCredit + minFloat64(float64(a.RecoverySuccessStreak)*0.01, 0.04) + minFloat64(float64(a.RecoveryFastStreak)*0.02, 0.08)
+	bRecovery := b.RecoveryCredit + minFloat64(float64(b.RecoverySuccessStreak)*0.01, 0.04) + minFloat64(float64(b.RecoveryFastStreak)*0.02, 0.08)
+	if aRecovery > bRecovery {
+		return -1
+	}
+	if aRecovery < bRecovery {
+		return 1
+	}
+	if a.QualityKnown && !b.QualityKnown {
+		return -1
+	}
+	if !a.QualityKnown && b.QualityKnown {
+		return 1
+	}
+	return 0
+}
+
+func buildScheduleSortKey(item *groupAccountQualityItem) string {
+	if item == nil {
+		return ""
+	}
+	lastUsed := "never"
+	if item.LastUsedAt != nil {
+		lastUsed = item.LastUsedAt.UTC().Format(time.RFC3339)
+	}
+	return fmt.Sprintf(
+		"priority=%d -> quality=%.4f -> penalty=%.4f -> recovery=%.4f -> last_used=%s",
+		item.Priority,
+		item.EffectiveQualityScore,
+		item.AppliedPenalty,
+		item.RecoveryCredit+minFloat64(float64(item.RecoverySuccessStreak)*0.01, 0.04)+minFloat64(float64(item.RecoveryFastStreak)*0.02, 0.08),
+		lastUsed,
+	)
+}
+
+func minFloat64(a, b float64) float64 {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // GetModelsListCandidates handles getting candidate model IDs for custom /v1/models list.
