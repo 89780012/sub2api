@@ -19,15 +19,15 @@ const (
 	accountQualityAuxiliaryKnownSamples = 2
 	accountQualityConfidenceMaxSamples  = 12
 
-	accountQualityNeutralBase        = 0.60
-	accountQualitySuccessWeight      = 0.25
-	accountQualityTTFT5sWeight       = 0.35
-	accountQualityTTFT10sWeight      = 0.20
-	accountQualityFastBonusWeight    = 0.20
-	accountQualitySlow10sPenalty     = 0.10
-	accountQualitySlow20sPenalty     = 0.30
-	accountQualitySlow40sPenalty     = 0.60
-	accountQualityErrorPenaltyWeight = 0.70
+	accountQualityNeutralBase        = 0.25
+	accountQualitySuccessWeight      = 0.20
+	accountQualityTTFT5sWeight       = 0.28
+	accountQualityTTFT10sWeight      = 0.12
+	accountQualityFastBonusWeight    = 0.10
+	accountQualitySlow10sPenalty     = 0.18
+	accountQualitySlow20sPenalty     = 0.36
+	accountQualitySlow40sPenalty     = 0.58
+	accountQualityErrorPenaltyWeight = 0.78
 	accountQualityBurstPenaltyCap    = 0.60
 	accountQualityRecoveryCreditCap  = 0.45
 
@@ -127,10 +127,11 @@ func ComputeAccountQualityScore(
 	if totalRequests > 0 {
 		confidence = clampQualityRate(float64(totalRequests) / float64(accountQualityConfidenceMaxSamples))
 	}
+	ttft5To10sRate := clampQualityRate(ttftLE10sRate - ttftLE5sRate)
 	successComponent := accountQualitySuccessWeight * clampQualityRate(successRate)
 	ttft5sComponent := accountQualityTTFT5sWeight * clampQualityRate(ttftLE5sRate)
-	ttft10sComponent := accountQualityTTFT10sWeight * clampQualityRate(ttftLE10sRate)
-	fastBonus := accountQualityFastBonusWeight * confidence * clampQualityRate((ttftLE5sRate*0.7)+(ttftLE10sRate*0.3))
+	ttft10sComponent := accountQualityTTFT10sWeight * ttft5To10sRate
+	fastBonus := accountQualityFastBonusWeight * confidence * clampQualityRate((ttftLE5sRate*0.85)+(ttft5To10sRate*0.15))
 	slowPenalty := confidence * (accountQualitySlow10sPenalty*clampQualityRate(ttftGT10sRate) +
 		accountQualitySlow20sPenalty*clampQualityRate(ttftGT20sRate) +
 		accountQualitySlow40sPenalty*clampQualityRate(ttftGT40sRate))
@@ -278,6 +279,20 @@ func appliedAccountQualityPenalty(snapshot *AccountQualitySnapshot) float64 {
 	return clampQualityRate(math.Max(0, snapshot.TransientPenalty-snapshot.RecoveryCredit))
 }
 
+func accountQualityRecoveryTieBreak(snapshot *AccountQualitySnapshot) float64 {
+	if snapshot == nil {
+		return 0
+	}
+	recovery := clampQualityRate(snapshot.RecoveryCredit)
+	if snapshot.RecoveryFastStreak > 0 {
+		recovery += math.Min(float64(snapshot.RecoveryFastStreak)*0.02, 0.08)
+	}
+	if snapshot.RecoverySuccessStreak > 0 {
+		recovery += math.Min(float64(snapshot.RecoverySuccessStreak)*0.01, 0.04)
+	}
+	return recovery
+}
+
 func accountIDsFromAccounts(accounts []*Account) []int64 {
 	if len(accounts) == 0 {
 		return nil
@@ -367,6 +382,22 @@ func compareAccountsByQuality(a, b *Account, snapshots map[int64]*AccountQuality
 		return -1
 	}
 	if aScore < bScore {
+		return 1
+	}
+	aPenalty := appliedAccountQualityPenalty(snapshots[a.ID])
+	bPenalty := appliedAccountQualityPenalty(snapshots[b.ID])
+	if aPenalty < bPenalty {
+		return -1
+	}
+	if aPenalty > bPenalty {
+		return 1
+	}
+	aRecovery := accountQualityRecoveryTieBreak(snapshots[a.ID])
+	bRecovery := accountQualityRecoveryTieBreak(snapshots[b.ID])
+	if aRecovery > bRecovery {
+		return -1
+	}
+	if aRecovery < bRecovery {
 		return 1
 	}
 	if aKnown && !bKnown {

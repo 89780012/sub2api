@@ -13,6 +13,8 @@ func TestComputeAccountQualityScoreWeightsFiveSecondTTFTHigher(t *testing.T) {
 
 	require.Greater(t, scoreFast5s.TTFT5sComponent, scoreFast10sOnly.TTFT5sComponent)
 	require.Greater(t, scoreFast5s.FastBonus, scoreFast10sOnly.FastBonus)
+	require.Equal(t, 0.0, scoreFast5s.TTFT10sComponent)
+	require.Greater(t, scoreFast10sOnly.TTFT10sComponent, 0.0)
 }
 
 func TestComputeAccountQualityScoreLongTTFTPunishesHard(t *testing.T) {
@@ -22,6 +24,11 @@ func TestComputeAccountQualityScoreLongTTFTPunishesHard(t *testing.T) {
 	require.Greater(t, oneVerySlow.SlowPenalty, 0.1)
 	require.Greater(t, fastStable.TTFT5sComponent, oneVerySlow.TTFT5sComponent)
 	require.Greater(t, fastStable.FastBonus, oneVerySlow.FastBonus)
+}
+
+func TestComputeAccountQualityScoreAvoidsEasySaturation(t *testing.T) {
+	score := ComputeAccountQualityScore(1, 1, 1, 0, 0, 0, 0, 12)
+	require.Less(t, score.FinalScore, 1.0)
 }
 
 func TestEffectiveAccountQualityScoreUsesNeutralBaseForUnknown(t *testing.T) {
@@ -174,4 +181,16 @@ func TestShouldEscapeStickyByAccountQualityIgnoresSmallSamples(t *testing.T) {
 
 	require.False(t, escape)
 	require.Empty(t, reason)
+}
+
+func TestCompareAccountsByQualityPrefersLowerPenaltyWhenScoresEqual(t *testing.T) {
+	a := &Account{ID: 1}
+	b := &Account{ID: 2}
+	snapshots := map[int64]*AccountQualitySnapshot{
+		1: {AccountID: 1, TotalRequests: accountQualityMinSamples, EffectiveQualityScore: 0.82, TransientPenalty: 0.30, RecoveryCredit: 0.00, QualityScore: 0.82},
+		2: {AccountID: 2, TotalRequests: accountQualityMinSamples, EffectiveQualityScore: 0.82, TransientPenalty: 0.10, RecoveryCredit: 0.00, QualityScore: 0.82},
+	}
+
+	require.Equal(t, 1, compareAccountsByQuality(a, b, snapshots))
+	require.Equal(t, -1, compareAccountsByQuality(b, a, snapshots))
 }

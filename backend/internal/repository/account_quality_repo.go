@@ -345,20 +345,20 @@ aggregate_scores AS (
     p.recovery_fast_streak,
     p.recovery_success_after_error,
     p.recovery_fast_after_slow,
-    ROUND((0.20 * s.sample_confidence * ((0.70 * s.ttft_le_5s_rate) + (0.30 * s.ttft_le_10s_rate)))::numeric, 4)::double precision AS fast_bonus,
-    ROUND((s.sample_confidence * ((0.10 * s.ttft_gt_10s_rate) + (0.30 * s.ttft_gt_20s_rate) + (0.60 * s.ttft_gt_40s_rate)))::numeric, 4)::double precision AS slow_penalty,
-    ROUND((0.70 * s.error_rate)::numeric, 4)::double precision AS error_penalty,
-    0.60::double precision AS neutral_base,
+    ROUND((0.10 * s.sample_confidence * ((0.85 * s.ttft_le_5s_rate) + (0.15 * GREATEST(s.ttft_le_10s_rate - s.ttft_le_5s_rate, 0))))::numeric, 4)::double precision AS fast_bonus,
+    ROUND((s.sample_confidence * ((0.18 * s.ttft_gt_10s_rate) + (0.36 * s.ttft_gt_20s_rate) + (0.58 * s.ttft_gt_40s_rate)))::numeric, 4)::double precision AS slow_penalty,
+    ROUND((0.78 * s.error_rate)::numeric, 4)::double precision AS error_penalty,
+    0.25::double precision AS neutral_base,
     ROUND(
       LEAST(
         GREATEST(
-          0.60
-          + (0.25 * s.recent_success_rate)
-          + (0.35 * s.ttft_le_5s_rate)
-          + (0.20 * s.ttft_le_10s_rate)
-          + (0.20 * s.sample_confidence * ((0.70 * s.ttft_le_5s_rate) + (0.30 * s.ttft_le_10s_rate)))
-          - (s.sample_confidence * ((0.10 * s.ttft_gt_10s_rate) + (0.30 * s.ttft_gt_20s_rate) + (0.60 * s.ttft_gt_40s_rate)))
-          - (0.70 * s.error_rate),
+          0.25
+          + (0.20 * s.recent_success_rate)
+          + (0.28 * s.ttft_le_5s_rate)
+          + (0.12 * GREATEST(s.ttft_le_10s_rate - s.ttft_le_5s_rate, 0))
+          + (0.10 * s.sample_confidence * ((0.85 * s.ttft_le_5s_rate) + (0.15 * GREATEST(s.ttft_le_10s_rate - s.ttft_le_5s_rate, 0))))
+          - (s.sample_confidence * ((0.18 * s.ttft_gt_10s_rate) + (0.36 * s.ttft_gt_20s_rate) + (0.58 * s.ttft_gt_40s_rate)))
+          - (0.78 * s.error_rate),
           0
         ),
         1
@@ -367,18 +367,18 @@ aggregate_scores AS (
     )::double precision AS base_quality_score,
     LEAST(
       CASE
-        WHEN p.error_streak >= 2 THEN 0.38 + (LEAST((p.error_streak - 2)::double precision, 3.0) * 0.09)
+        WHEN p.error_streak >= 2 THEN 0.34 + (LEAST((p.error_streak - 2)::double precision, 3.0) * 0.08)
         ELSE 0
       END,
       0.55
     ) AS error_burst_penalty,
     LEAST(
       CASE
-        WHEN p.slow_streak >= 3 THEN
-          0.22
-          + (LEAST((p.slow_streak - 3)::double precision, 4.0) * 0.06)
+        WHEN p.slow_streak >= 2 THEN
+          0.16
+          + (LEAST((p.slow_streak - 2)::double precision, 4.0) * 0.05)
           + CASE WHEN p.slow_streak_gt20_count > 0 THEN 0.05 ELSE 0 END
-          + CASE WHEN p.slow_streak_gt40_count > 0 THEN 0.07 ELSE 0 END
+          + CASE WHEN p.slow_streak_gt40_count > 0 THEN 0.08 ELSE 0 END
         ELSE 0
       END,
       0.45
