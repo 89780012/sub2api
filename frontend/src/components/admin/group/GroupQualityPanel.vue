@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog :show="show" :title="t('admin.groups.qualityPanel.title')" width="extra-wide" @close="emit('close')">
+  <BaseDialog :show="show" :title="t('admin.groups.qualityPanel.title')" width="extra-extra-wide" @close="emit('close')">
     <div v-if="group" class="space-y-4">
       <div class="flex flex-wrap items-center gap-3 rounded-lg bg-gray-50 px-4 py-2.5 text-sm dark:bg-dark-700">
         <span class="inline-flex items-center gap-1.5" :class="platformColorClass">
@@ -49,6 +49,7 @@
                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.columns.penalties') }}</th>
                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.columns.samples') }}</th>
                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.columns.auxiliary') }}</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.columns.recovery') }}</th>
                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.columns.formula') }}</th>
               </tr>
             </thead>
@@ -76,6 +77,7 @@
                     <span class="font-mono text-sm font-semibold" :class="item.quality_known ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'">
                       {{ formatScore(item.quality_score) }}
                     </span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.effectiveLabel', { value: formatScore(item.effective_quality_score) }) }}</span>
                     <span class="text-xs text-gray-500 dark:text-gray-400">
                       {{ item.quality_known ? t('admin.groups.qualityPanel.known') : t('admin.groups.qualityPanel.unknown') }}
                     </span>
@@ -105,6 +107,7 @@
                   <div class="space-y-1 text-xs">
                     <div class="text-amber-600 dark:text-amber-400">{{ t('admin.groups.qualityPanel.slowPenaltyLabel', { value: formatScore(item.slow_penalty) }) }}</div>
                     <div class="text-rose-600 dark:text-rose-400">{{ t('admin.groups.qualityPanel.errorPenaltyLabel', { value: formatScore(item.error_penalty) }) }}</div>
+                    <div class="text-sky-600 dark:text-sky-400">{{ t('admin.groups.qualityPanel.baseQualityLabel', { value: formatScore(item.base_quality_score) }) }}</div>
                     <div class="text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.baseLabel', { value: formatScore(item.neutral_base) }) }}</div>
                   </div>
                 </td>
@@ -122,6 +125,16 @@
                     <div>{{ t('admin.groups.qualityPanel.auxFailuresLabel', { value: item.auxiliary_failure_requests }) }}</div>
                     <div>{{ t('admin.groups.qualityPanel.auxTTFTLabel', { value: item.auxiliary_ttft_sample_count }) }}</div>
                     <div class="text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.auxWeightLabel', { value: formatPercent(item.auxiliary_weight) }) }}</div>
+                  </div>
+                </td>
+                <td class="px-3 py-3">
+                  <div class="space-y-1 text-xs">
+                    <div>{{ t('admin.groups.qualityPanel.slowStreakLabel', { value: item.slow_streak }) }}</div>
+                    <div>{{ t('admin.groups.qualityPanel.errorStreakLabel', { value: item.error_streak }) }}</div>
+                    <div>{{ t('admin.groups.qualityPanel.recoverySuccessLabel', { value: item.recovery_success_streak }) }}</div>
+                    <div>{{ t('admin.groups.qualityPanel.recoveryFastLabel', { value: item.recovery_fast_streak }) }}</div>
+                    <div class="text-sky-600 dark:text-sky-400">{{ t('admin.groups.qualityPanel.recoveryCreditLabel', { value: formatScore(item.recovery_credit) }) }}</div>
+                    <div class="text-rose-600 dark:text-rose-400">{{ t('admin.groups.qualityPanel.appliedPenaltyLabel', { value: formatScore(item.applied_penalty) }) }}</div>
                   </div>
                 </td>
                 <td class="px-3 py-3">

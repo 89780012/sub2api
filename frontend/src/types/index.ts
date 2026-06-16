@@ -599,6 +599,15 @@ export interface GroupAccountQualityItem {
   fast_bonus: number
   slow_penalty: number
   error_penalty: number
+  base_quality_score: number
+  effective_quality_score: number
+  transient_penalty: number
+  recovery_credit: number
+  applied_penalty: number
+  slow_streak: number
+  error_streak: number
+  recovery_success_streak: number
+  recovery_fast_streak: number
   auxiliary_total_requests: number
   auxiliary_success_requests: number
   auxiliary_failure_requests: number

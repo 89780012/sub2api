@@ -66,6 +66,15 @@ type groupAccountQualityItem struct {
 	FastBonus                float64    `json:"fast_bonus"`
 	SlowPenalty              float64    `json:"slow_penalty"`
 	ErrorPenalty             float64    `json:"error_penalty"`
+	BaseQualityScore         float64    `json:"base_quality_score"`
+	EffectiveQualityScore    float64    `json:"effective_quality_score"`
+	TransientPenalty         float64    `json:"transient_penalty"`
+	RecoveryCredit           float64    `json:"recovery_credit"`
+	AppliedPenalty           float64    `json:"applied_penalty"`
+	SlowStreak               int64      `json:"slow_streak"`
+	ErrorStreak              int64      `json:"error_streak"`
+	RecoverySuccessStreak    int64      `json:"recovery_success_streak"`
+	RecoveryFastStreak       int64      `json:"recovery_fast_streak"`
 	AuxiliaryTotalRequests   int64      `json:"auxiliary_total_requests"`
 	AuxiliarySuccessRequests int64      `json:"auxiliary_success_requests"`
 	AuxiliaryFailureRequests int64      `json:"auxiliary_failure_requests"`
@@ -378,28 +387,33 @@ func (h *GroupHandler) GetAccountQuality(c *gin.Context) {
 			knownCount++
 		}
 		item := groupAccountQualityItem{
-			AccountID:        account.ID,
-			AccountName:      account.Name,
-			Platform:         account.Platform,
-			AccountType:      account.Type,
-			Status:           account.Status,
-			Schedulable:      account.Schedulable,
-			Priority:         account.Priority,
-			Concurrency:      account.Concurrency,
-			GroupIDs:         append([]int64(nil), account.GroupIDs...),
-			LastUsedAt:       account.LastUsedAt,
-			UpdatedAt:        account.UpdatedAt,
-			QualityKnown:     known,
-			QualityScore:     score,
-			ScoreBreakdown:   breakdown,
-			NeutralBase:      components.NeutralBase,
-			SuccessComponent: components.SuccessComponent,
-			TTFT5sComponent:  components.TTFT5sComponent,
-			TTFT10sComponent: components.TTFT10sComponent,
-			FastBonus:        components.FastBonus,
-			SlowPenalty:      components.SlowPenalty,
-			ErrorPenalty:     components.ErrorPenalty,
-			SampleConfidence: components.SampleConfidence,
+			AccountID:             account.ID,
+			AccountName:           account.Name,
+			Platform:              account.Platform,
+			AccountType:           account.Type,
+			Status:                account.Status,
+			Schedulable:           account.Schedulable,
+			Priority:              account.Priority,
+			Concurrency:           account.Concurrency,
+			GroupIDs:              append([]int64(nil), account.GroupIDs...),
+			LastUsedAt:            account.LastUsedAt,
+			UpdatedAt:             account.UpdatedAt,
+			QualityKnown:          known,
+			QualityScore:          score,
+			ScoreBreakdown:        breakdown,
+			NeutralBase:           components.NeutralBase,
+			SuccessComponent:      components.SuccessComponent,
+			TTFT5sComponent:       components.TTFT5sComponent,
+			TTFT10sComponent:      components.TTFT10sComponent,
+			FastBonus:             components.FastBonus,
+			SlowPenalty:           components.SlowPenalty,
+			ErrorPenalty:          components.ErrorPenalty,
+			SampleConfidence:      components.SampleConfidence,
+			BaseQualityScore:      components.BaseQualityScore,
+			EffectiveQualityScore: components.EffectiveQualityScore,
+			TransientPenalty:      components.TransientPenalty,
+			RecoveryCredit:        components.RecoveryCredit,
+			AppliedPenalty:        components.AppliedPenalty,
 		}
 		if snapshot != nil {
 			item.WindowStart = &snapshot.WindowStart
@@ -421,6 +435,10 @@ func (h *GroupHandler) GetAccountQuality(c *gin.Context) {
 			item.TTFTGT10sRate = snapshot.TTFTGT10sRate
 			item.TTFTGT20sRate = snapshot.TTFTGT20sRate
 			item.TTFTGT40sRate = snapshot.TTFTGT40sRate
+			item.SlowStreak = snapshot.SlowStreak
+			item.ErrorStreak = snapshot.ErrorStreak
+			item.RecoverySuccessStreak = snapshot.RecoverySuccessStreak
+			item.RecoveryFastStreak = snapshot.RecoveryFastStreak
 			item.AuxiliaryTotalRequests = snapshot.AuxiliaryTotalRequests
 			item.AuxiliarySuccessRequests = snapshot.AuxiliarySuccessRequests
 			item.AuxiliaryFailureRequests = snapshot.AuxiliaryFailureRequests

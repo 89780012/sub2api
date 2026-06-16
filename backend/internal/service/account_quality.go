@@ -12,11 +12,12 @@ import (
 )
 
 const (
-	accountQualityWindow               = 5 * time.Minute
-	accountQualityRefreshInterval      = time.Minute
-	accountQualityRefreshTimeout       = 20 * time.Second
-	accountQualityMinSamples           = 3
-	accountQualityConfidenceMaxSamples = 12
+	accountQualityWindow                = 5 * time.Minute
+	accountQualityRefreshInterval       = time.Minute
+	accountQualityRefreshTimeout        = 20 * time.Second
+	accountQualityMinSamples            = 3
+	accountQualityAuxiliaryKnownSamples = 2
+	accountQualityConfidenceMaxSamples  = 12
 
 	accountQualityNeutralBase        = 0.60
 	accountQualitySuccessWeight      = 0.25
@@ -27,6 +28,8 @@ const (
 	accountQualitySlow20sPenalty     = 0.30
 	accountQualitySlow40sPenalty     = 0.60
 	accountQualityErrorPenaltyWeight = 0.70
+	accountQualityBurstPenaltyCap    = 0.60
+	accountQualityRecoveryCreditCap  = 0.45
 
 	accountQualityStickyEscapeScoreThreshold       = 0.70
 	accountQualityStickyEscapeSuccessRateThreshold = 0.80
@@ -57,6 +60,14 @@ type AccountQualitySnapshot struct {
 	SlowPenalty              float64
 	ErrorPenalty             float64
 	NeutralBase              float64
+	BaseQualityScore         float64
+	EffectiveQualityScore    float64
+	TransientPenalty         float64
+	RecoveryCredit           float64
+	SlowStreak               int64
+	ErrorStreak              int64
+	RecoverySuccessStreak    int64
+	RecoveryFastStreak       int64
 	QualityScore             float64
 	AuxiliaryTotalRequests   int64
 	AuxiliarySuccessRequests int64
@@ -86,15 +97,20 @@ var (
 )
 
 type AccountQualityComponents struct {
-	NeutralBase      float64
-	SuccessComponent float64
-	TTFT5sComponent  float64
-	TTFT10sComponent float64
-	FastBonus        float64
-	SlowPenalty      float64
-	ErrorPenalty     float64
-	SampleConfidence float64
-	FinalScore       float64
+	NeutralBase           float64
+	SuccessComponent      float64
+	TTFT5sComponent       float64
+	TTFT10sComponent      float64
+	FastBonus             float64
+	SlowPenalty           float64
+	ErrorPenalty          float64
+	SampleConfidence      float64
+	BaseQualityScore      float64
+	EffectiveQualityScore float64
+	TransientPenalty      float64
+	RecoveryCredit        float64
+	AppliedPenalty        float64
+	FinalScore            float64
 }
 
 func ComputeAccountQualityScore(
@@ -159,9 +175,11 @@ func DefaultAccountQualityReader() AccountQualityReader {
 func DescribeAccountQualitySnapshot(snapshot *AccountQualitySnapshot) (float64, bool, string, AccountQualityComponents) {
 	if snapshot == nil {
 		components := AccountQualityComponents{
-			NeutralBase:      accountQualityNeutralBase,
-			SampleConfidence: 0,
-			FinalScore:       accountQualityNeutralBase,
+			NeutralBase:           accountQualityNeutralBase,
+			SampleConfidence:      0,
+			BaseQualityScore:      accountQualityNeutralBase,
+			EffectiveQualityScore: accountQualityNeutralBase,
+			FinalScore:            accountQualityNeutralBase,
 		}
 		return accountQualityNeutralBase, false, fmt.Sprintf(
 			"quality unknown: neutral score %.4f until at least %d recent samples",
@@ -180,9 +198,16 @@ func DescribeAccountQualitySnapshot(snapshot *AccountQualitySnapshot) (float64, 
 		snapshot.ErrorRate,
 		snapshot.TotalRequests,
 	)
+	components.BaseQualityScore = clampQualityRate(snapshot.BaseQualityScore)
+	components.TransientPenalty = clampQualityRate(snapshot.TransientPenalty)
+	components.RecoveryCredit = clampQualityRate(snapshot.RecoveryCredit)
+	components.AppliedPenalty = appliedAccountQualityPenalty(snapshot)
 
 	score, known := effectiveAccountQualityScore(snapshot)
+	components.EffectiveQualityScore = score
+	components.FinalScore = score
 	if !known {
+		components.EffectiveQualityScore = accountQualityNeutralBase
 		components.FinalScore = accountQualityNeutralBase
 		return accountQualityNeutralBase, false, fmt.Sprintf(
 			"quality unknown: neutral score %.4f until at least %d recent samples",
@@ -192,8 +217,16 @@ func DescribeAccountQualitySnapshot(snapshot *AccountQualitySnapshot) (float64, 
 	}
 
 	return score, true, fmt.Sprintf(
-		"final=%.4f = neutral=%.4f + success=%.4f + ttft5=%.4f + ttft10=%.4f + fast_bonus=%.4f - slow_penalty=%.4f - error_penalty=%.4f (confidence=%.4f)",
+		"effective=%.4f = base=%.4f - burst_penalty=%.4f + recovery_credit=%.4f (applied_penalty=%.4f, slow_streak=%d, error_streak=%d, recovery_success=%d, recovery_fast=%d; aggregate: neutral=%.4f + success=%.4f + ttft5=%.4f + ttft10=%.4f + fast_bonus=%.4f - slow_penalty=%.4f - error_penalty=%.4f, confidence=%.4f)",
 		score,
+		components.BaseQualityScore,
+		components.TransientPenalty,
+		components.RecoveryCredit,
+		components.AppliedPenalty,
+		snapshot.SlowStreak,
+		snapshot.ErrorStreak,
+		snapshot.RecoverySuccessStreak,
+		snapshot.RecoveryFastStreak,
 		components.NeutralBase,
 		components.SuccessComponent,
 		components.TTFT5sComponent,
@@ -206,10 +239,43 @@ func DescribeAccountQualitySnapshot(snapshot *AccountQualitySnapshot) (float64, 
 }
 
 func effectiveAccountQualityScore(snapshot *AccountQualitySnapshot) (float64, bool) {
-	if snapshot == nil || snapshot.TotalRequests < accountQualityMinSamples {
+	if !accountQualityHasEvidence(snapshot) {
 		return accountQualityNeutralBase, false
 	}
-	return clampQualityRate(snapshot.QualityScore), true
+	score := snapshot.EffectiveQualityScore
+	if score == 0 && snapshot.QualityScore != 0 {
+		score = snapshot.QualityScore
+	}
+	return clampQualityRate(score), true
+}
+
+func accountQualityHasEvidence(snapshot *AccountQualitySnapshot) bool {
+	if snapshot == nil {
+		return false
+	}
+	if snapshot.TotalRequests >= accountQualityMinSamples {
+		return true
+	}
+	if snapshot.AuxiliaryTotalRequests >= accountQualityAuxiliaryKnownSamples {
+		return true
+	}
+	if snapshot.TransientPenalty > 0 || snapshot.RecoveryCredit > 0 {
+		return true
+	}
+	if snapshot.SlowStreak >= 3 || snapshot.ErrorStreak >= 2 {
+		return true
+	}
+	if snapshot.RecoverySuccessStreak > 0 || snapshot.RecoveryFastStreak > 0 {
+		return true
+	}
+	return false
+}
+
+func appliedAccountQualityPenalty(snapshot *AccountQualitySnapshot) float64 {
+	if snapshot == nil {
+		return 0
+	}
+	return clampQualityRate(math.Max(0, snapshot.TransientPenalty-snapshot.RecoveryCredit))
 }
 
 func accountIDsFromAccounts(accounts []*Account) []int64 {
@@ -337,7 +403,12 @@ func shouldEscapeStickyByAccountQuality(snapshot *AccountQualitySnapshot) (bool,
 	if !known {
 		return false, ""
 	}
-	if snapshot.RecentSuccessRate < accountQualityStickyEscapeSuccessRateThreshold {
+	if appliedAccountQualityPenalty(snapshot) >= 0.30 {
+		return true, "transient_penalty"
+	}
+	if snapshot.AuxiliaryTotalRequests == 0 &&
+		snapshot.TotalRequests >= accountQualityMinSamples &&
+		snapshot.RecentSuccessRate < accountQualityStickyEscapeSuccessRateThreshold {
 		return true, "recent_success_rate"
 	}
 	if score < accountQualityStickyEscapeScoreThreshold {
@@ -353,15 +424,18 @@ func shouldEscapeStickyAccountByQuality(ctx context.Context, reader AccountQuali
 	snapshot := accountQualitySnapshotForAccount(ctx, reader, accountID, logKey)
 	escape, reason := shouldEscapeStickyByAccountQuality(snapshot)
 	if escape && snapshot != nil {
+		score, _ := effectiveAccountQualityScore(snapshot)
 		logger.LegacyPrintf(logKey,
-			"sticky account quality escape: account_id=%d reason=%s total=%d success_rate=%.4f ttft_5s_rate=%.4f ttft_10s_rate=%.4f score=%.4f",
+			"sticky account quality escape: account_id=%d reason=%s total=%d success_rate=%.4f ttft_5s_rate=%.4f ttft_10s_rate=%.4f score=%.4f penalty=%.4f recovery=%.4f",
 			accountID,
 			reason,
 			snapshot.TotalRequests,
 			snapshot.RecentSuccessRate,
 			snapshot.TTFTLE5sRate,
 			snapshot.TTFTLE10sRate,
-			snapshot.QualityScore,
+			score,
+			snapshot.TransientPenalty,
+			snapshot.RecoveryCredit,
 		)
 	}
 	return escape, reason, snapshot

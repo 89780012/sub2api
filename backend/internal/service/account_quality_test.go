@@ -33,6 +33,30 @@ func TestEffectiveAccountQualityScoreUsesNeutralBaseForUnknown(t *testing.T) {
 	require.Equal(t, accountQualityNeutralBase, score)
 }
 
+func TestEffectiveAccountQualityScoreAllowsAuxiliaryOnlyEvidence(t *testing.T) {
+	score, known := effectiveAccountQualityScore(&AccountQualitySnapshot{
+		TotalRequests:          0,
+		AuxiliaryTotalRequests: accountQualityAuxiliaryKnownSamples,
+		EffectiveQualityScore:  0.82,
+	})
+
+	require.True(t, known)
+	require.Equal(t, 0.82, score)
+}
+
+func TestEffectiveAccountQualityScoreUsesTransientPenaltyAdjustedScore(t *testing.T) {
+	score, known := effectiveAccountQualityScore(&AccountQualitySnapshot{
+		TotalRequests:         accountQualityMinSamples,
+		BaseQualityScore:      0.92,
+		TransientPenalty:      0.50,
+		RecoveryCredit:        0.14,
+		EffectiveQualityScore: 0.56,
+	})
+
+	require.True(t, known)
+	require.Equal(t, 0.56, score)
+}
+
 func TestFilterByMaxQualityWithinSamePriority(t *testing.T) {
 	accounts := []accountWithLoad{
 		{account: &Account{ID: 1, Priority: 1}, loadInfo: &AccountLoadInfo{LoadRate: 0}},
@@ -114,6 +138,31 @@ func TestShouldEscapeStickyByAccountQualityOnRecentFailure(t *testing.T) {
 
 	require.True(t, escape)
 	require.Equal(t, "recent_success_rate", reason)
+}
+
+func TestShouldEscapeStickyByAccountQualityOnTransientPenalty(t *testing.T) {
+	escape, reason := shouldEscapeStickyByAccountQuality(&AccountQualitySnapshot{
+		TotalRequests:          accountQualityMinSamples,
+		AuxiliaryTotalRequests: 3,
+		TransientPenalty:       0.42,
+		RecoveryCredit:         0.05,
+		EffectiveQualityScore:  0.72,
+	})
+
+	require.True(t, escape)
+	require.Equal(t, "transient_penalty", reason)
+}
+
+func TestShouldEscapeStickyByAccountQualitySkipsRecentSuccessRuleWhenAuxiliaryExists(t *testing.T) {
+	escape, reason := shouldEscapeStickyByAccountQuality(&AccountQualitySnapshot{
+		TotalRequests:          accountQualityMinSamples,
+		AuxiliaryTotalRequests: 3,
+		RecentSuccessRate:      0.5,
+		EffectiveQualityScore:  0.88,
+	})
+
+	require.False(t, escape)
+	require.Empty(t, reason)
 }
 
 func TestShouldEscapeStickyByAccountQualityIgnoresSmallSamples(t *testing.T) {
