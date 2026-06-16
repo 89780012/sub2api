@@ -125,8 +125,19 @@ func TestMigrationsRunner_IsIdempotent_AndSchemaIsUpToDate(t *testing.T) {
 	requireColumn(t, tx, "account_quality_snapshots", "fast_bonus", "double precision", 0, false)
 	requireColumn(t, tx, "account_quality_snapshots", "slow_penalty", "double precision", 0, false)
 	requireColumn(t, tx, "account_quality_snapshots", "error_penalty", "double precision", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "auxiliary_total_requests", "bigint", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "auxiliary_ttft_sample_count", "bigint", 0, false)
+	requireColumn(t, tx, "account_quality_snapshots", "auxiliary_weight", "double precision", 0, false)
 	requireColumn(t, tx, "account_quality_snapshots", "quality_score", "double precision", 0, false)
 	requireIndex(t, tx, "account_quality_snapshots", "idx_account_quality_snapshots_score")
+
+	requireColumn(t, tx, "scheduled_test_results", "account_id", "bigint", 0, true)
+	requireColumn(t, tx, "scheduled_test_results", "model_id", "character varying", 100, false)
+	requireColumn(t, tx, "scheduled_test_results", "first_token_ms", "bigint", 0, true)
+	requireColumn(t, tx, "scheduled_test_results", "has_first_token", "boolean", 0, false)
+	requireColumn(t, tx, "scheduled_test_results", "failure_kind", "character varying", 50, false)
+	requireColumn(t, tx, "scheduled_test_results", "request_type", "character varying", 20, false)
+	requireIndex(t, tx, "scheduled_test_results", "idx_str_account_created")
 
 	// user_allowed_groups: created_at should be timestamptz
 	requireColumn(t, tx, "user_allowed_groups", "created_at", "timestamp with time zone", 0, false)

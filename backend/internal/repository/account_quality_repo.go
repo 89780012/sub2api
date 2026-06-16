@@ -51,9 +51,9 @@ ops_failures AS (
     AND COALESCE(oe.is_business_limited, false) = false
   GROUP BY oe.account_id
 ),
-combined AS (
+real_base AS (
   SELECT
-    COALESCE(us.account_id, of.account_id) AS account_id,
+    COALESCE(us.account_id, opf.account_id) AS account_id,
     COALESCE(us.success_requests, 0)::bigint AS success_requests,
     COALESCE(of.failure_requests, 0)::bigint AS failure_requests,
     COALESCE(us.ttft_sample_count, 0)::bigint AS ttft_sample_count,
@@ -63,43 +63,160 @@ combined AS (
     COALESCE(us.ttft_gt_20s_count, 0)::bigint AS ttft_gt_20s_count,
     COALESCE(us.ttft_gt_40s_count, 0)::bigint AS ttft_gt_40s_count
   FROM usage_success us
-  FULL OUTER JOIN ops_failures of ON of.account_id = us.account_id
+  FULL OUTER JOIN ops_failures opf ON opf.account_id = us.account_id
+),
+scheduled_test AS (
+  SELECT
+    str.account_id,
+    COUNT(*)::bigint AS total_requests,
+    COUNT(*) FILTER (WHERE str.status = 'success')::bigint AS success_requests,
+    COUNT(*) FILTER (WHERE str.status <> 'success')::bigint AS failure_requests,
+    COUNT(str.first_token_ms)::bigint AS ttft_sample_count,
+    COUNT(*) FILTER (WHERE str.first_token_ms IS NOT NULL AND str.first_token_ms <= 5000)::bigint AS ttft_le_5s_count,
+    COUNT(*) FILTER (WHERE str.first_token_ms IS NOT NULL AND str.first_token_ms <= 10000)::bigint AS ttft_le_10s_count,
+    COUNT(*) FILTER (WHERE str.first_token_ms IS NOT NULL AND str.first_token_ms > 10000)::bigint AS ttft_gt_10s_count,
+    COUNT(*) FILTER (WHERE str.first_token_ms IS NOT NULL AND str.first_token_ms > 20000)::bigint AS ttft_gt_20s_count,
+    COUNT(*) FILTER (WHERE str.first_token_ms IS NOT NULL AND str.first_token_ms > 40000)::bigint AS ttft_gt_40s_count
+  FROM scheduled_test_results str
+  WHERE str.account_id IS NOT NULL
+    AND str.created_at >= $1
+    AND str.created_at < $2
+    AND str.request_type = 'stream'
+  GROUP BY str.account_id
+),
+base AS (
+  SELECT
+    COALESCE(rb.account_id, st.account_id) AS account_id,
+    COALESCE(rb.success_requests, 0)::bigint AS real_success_requests,
+    COALESCE(rb.failure_requests, 0)::bigint AS real_failure_requests,
+    COALESCE(rb.ttft_sample_count, 0)::bigint AS real_ttft_sample_count,
+    COALESCE(rb.ttft_le_5s_count, 0)::bigint AS real_ttft_le_5s_count,
+    COALESCE(rb.ttft_le_10s_count, 0)::bigint AS real_ttft_le_10s_count,
+    COALESCE(rb.ttft_gt_10s_count, 0)::bigint AS real_ttft_gt_10s_count,
+    COALESCE(rb.ttft_gt_20s_count, 0)::bigint AS real_ttft_gt_20s_count,
+    COALESCE(rb.ttft_gt_40s_count, 0)::bigint AS real_ttft_gt_40s_count,
+    COALESCE(st.total_requests, 0)::bigint AS auxiliary_total_requests,
+    COALESCE(st.success_requests, 0)::bigint AS auxiliary_success_requests,
+    COALESCE(st.failure_requests, 0)::bigint AS auxiliary_failure_requests,
+    COALESCE(st.ttft_sample_count, 0)::bigint AS auxiliary_ttft_sample_count,
+    COALESCE(st.ttft_le_5s_count, 0)::bigint AS auxiliary_ttft_le_5s_count,
+    COALESCE(st.ttft_le_10s_count, 0)::bigint AS auxiliary_ttft_le_10s_count,
+    COALESCE(st.ttft_gt_10s_count, 0)::bigint AS auxiliary_ttft_gt_10s_count,
+    COALESCE(st.ttft_gt_20s_count, 0)::bigint AS auxiliary_ttft_gt_20s_count,
+    COALESCE(st.ttft_gt_40s_count, 0)::bigint AS auxiliary_ttft_gt_40s_count
+  FROM real_base rb
+  FULL OUTER JOIN scheduled_test st ON st.account_id = rb.account_id
+),
+weighted AS (
+  SELECT
+    account_id,
+    real_success_requests,
+    real_failure_requests,
+    real_ttft_sample_count,
+    real_ttft_le_5s_count,
+    real_ttft_le_10s_count,
+    real_ttft_gt_10s_count,
+    real_ttft_gt_20s_count,
+    real_ttft_gt_40s_count,
+    auxiliary_total_requests,
+    auxiliary_success_requests,
+    auxiliary_failure_requests,
+    auxiliary_ttft_sample_count,
+    auxiliary_ttft_le_5s_count,
+    auxiliary_ttft_le_10s_count,
+    auxiliary_ttft_gt_10s_count,
+    auxiliary_ttft_gt_20s_count,
+    auxiliary_ttft_gt_40s_count,
+    (real_success_requests + real_failure_requests)::bigint AS real_total_requests,
+    LEAST(auxiliary_total_requests::double precision / 6.0, 1.0) *
+      CASE
+        WHEN (real_success_requests + real_failure_requests) >= 3 THEN 0.15
+        ELSE 0.35
+      END AS auxiliary_weight
+  FROM base
+),
+blended AS (
+  SELECT
+    account_id,
+    auxiliary_total_requests,
+    auxiliary_success_requests,
+    auxiliary_failure_requests,
+    auxiliary_ttft_sample_count,
+    auxiliary_ttft_le_5s_count,
+    auxiliary_ttft_le_10s_count,
+    auxiliary_ttft_gt_10s_count,
+    auxiliary_ttft_gt_20s_count,
+    auxiliary_ttft_gt_40s_count,
+    auxiliary_weight,
+    ROUND(real_success_requests + (auxiliary_success_requests * auxiliary_weight))::bigint AS success_requests,
+    ROUND(real_failure_requests + (auxiliary_failure_requests * auxiliary_weight))::bigint AS failure_requests,
+    ROUND(real_ttft_sample_count + (auxiliary_ttft_sample_count * auxiliary_weight))::bigint AS ttft_sample_count,
+    ROUND(real_ttft_le_5s_count + (auxiliary_ttft_le_5s_count * auxiliary_weight))::bigint AS ttft_le_5s_count,
+    ROUND(real_ttft_le_10s_count + (auxiliary_ttft_le_10s_count * auxiliary_weight))::bigint AS ttft_le_10s_count,
+    ROUND(real_ttft_gt_10s_count + (auxiliary_ttft_gt_10s_count * auxiliary_weight))::bigint AS ttft_gt_10s_count,
+    ROUND(real_ttft_gt_20s_count + (auxiliary_ttft_gt_20s_count * auxiliary_weight))::bigint AS ttft_gt_20s_count,
+    ROUND(real_ttft_gt_40s_count + (auxiliary_ttft_gt_40s_count * auxiliary_weight))::bigint AS ttft_gt_40s_count
+  FROM weighted
 ),
 scored AS (
   SELECT
     account_id,
-    success_requests + failure_requests AS total_requests,
+    (success_requests + failure_requests)::bigint AS total_requests,
     success_requests,
     failure_requests,
-    CASE WHEN success_requests + failure_requests > 0
-      THEN success_requests::double precision / (success_requests + failure_requests)::double precision
-      ELSE 0 END AS recent_success_rate,
-    CASE WHEN success_requests + failure_requests > 0
-      THEN failure_requests::double precision / (success_requests + failure_requests)::double precision
-      ELSE 0 END AS error_rate,
+    CASE
+      WHEN (success_requests + failure_requests) > 0
+        THEN success_requests::double precision / (success_requests + failure_requests)::double precision
+      ELSE 0
+    END AS recent_success_rate,
+    CASE
+      WHEN (success_requests + failure_requests) > 0
+        THEN failure_requests::double precision / (success_requests + failure_requests)::double precision
+      ELSE 0
+    END AS error_rate,
     ttft_sample_count,
     ttft_le_5s_count,
     ttft_le_10s_count,
     ttft_gt_10s_count,
     ttft_gt_20s_count,
     ttft_gt_40s_count,
-    CASE WHEN ttft_sample_count > 0
-      THEN ttft_le_5s_count::double precision / ttft_sample_count::double precision
-      ELSE 0 END AS ttft_le_5s_rate,
-    CASE WHEN ttft_sample_count > 0
-      THEN ttft_le_10s_count::double precision / ttft_sample_count::double precision
-      ELSE 0 END AS ttft_le_10s_rate,
-    CASE WHEN ttft_sample_count > 0
-      THEN ttft_gt_10s_count::double precision / ttft_sample_count::double precision
-      ELSE 0 END AS ttft_gt_10s_rate,
-    CASE WHEN ttft_sample_count > 0
-      THEN ttft_gt_20s_count::double precision / ttft_sample_count::double precision
-      ELSE 0 END AS ttft_gt_20s_rate,
-    CASE WHEN ttft_sample_count > 0
-      THEN ttft_gt_40s_count::double precision / ttft_sample_count::double precision
-      ELSE 0 END AS ttft_gt_40s_rate,
-    LEAST((success_requests + failure_requests)::double precision / 12.0, 1.0) AS sample_confidence
-  FROM combined
+    CASE
+      WHEN ttft_sample_count > 0
+        THEN ttft_le_5s_count::double precision / ttft_sample_count::double precision
+      ELSE 0
+    END AS ttft_le_5s_rate,
+    CASE
+      WHEN ttft_sample_count > 0
+        THEN ttft_le_10s_count::double precision / ttft_sample_count::double precision
+      ELSE 0
+    END AS ttft_le_10s_rate,
+    CASE
+      WHEN ttft_sample_count > 0
+        THEN ttft_gt_10s_count::double precision / ttft_sample_count::double precision
+      ELSE 0
+    END AS ttft_gt_10s_rate,
+    CASE
+      WHEN ttft_sample_count > 0
+        THEN ttft_gt_20s_count::double precision / ttft_sample_count::double precision
+      ELSE 0
+    END AS ttft_gt_20s_rate,
+    CASE
+      WHEN ttft_sample_count > 0
+        THEN ttft_gt_40s_count::double precision / ttft_sample_count::double precision
+      ELSE 0
+    END AS ttft_gt_40s_rate,
+    LEAST((success_requests + failure_requests)::double precision / 12.0, 1.0) AS sample_confidence,
+    auxiliary_total_requests,
+    auxiliary_success_requests,
+    auxiliary_failure_requests,
+    auxiliary_ttft_sample_count,
+    auxiliary_ttft_le_5s_count,
+    auxiliary_ttft_le_10s_count,
+    auxiliary_ttft_gt_10s_count,
+    auxiliary_ttft_gt_20s_count,
+    auxiliary_ttft_gt_40s_count,
+    auxiliary_weight
+  FROM blended
 )
 INSERT INTO account_quality_snapshots (
   account_id,
@@ -127,6 +244,16 @@ INSERT INTO account_quality_snapshots (
   error_penalty,
   neutral_base,
   quality_score,
+  auxiliary_total_requests,
+  auxiliary_success_requests,
+  auxiliary_failure_requests,
+  auxiliary_ttft_sample_count,
+  auxiliary_ttft_le_5s_count,
+  auxiliary_ttft_le_10s_count,
+  auxiliary_ttft_gt_10s_count,
+  auxiliary_ttft_gt_20s_count,
+  auxiliary_ttft_gt_40s_count,
+  auxiliary_weight,
   updated_at
 )
 SELECT
@@ -154,7 +281,32 @@ SELECT
   ROUND((sample_confidence * ((0.10 * ttft_gt_10s_rate) + (0.30 * ttft_gt_20s_rate) + (0.60 * ttft_gt_40s_rate)))::numeric, 4)::double precision,
   ROUND((0.70 * error_rate)::numeric, 4)::double precision,
   0.60,
-  ROUND(LEAST(GREATEST(0.60 + (0.25 * recent_success_rate) + (0.35 * ttft_le_5s_rate) + (0.20 * ttft_le_10s_rate) + (0.20 * sample_confidence * ((0.70 * ttft_le_5s_rate) + (0.30 * ttft_le_10s_rate))) - (sample_confidence * ((0.10 * ttft_gt_10s_rate) + (0.30 * ttft_gt_20s_rate) + (0.60 * ttft_gt_40s_rate))) - (0.70 * error_rate), 0), 1)::numeric, 4)::double precision,
+  ROUND(
+    LEAST(
+      GREATEST(
+        0.60
+        + (0.25 * recent_success_rate)
+        + (0.35 * ttft_le_5s_rate)
+        + (0.20 * ttft_le_10s_rate)
+        + (0.20 * sample_confidence * ((0.70 * ttft_le_5s_rate) + (0.30 * ttft_le_10s_rate)))
+        - (sample_confidence * ((0.10 * ttft_gt_10s_rate) + (0.30 * ttft_gt_20s_rate) + (0.60 * ttft_gt_40s_rate)))
+        - (0.70 * error_rate),
+        0
+      ),
+      1
+    )::numeric,
+    4
+  )::double precision,
+  auxiliary_total_requests,
+  auxiliary_success_requests,
+  auxiliary_failure_requests,
+  auxiliary_ttft_sample_count,
+  auxiliary_ttft_le_5s_count,
+  auxiliary_ttft_le_10s_count,
+  auxiliary_ttft_gt_10s_count,
+  auxiliary_ttft_gt_20s_count,
+  auxiliary_ttft_gt_40s_count,
+  auxiliary_weight,
   NOW()
 FROM scored
 ON CONFLICT (account_id) DO UPDATE SET
@@ -182,12 +334,23 @@ ON CONFLICT (account_id) DO UPDATE SET
   error_penalty = EXCLUDED.error_penalty,
   neutral_base = EXCLUDED.neutral_base,
   quality_score = EXCLUDED.quality_score,
+  auxiliary_total_requests = EXCLUDED.auxiliary_total_requests,
+  auxiliary_success_requests = EXCLUDED.auxiliary_success_requests,
+  auxiliary_failure_requests = EXCLUDED.auxiliary_failure_requests,
+  auxiliary_ttft_sample_count = EXCLUDED.auxiliary_ttft_sample_count,
+  auxiliary_ttft_le_5s_count = EXCLUDED.auxiliary_ttft_le_5s_count,
+  auxiliary_ttft_le_10s_count = EXCLUDED.auxiliary_ttft_le_10s_count,
+  auxiliary_ttft_gt_10s_count = EXCLUDED.auxiliary_ttft_gt_10s_count,
+  auxiliary_ttft_gt_20s_count = EXCLUDED.auxiliary_ttft_gt_20s_count,
+  auxiliary_ttft_gt_40s_count = EXCLUDED.auxiliary_ttft_gt_40s_count,
+  auxiliary_weight = EXCLUDED.auxiliary_weight,
   updated_at = NOW()`
 
 	_, err := r.db.ExecContext(ctx, query, windowStart.UTC(), windowEnd.UTC())
 	if err != nil {
 		return err
 	}
+
 	_, err = r.db.ExecContext(ctx, `DELETE FROM account_quality_snapshots WHERE window_end < $1`, windowEnd.UTC())
 	return err
 }
@@ -225,6 +388,16 @@ SELECT
   error_penalty,
   neutral_base,
   quality_score,
+  auxiliary_total_requests,
+  auxiliary_success_requests,
+  auxiliary_failure_requests,
+  auxiliary_ttft_sample_count,
+  auxiliary_ttft_le_5s_count,
+  auxiliary_ttft_le_10s_count,
+  auxiliary_ttft_gt_10s_count,
+  auxiliary_ttft_gt_20s_count,
+  auxiliary_ttft_gt_40s_count,
+  auxiliary_weight,
   updated_at
 FROM account_quality_snapshots
 WHERE account_id = ANY($1)`
@@ -263,6 +436,16 @@ WHERE account_id = ANY($1)`
 			&snapshot.ErrorPenalty,
 			&snapshot.NeutralBase,
 			&snapshot.QualityScore,
+			&snapshot.AuxiliaryTotalRequests,
+			&snapshot.AuxiliarySuccessRequests,
+			&snapshot.AuxiliaryFailureRequests,
+			&snapshot.AuxiliaryTTFTSampleCount,
+			&snapshot.AuxiliaryTTFTLE5sCount,
+			&snapshot.AuxiliaryTTFTLE10sCount,
+			&snapshot.AuxiliaryTTFTGT10sCount,
+			&snapshot.AuxiliaryTTFTGT20sCount,
+			&snapshot.AuxiliaryTTFTGT40sCount,
+			&snapshot.AuxiliaryWeight,
 			&snapshot.UpdatedAt,
 		); err != nil {
 			return nil, err

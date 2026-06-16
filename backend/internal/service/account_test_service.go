@@ -48,6 +48,7 @@ type TestEvent struct {
 	Data     any    `json:"data,omitempty"`
 	Success  bool   `json:"success,omitempty"`
 	Error    string `json:"error,omitempty"`
+	At       int64  `json:"at,omitempty"`
 }
 
 const (
@@ -1186,7 +1187,7 @@ func (s *AccountTestService) processGeminiStream(c *gin.Context, body io.Reader)
 						for _, part := range parts {
 							if partMap, ok := part.(map[string]any); ok {
 								if text, ok := partMap["text"].(string); ok && text != "" {
-									s.sendEvent(c, TestEvent{Type: "content", Text: text})
+									s.sendEvent(c, TestEvent{Type: "content", Text: text, At: time.Now().UnixMilli()})
 								}
 								if inlineData, ok := partMap["inlineData"].(map[string]any); ok {
 									mimeType, _ := inlineData["mimeType"].(string)
@@ -1206,7 +1207,7 @@ func (s *AccountTestService) processGeminiStream(c *gin.Context, body io.Reader)
 
 				// Check for completion after extracting content
 				if finishReason, ok := candidate["finishReason"].(string); ok && finishReason != "" {
-					s.sendEvent(c, TestEvent{Type: "test_complete", Success: true})
+					s.sendEvent(c, TestEvent{Type: "test_complete", Success: true, At: time.Now().UnixMilli()})
 					return nil
 				}
 			}
@@ -1306,11 +1307,11 @@ func (s *AccountTestService) processClaudeStream(c *gin.Context, body io.Reader)
 		case "content_block_delta":
 			if delta, ok := data["delta"].(map[string]any); ok {
 				if text, ok := delta["text"].(string); ok {
-					s.sendEvent(c, TestEvent{Type: "content", Text: text})
+					s.sendEvent(c, TestEvent{Type: "content", Text: text, At: time.Now().UnixMilli()})
 				}
 			}
 		case "message_stop":
-			s.sendEvent(c, TestEvent{Type: "test_complete", Success: true})
+			s.sendEvent(c, TestEvent{Type: "test_complete", Success: true, At: time.Now().UnixMilli()})
 			return nil
 		case "error":
 			errorMsg := "Unknown error"
@@ -1385,12 +1386,12 @@ func (s *AccountTestService) processOpenAIChatCompletionsStream(c *gin.Context, 
 			}
 			if delta, ok := choice["delta"].(map[string]any); ok {
 				if text, ok := delta["content"].(string); ok && text != "" {
-					s.sendEvent(c, TestEvent{Type: "content", Text: text})
+					s.sendEvent(c, TestEvent{Type: "content", Text: text, At: time.Now().UnixMilli()})
 				}
 			}
 			if message, ok := choice["message"].(map[string]any); ok {
 				if text, ok := message["content"].(string); ok && text != "" {
-					s.sendEvent(c, TestEvent{Type: "content", Text: text})
+					s.sendEvent(c, TestEvent{Type: "content", Text: text, At: time.Now().UnixMilli()})
 				}
 			}
 			if finishReason, ok := choice["finish_reason"].(string); ok && finishReason != "" {
@@ -1443,10 +1444,10 @@ func (s *AccountTestService) processOpenAIStream(c *gin.Context, body io.Reader)
 		case "response.output_text.delta":
 			// OpenAI Responses API uses "delta" field for text content
 			if delta, ok := data["delta"].(string); ok && delta != "" {
-				s.sendEvent(c, TestEvent{Type: "content", Text: delta})
+				s.sendEvent(c, TestEvent{Type: "content", Text: delta, At: time.Now().UnixMilli()})
 			}
 		case "response.completed", "response.done":
-			s.sendEvent(c, TestEvent{Type: "test_complete", Success: true})
+			s.sendEvent(c, TestEvent{Type: "test_complete", Success: true, At: time.Now().UnixMilli()})
 			return nil
 		case "response.failed":
 			errorMsg := "OpenAI response failed"
@@ -1693,7 +1694,7 @@ func (s *AccountTestService) RunTestBackground(ctx context.Context, accountID in
 
 	finishedAt := time.Now()
 	body := w.Body.String()
-	responseText, errMsg := parseTestSSEOutput(body)
+	responseText, errMsg, firstTokenMs, failureKind := parseTestSSEOutput(body, startedAt, finishedAt, testErr)
 
 	status := "success"
 	if testErr != nil || errMsg != "" {
@@ -1704,18 +1705,25 @@ func (s *AccountTestService) RunTestBackground(ctx context.Context, accountID in
 	}
 
 	return &ScheduledTestResult{
-		Status:       status,
-		ResponseText: responseText,
-		ErrorMessage: errMsg,
-		LatencyMs:    finishedAt.Sub(startedAt).Milliseconds(),
-		StartedAt:    startedAt,
-		FinishedAt:   finishedAt,
+		Status:        status,
+		ResponseText:  responseText,
+		ErrorMessage:  errMsg,
+		LatencyMs:     finishedAt.Sub(startedAt).Milliseconds(),
+		FirstTokenMs:  firstTokenMs,
+		HasFirstToken: firstTokenMs != nil,
+		FailureKind:   failureKind,
+		RequestType:   RequestTypeStream.String(),
+		AccountID:     accountID,
+		ModelID:       modelID,
+		StartedAt:     startedAt,
+		FinishedAt:    finishedAt,
 	}, nil
 }
 
 // parseTestSSEOutput extracts response text and error message from captured SSE output.
-func parseTestSSEOutput(body string) (responseText, errMsg string) {
+func parseTestSSEOutput(body string, startedAt, finishedAt time.Time, testErr error) (responseText, errMsg string, firstTokenMs *int64, failureKind string) {
 	var texts []string
+	var firstTokenAt time.Time
 	for _, line := range strings.Split(body, "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, "data: ") {
@@ -1730,11 +1738,33 @@ func parseTestSSEOutput(body string) (responseText, errMsg string) {
 		case "content":
 			if event.Text != "" {
 				texts = append(texts, event.Text)
+				if firstTokenAt.IsZero() && event.At > 0 {
+					firstTokenAt = time.UnixMilli(event.At)
+				}
 			}
 		case "error":
 			errMsg = event.Error
 		}
 	}
 	responseText = strings.Join(texts, "")
+	if !firstTokenAt.IsZero() {
+		v := firstTokenAt.Sub(startedAt).Milliseconds()
+		if v < 0 {
+			v = 0
+		}
+		firstTokenMs = &v
+	}
+	switch {
+	case testErr != nil:
+		failureKind = "error"
+	case errMsg != "":
+		failureKind = "stream_error"
+	case responseText == "":
+		failureKind = "empty_response"
+	case finishedAt.Sub(startedAt) <= 0:
+		failureKind = "invalid_latency"
+	default:
+		failureKind = ""
+	}
 	return
 }

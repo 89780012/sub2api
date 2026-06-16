@@ -33,32 +33,42 @@ const (
 )
 
 type AccountQualitySnapshot struct {
-	AccountID         int64
-	WindowStart       time.Time
-	WindowEnd         time.Time
-	TotalRequests     int64
-	SuccessRequests   int64
-	FailureRequests   int64
-	RecentSuccessRate float64
-	ErrorRate         float64
-	TTFTSampleCount   int64
-	TTFTLE5sCount     int64
-	TTFTLE10sCount    int64
-	TTFTGT10sCount    int64
-	TTFTGT20sCount    int64
-	TTFTGT40sCount    int64
-	TTFTLE5sRate      float64
-	TTFTLE10sRate     float64
-	TTFTGT10sRate     float64
-	TTFTGT20sRate     float64
-	TTFTGT40sRate     float64
-	SampleConfidence  float64
-	FastBonus         float64
-	SlowPenalty       float64
-	ErrorPenalty      float64
-	NeutralBase       float64
-	QualityScore      float64
-	UpdatedAt         time.Time
+	AccountID                int64
+	WindowStart              time.Time
+	WindowEnd                time.Time
+	TotalRequests            int64
+	SuccessRequests          int64
+	FailureRequests          int64
+	RecentSuccessRate        float64
+	ErrorRate                float64
+	TTFTSampleCount          int64
+	TTFTLE5sCount            int64
+	TTFTLE10sCount           int64
+	TTFTGT10sCount           int64
+	TTFTGT20sCount           int64
+	TTFTGT40sCount           int64
+	TTFTLE5sRate             float64
+	TTFTLE10sRate            float64
+	TTFTGT10sRate            float64
+	TTFTGT20sRate            float64
+	TTFTGT40sRate            float64
+	SampleConfidence         float64
+	FastBonus                float64
+	SlowPenalty              float64
+	ErrorPenalty             float64
+	NeutralBase              float64
+	QualityScore             float64
+	AuxiliaryTotalRequests   int64
+	AuxiliarySuccessRequests int64
+	AuxiliaryFailureRequests int64
+	AuxiliaryTTFTSampleCount int64
+	AuxiliaryTTFTLE5sCount   int64
+	AuxiliaryTTFTLE10sCount  int64
+	AuxiliaryTTFTGT10sCount  int64
+	AuxiliaryTTFTGT20sCount  int64
+	AuxiliaryTTFTGT40sCount  int64
+	AuxiliaryWeight          float64
+	UpdatedAt                time.Time
 }
 
 type AccountQualityRepository interface {

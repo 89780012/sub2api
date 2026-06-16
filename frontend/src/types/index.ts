@@ -599,6 +599,16 @@ export interface GroupAccountQualityItem {
   fast_bonus: number
   slow_penalty: number
   error_penalty: number
+  auxiliary_total_requests: number
+  auxiliary_success_requests: number
+  auxiliary_failure_requests: number
+  auxiliary_ttft_sample_count: number
+  auxiliary_ttft_le_5s_count: number
+  auxiliary_ttft_le_10s_count: number
+  auxiliary_ttft_gt_10s_count: number
+  auxiliary_ttft_gt_20s_count: number
+  auxiliary_ttft_gt_40s_count: number
+  auxiliary_weight: number
 }
 
 export interface GroupAccountQualityResponse {

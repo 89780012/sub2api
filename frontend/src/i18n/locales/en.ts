@@ -2204,6 +2204,7 @@ export default {
           ttftSlow: 'Slow TTFT',
           penalties: 'Penalties',
           samples: 'Samples',
+          auxiliary: 'Auxiliary',
           formula: 'Formula'
         },
         priorityLabel: 'Priority {priority}',
@@ -2217,7 +2218,11 @@ export default {
         failureRequestsLabel: 'Failures {value}',
         ttftSamplesLabel: 'TTFT samples {value}',
         confidenceLabel: 'Confidence {value}',
-        successComponentLabel: 'Success bonus {value}'
+        successComponentLabel: 'Success bonus {value}',
+        auxRequestsLabel: 'Aux requests {value}',
+        auxFailuresLabel: 'Aux failures {value}',
+        auxTTFTLabel: 'Aux TTFT {value}',
+        auxWeightLabel: 'Aux weight {value}'
       },
       addUserRpm: 'Add User RPM Override',
       noRpmOverrides: 'No users have an RPM override yet',

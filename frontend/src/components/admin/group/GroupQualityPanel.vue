@@ -1,5 +1,5 @@
 <template>
-  <BaseDialog :show="show" :title="t('admin.groups.qualityPanel.title')" width="wide" @close="emit('close')">
+  <BaseDialog :show="show" :title="t('admin.groups.qualityPanel.title')" width="extra-wide" @close="emit('close')">
     <div v-if="group" class="space-y-4">
       <div class="flex flex-wrap items-center gap-3 rounded-lg bg-gray-50 px-4 py-2.5 text-sm dark:bg-dark-700">
         <span class="inline-flex items-center gap-1.5" :class="platformColorClass">
@@ -48,6 +48,7 @@
                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.columns.ttftSlow') }}</th>
                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.columns.penalties') }}</th>
                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.columns.samples') }}</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.columns.auxiliary') }}</th>
                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.columns.formula') }}</th>
               </tr>
             </thead>
@@ -113,6 +114,14 @@
                     <div>{{ t('admin.groups.qualityPanel.failureRequestsLabel', { value: item.failure_requests }) }}</div>
                     <div>{{ t('admin.groups.qualityPanel.ttftSamplesLabel', { value: item.ttft_sample_count }) }}</div>
                     <div class="text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.confidenceLabel', { value: formatPercent(item.sample_confidence) }) }}</div>
+                  </div>
+                </td>
+                <td class="px-3 py-3">
+                  <div class="space-y-1 text-xs">
+                    <div>{{ t('admin.groups.qualityPanel.auxRequestsLabel', { value: item.auxiliary_total_requests }) }}</div>
+                    <div>{{ t('admin.groups.qualityPanel.auxFailuresLabel', { value: item.auxiliary_failure_requests }) }}</div>
+                    <div>{{ t('admin.groups.qualityPanel.auxTTFTLabel', { value: item.auxiliary_ttft_sample_count }) }}</div>
+                    <div class="text-gray-500 dark:text-gray-400">{{ t('admin.groups.qualityPanel.auxWeightLabel', { value: formatPercent(item.auxiliary_weight) }) }}</div>
                   </div>
                 </td>
                 <td class="px-3 py-3">
