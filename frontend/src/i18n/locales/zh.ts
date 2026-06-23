@@ -2333,6 +2333,28 @@ export default {
           recovering: '恢复中',
           auxHeavy: '辅助影响较大'
         },
+        primaryModeLabel: '主模式: {mode}',
+        primaryLabels: {
+          activePrimary: '当前主账号:',
+          manualPrimary: '手动主账号:',
+          failoverPrimary: '故障转移主账号:'
+        },
+        primaryMeta: {
+          manualSet: '当前按手动主账号优先',
+          failoverPromoted: '主控已在本地故障转移后接管',
+          withTime: '{status} | 切换时间 {time}'
+        },
+        failoverTakeoverHint: '原手动主账号已经被故障转移接管，当前由 {account} 作为自动主账号继续承接请求。',
+        recentScheduleTitle: '最近一次调度结果',
+        recentScheduleSummary: '{reason}。实际命中账号：{account}。时间：{time}',
+        recentScheduleReasons: {
+          previousResponse: '命中了 previous_response_id 上下文续写',
+          primaryHit: '直接命中了主账号',
+          stickyHit: '命中了已有 sticky 会话',
+          primaryBypass: '主账号被绕过：{reason}',
+          loadBalance: '回退到负载均衡选择',
+          unknown: '最近一次调度原因未知'
+        },
         priorityLabel: '优先级 {priority}',
         scheduleRankLabel: '调度 #{rank}',
         concurrencyLabel: '并发 {concurrency}',

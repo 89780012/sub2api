@@ -10,8 +10,10 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +25,7 @@ type GroupHandler struct {
 	dashboardService     *service.DashboardService
 	groupCapacityService *service.GroupCapacityService
 	accountQualityReader service.AccountQualityReader
+	usageService         *service.UsageService
 }
 
 type groupAccountQualityItem struct {
@@ -98,21 +101,24 @@ type groupAccountQualityItem struct {
 }
 
 type groupAccountQualityResponse struct {
-	GroupID             int64                     `json:"group_id"`
-	GroupName           string                    `json:"group_name"`
-	GroupPlatform       string                    `json:"group_platform"`
-	PrimaryAccountMode             string     `json:"primary_account_mode"`
-	ManualPrimaryAccountID         *int64     `json:"manual_primary_account_id"`
-	ActivePrimaryAccountID         *int64     `json:"active_primary_account_id"`
-	ActivePrimarySource            string     `json:"active_primary_source"`
-	ActivePrimaryReason            string     `json:"active_primary_reason"`
-	ActivePrimarySwitchedAt        *time.Time `json:"active_primary_switched_at"`
-	PrimaryFailoverCooldownSeconds int        `json:"primary_failover_cooldown_seconds"`
-	PrimaryAllowManualAutoReplace  bool       `json:"primary_allow_manual_auto_replace"`
-	AccountCount        int                       `json:"account_count"`
-	KnownAccountCount   int                       `json:"known_account_count"`
-	UnknownAccountCount int                       `json:"unknown_account_count"`
-	Items               []groupAccountQualityItem `json:"items"`
+	GroupID                        int64                     `json:"group_id"`
+	GroupName                      string                    `json:"group_name"`
+	GroupPlatform                  string                    `json:"group_platform"`
+	PrimaryAccountMode             string                    `json:"primary_account_mode"`
+	ManualPrimaryAccountID         *int64                    `json:"manual_primary_account_id"`
+	ActivePrimaryAccountID         *int64                    `json:"active_primary_account_id"`
+	ActivePrimarySource            string                    `json:"active_primary_source"`
+	ActivePrimaryReason            string                    `json:"active_primary_reason"`
+	ActivePrimarySwitchedAt        *time.Time                `json:"active_primary_switched_at"`
+	PrimaryFailoverCooldownSeconds int                       `json:"primary_failover_cooldown_seconds"`
+	PrimaryAllowManualAutoReplace  bool                      `json:"primary_allow_manual_auto_replace"`
+	RecentScheduleTrace            *dto.UsageScheduleTrace   `json:"recent_schedule_trace,omitempty"`
+	RecentScheduleRequestID        string                    `json:"recent_schedule_request_id,omitempty"`
+	RecentScheduleCreatedAt        *time.Time                `json:"recent_schedule_created_at,omitempty"`
+	AccountCount                   int                       `json:"account_count"`
+	KnownAccountCount              int                       `json:"known_account_count"`
+	UnknownAccountCount            int                       `json:"unknown_account_count"`
+	Items                          []groupAccountQualityItem `json:"items"`
 }
 
 type optionalLimitField struct {
@@ -165,12 +171,32 @@ func (f optionalLimitField) ToServiceInput() *float64 {
 }
 
 // NewGroupHandler creates a new admin group handler
-func NewGroupHandler(adminService service.AdminService, dashboardService *service.DashboardService, groupCapacityService *service.GroupCapacityService) *GroupHandler {
+func NewGroupHandler(adminService service.AdminService, dashboardService *service.DashboardService, groupCapacityService *service.GroupCapacityService, usageService *service.UsageService) *GroupHandler {
 	return &GroupHandler{
 		adminService:         adminService,
 		dashboardService:     dashboardService,
 		groupCapacityService: groupCapacityService,
+		usageService:         usageService,
 	}
+}
+
+func (h *GroupHandler) latestGroupScheduleTrace(ctx *gin.Context, groupID int64) (*dto.UsageScheduleTrace, string, *time.Time) {
+	if h == nil || h.usageService == nil || groupID <= 0 {
+		return nil, "", nil
+	}
+	logs, _, err := h.usageService.ListWithFilters(ctx.Request.Context(), pagination.PaginationParams{
+		Page:      1,
+		PageSize:  1,
+		SortBy:    "created_at",
+		SortOrder: "desc",
+	}, usagestats.UsageLogFilters{
+		GroupID: groupID,
+	})
+	if err != nil || len(logs) == 0 {
+		return nil, "", nil
+	}
+	log := logs[0]
+	return dto.UsageLogFromServiceAdmin(&log).ScheduleTrace, log.RequestID, &log.CreatedAt
 }
 
 // CreateGroupRequest represents create group request
@@ -525,10 +551,12 @@ func (h *GroupHandler) GetAccountQuality(c *gin.Context) {
 		items[i].ScheduleSortKey = buildScheduleSortKey(&items[i])
 	}
 
+	recentScheduleTrace, recentScheduleRequestID, recentScheduleCreatedAt := h.latestGroupScheduleTrace(c, group.ID)
+
 	response.Success(c, groupAccountQualityResponse{
-		GroupID:             group.ID,
-		GroupName:           group.Name,
-		GroupPlatform:       group.Platform,
+		GroupID:                        group.ID,
+		GroupName:                      group.Name,
+		GroupPlatform:                  group.Platform,
 		PrimaryAccountMode:             group.PrimaryAccountMode,
 		ManualPrimaryAccountID:         group.ManualPrimaryAccountID,
 		ActivePrimaryAccountID:         group.ActivePrimaryAccountID,
@@ -537,10 +565,13 @@ func (h *GroupHandler) GetAccountQuality(c *gin.Context) {
 		ActivePrimarySwitchedAt:        group.ActivePrimarySwitchedAt,
 		PrimaryFailoverCooldownSeconds: group.PrimaryFailoverCooldownSeconds,
 		PrimaryAllowManualAutoReplace:  group.PrimaryAllowManualAutoReplace,
-		AccountCount:        len(items),
-		KnownAccountCount:   knownCount,
-		UnknownAccountCount: len(items) - knownCount,
-		Items:               items,
+		RecentScheduleTrace:            recentScheduleTrace,
+		RecentScheduleRequestID:        recentScheduleRequestID,
+		RecentScheduleCreatedAt:        recentScheduleCreatedAt,
+		AccountCount:                   len(items),
+		KnownAccountCount:              knownCount,
+		UnknownAccountCount:            len(items) - knownCount,
+		Items:                          items,
 	})
 }
 

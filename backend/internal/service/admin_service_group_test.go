@@ -1031,3 +1031,32 @@ func TestAdminService_UpdateGroup_InvalidRequestFallbackAllowsAntigravity(t *tes
 	require.NotNil(t, repo.updated)
 	require.Equal(t, fallbackID, *repo.updated.FallbackGroupIDOnInvalidRequest)
 }
+
+func TestPersistGroupPrimarySelection_ManualFailoverPromotionTakesOverControl(t *testing.T) {
+	manualID := int64(101)
+	group := &Group{
+		ID:                           1,
+		PrimaryAccountMode:           GroupPrimaryAccountModeManual,
+		ManualPrimaryAccountID:       &manualID,
+		PrimaryAllowManualAutoReplace: true,
+	}
+	repo := &groupRepoStubForAdmin{}
+
+	persistGroupPrimarySelection(
+		context.Background(),
+		repo,
+		group,
+		202,
+		"failover_promoted",
+		"same_account_retry_exhausted",
+	)
+
+	require.NotNil(t, repo.updated)
+	require.Equal(t, GroupPrimaryAccountModeAuto, repo.updated.PrimaryAccountMode)
+	require.Nil(t, repo.updated.ManualPrimaryAccountID)
+	require.NotNil(t, repo.updated.ActivePrimaryAccountID)
+	require.Equal(t, int64(202), *repo.updated.ActivePrimaryAccountID)
+	require.Equal(t, "failover_promoted", repo.updated.ActivePrimarySource)
+	require.Equal(t, "same_account_retry_exhausted", repo.updated.ActivePrimaryReason)
+	require.NotNil(t, repo.updated.ActivePrimarySwitchedAt)
+}

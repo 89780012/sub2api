@@ -8,6 +8,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestGroup_CurrentPreferredPrimaryAccountID_ManualFailoverPromotionTakesOver(t *testing.T) {
+	manualID := int64(101)
+	activeID := int64(202)
+	group := &Group{
+		PrimaryAccountMode:            GroupPrimaryAccountModeManual,
+		ManualPrimaryAccountID:        &manualID,
+		ActivePrimaryAccountID:        &activeID,
+		ActivePrimarySource:           "failover_promoted",
+		PrimaryAllowManualAutoReplace: true,
+	}
+
+	require.Equal(t, activeID, group.currentPreferredPrimaryAccountID())
+}
+
 // TestGroup_GetImagePrice_1K 测试 1K 尺寸返回正确价格
 func TestGroup_GetImagePrice_1K(t *testing.T) {
 	price := 0.10

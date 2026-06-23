@@ -61,6 +61,22 @@ type schedulerGroupAwareOpenAIAccountRepo struct {
 	schedulerTestOpenAIAccountRepo
 }
 
+type schedulerTestGroupRepo struct {
+	GroupRepository
+	group *Group
+}
+
+func (r schedulerTestGroupRepo) GetByID(ctx context.Context, id int64) (*Group, error) {
+	if r.group != nil && r.group.ID == id {
+		return r.group, nil
+	}
+	return nil, ErrGroupNotFound
+}
+
+func (r schedulerTestGroupRepo) GetByIDLite(ctx context.Context, id int64) (*Group, error) {
+	return r.GetByID(ctx, id)
+}
+
 func (r schedulerGroupAwareOpenAIAccountRepo) ListSchedulableByGroupIDAndPlatform(ctx context.Context, groupID int64, platform string) ([]Account, error) {
 	var result []Account
 	for _, acc := range r.accounts {
@@ -739,6 +755,60 @@ func TestOpenAIGatewayService_SelectAccountForModelWithExclusions_AutoPauseBy5hT
 	require.Equal(t, int64(35002), account.ID)
 }
 
+func TestOpenAIGatewayService_SelectAccountForModelWithExclusions_ManualPrimaryOverridesSessionStickyWithinSameGroup(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10151)
+	manualPrimaryID := int64(21601)
+	stickyID := int64(21602)
+	accounts := []Account{
+		{
+			ID:          manualPrimaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+		{
+			ID:          stickyID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    1,
+			GroupIDs:    []int64{groupID},
+		},
+	}
+	cache := &schedulerTestGatewayCache{
+		sessionBindings: map[string]int64{
+			"openai:session_hash_manual_primary_legacy": stickyID,
+		},
+	}
+	groupRepo := schedulerTestGroupRepo{
+		group: &Group{
+			ID:                     groupID,
+			PrimaryAccountMode:     GroupPrimaryAccountModeManual,
+			ManualPrimaryAccountID: &manualPrimaryID,
+			ActivePrimaryAccountID: &manualPrimaryID,
+		},
+	}
+	svc := &OpenAIGatewayService{
+		accountRepo: schedulerTestOpenAIAccountRepo{accounts: accounts},
+		groupRepo:   groupRepo,
+		cache:       cache,
+		cfg:         &config.Config{},
+	}
+
+	account, err := svc.SelectAccountForModelWithExclusions(ctx, &groupID, "session_hash_manual_primary_legacy", "gpt-5.1", nil)
+	require.NoError(t, err)
+	require.NotNil(t, account)
+	require.Equal(t, manualPrimaryID, account.ID)
+	require.Equal(t, manualPrimaryID, cache.sessionBindings["openai:session_hash_manual_primary_legacy"])
+}
+
 func TestOpenAIGatewayService_SelectAccountForModelWithExclusions_AllowsBelow5hThreshold(t *testing.T) {
 	ctx := context.Background()
 	primary := Account{
@@ -1305,6 +1375,77 @@ func TestOpenAIGatewayService_SelectAccountWithScheduler_SessionStickyBusyKeepsS
 	require.Equal(t, int64(21001), selection.WaitPlan.AccountID)
 	require.Equal(t, openAIAccountScheduleLayerSessionSticky, decision.Layer)
 	require.True(t, decision.StickySessionHit)
+}
+
+func TestOpenAIGatewayService_SelectAccountWithScheduler_ManualPrimaryOverridesSessionStickyWithinSameGroup(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10150)
+	manualPrimaryID := int64(21501)
+	stickyID := int64(21502)
+	accounts := []Account{
+		{
+			ID:          manualPrimaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+		{
+			ID:          stickyID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    1,
+			GroupIDs:    []int64{groupID},
+		},
+	}
+	cache := &schedulerTestGatewayCache{
+		sessionBindings: map[string]int64{
+			"openai:session_hash_manual_primary": stickyID,
+		},
+	}
+	groupRepo := schedulerTestGroupRepo{
+		group: &Group{
+			ID:                     groupID,
+			PrimaryAccountMode:     GroupPrimaryAccountModeManual,
+			ManualPrimaryAccountID: &manualPrimaryID,
+			ActivePrimaryAccountID: &manualPrimaryID,
+		},
+	}
+	svc := &OpenAIGatewayService{
+		accountRepo:        schedulerTestOpenAIAccountRepo{accounts: accounts},
+		groupRepo:          groupRepo,
+		cache:              cache,
+		cfg:                &config.Config{},
+		rateLimitService:   newOpenAIAdvancedSchedulerRateLimitService("true"),
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{}),
+	}
+
+	selection, decision, err := svc.SelectAccountWithScheduler(
+		ctx,
+		&groupID,
+		"",
+		"session_hash_manual_primary",
+		"gpt-5.1",
+		nil,
+		OpenAIUpstreamTransportAny,
+		false,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, selection)
+	require.NotNil(t, selection.Account)
+	require.Equal(t, manualPrimaryID, selection.Account.ID)
+	require.Equal(t, openAIAccountScheduleLayerGroupPrimary, decision.Layer)
+	require.False(t, decision.StickySessionHit)
+	require.Equal(t, manualPrimaryID, cache.sessionBindings["openai:session_hash_manual_primary"])
+	if selection.ReleaseFunc != nil {
+		selection.ReleaseFunc()
+	}
 }
 
 func TestOpenAIGatewayService_SelectAccountWithScheduler_SessionStickyEscapeByTTFT(t *testing.T) {

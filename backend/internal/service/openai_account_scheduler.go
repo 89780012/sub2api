@@ -20,6 +20,7 @@ import (
 const (
 	openAIAccountScheduleLayerPreviousResponse = "previous_response_id"
 	openAIAccountScheduleLayerSessionSticky    = "session_hash"
+	openAIAccountScheduleLayerGroupPrimary     = "group_primary"
 	openAIAccountScheduleLayerLoadBalance      = "load_balance"
 	openAIAdvancedSchedulerSettingKey          = "openai_advanced_scheduler_enabled"
 )
@@ -340,6 +341,20 @@ func (s *defaultOpenAIAccountScheduler) Select(
 		}
 	}
 
+	preferPrimaryBeforeSticky := group != nil && group.shouldPreferPrimaryBeforeStickySession()
+	if preferPrimaryBeforeSticky {
+		if selection, primaryHit, err := s.trySelectPrimaryAccount(ctx, req, group, hadExcludedFailures); err != nil {
+			return nil, decision, err
+		} else if primaryHit {
+			decision.Layer = openAIAccountScheduleLayerGroupPrimary
+			decision.SelectedAccountID = selection.Account.ID
+			decision.SelectedAccountType = selection.Account.Type
+			selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
+			attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
+			return selection, decision, nil
+		}
+	}
+
 	selection, escapedSticky, err := s.selectBySessionHash(ctx, req)
 	if err != nil {
 		return nil, decision, err
@@ -358,22 +373,15 @@ func (s *defaultOpenAIAccountScheduler) Select(
 		req.PreserveStickyBinding = true
 	}
 
-	if primaryAccount := s.service.tryPrimaryAccountHit(ctx, group, req.GroupID, req.SessionHash, req.RequestedModel, req.ExcludedIDs, req.RequireCompact, req.RequiredCapability); primaryAccount != nil {
-		result, acquireErr := s.service.tryAcquireAccountSlot(ctx, primaryAccount.ID, primaryAccount.Concurrency)
-		if acquireErr == nil && result != nil && result.Acquired {
-			selection, selectErr := s.service.newAcquiredSelectionResult(ctx, primaryAccount, result.ReleaseFunc)
-			if selectErr != nil {
-				return nil, decision, selectErr
-			}
-			if req.SessionHash != "" {
-				_ = s.service.BindStickySession(ctx, req.GroupID, req.SessionHash, primaryAccount.ID)
-			}
-			decision.Layer = "group_primary"
-			decision.SelectedAccountID = primaryAccount.ID
-			decision.SelectedAccountType = primaryAccount.Type
+	if !preferPrimaryBeforeSticky {
+		if selection, primaryHit, err := s.trySelectPrimaryAccount(ctx, req, group, hadExcludedFailures); err != nil {
+			return nil, decision, err
+		} else if primaryHit {
+			decision.Layer = openAIAccountScheduleLayerGroupPrimary
+			decision.SelectedAccountID = selection.Account.ID
+			decision.SelectedAccountType = selection.Account.Type
 			selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
 			attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
-			s.service.persistPrimaryPromotionFromSelection(ctx, group, primaryAccount.ID, hadExcludedFailures)
 			return selection, decision, nil
 		}
 	}
@@ -402,6 +410,46 @@ func (s *defaultOpenAIAccountScheduler) Select(
 		s.service.persistPrimaryPromotionFromSelection(ctx, group, selection.Account.ID, hadExcludedFailures)
 	}
 	return selection, decision, nil
+}
+
+func (s *defaultOpenAIAccountScheduler) trySelectPrimaryAccount(
+	ctx context.Context,
+	req OpenAIAccountScheduleRequest,
+	group *Group,
+	hadExcludedFailures bool,
+) (*AccountSelectionResult, bool, error) {
+	if s == nil || s.service == nil {
+		return nil, false, nil
+	}
+	primaryAccount := s.service.tryPrimaryAccountHit(
+		ctx,
+		group,
+		req.GroupID,
+		req.SessionHash,
+		req.RequestedModel,
+		req.ExcludedIDs,
+		req.RequireCompact,
+		req.RequiredCapability,
+	)
+	if primaryAccount == nil {
+		return nil, false, nil
+	}
+	result, acquireErr := s.service.tryAcquireAccountSlot(ctx, primaryAccount.ID, primaryAccount.Concurrency)
+	if acquireErr != nil {
+		return nil, false, acquireErr
+	}
+	if result == nil || !result.Acquired {
+		return nil, false, nil
+	}
+	selection, selectErr := s.service.newAcquiredSelectionResult(ctx, primaryAccount, result.ReleaseFunc)
+	if selectErr != nil {
+		return nil, false, selectErr
+	}
+	if req.SessionHash != "" {
+		_ = s.service.BindStickySession(ctx, req.GroupID, req.SessionHash, primaryAccount.ID)
+	}
+	s.service.persistPrimaryPromotionFromSelection(ctx, group, primaryAccount.ID, hadExcludedFailures)
+	return selection, true, nil
 }
 
 func (s *defaultOpenAIAccountScheduler) selectBySessionHash(

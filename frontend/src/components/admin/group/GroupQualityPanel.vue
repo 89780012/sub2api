@@ -21,17 +21,35 @@
           </div>
           <div class="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
             <span class="inline-flex rounded-full bg-slate-100 px-2 py-1 dark:bg-dark-700">
-              主模式: {{ primaryModeLabel }}
+              {{ t('admin.groups.qualityPanel.primaryModeLabel', { mode: primaryModeLabel }) }}
             </span>
             <span v-if="activePrimaryItem" class="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-              当前主账号: {{ activePrimaryItem.account_name }}
+              {{ activePrimaryBadgeLabel }} {{ activePrimaryItem.account_name }}
             </span>
             <span v-if="manualPrimaryItem" class="inline-flex rounded-full bg-blue-100 px-2 py-1 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-              手动主账号: {{ manualPrimaryItem.account_name }}
+              {{ t('admin.groups.qualityPanel.primaryLabels.manualPrimary') }} {{ manualPrimaryItem.account_name }}
             </span>
           </div>
           <div v-if="activePrimaryMeta" class="text-xs text-gray-500 dark:text-gray-400">
             {{ activePrimaryMeta }}
+          </div>
+          <div
+            v-if="recentScheduleSummary"
+            class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 dark:border-dark-600 dark:bg-dark-800/60 dark:text-gray-300"
+          >
+            <div class="font-medium text-gray-800 dark:text-gray-100">
+              {{ t('admin.groups.qualityPanel.recentScheduleTitle') }}
+            </div>
+            <div class="mt-1">
+              {{ recentScheduleSummary }}
+            </div>
+          </div>
+          <div
+            v-if="failoverTakeoverHint"
+            class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300"
+          >
+            <Icon name="sync" size="sm" class="mt-0.5 shrink-0" />
+            <span>{{ failoverTakeoverHint }}</span>
           </div>
           <div class="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
             <Icon name="infoCircle" size="sm" class="mt-0.5 shrink-0" />
@@ -151,13 +169,13 @@
                         v-if="item.is_active_primary"
                         class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
                       >
-                        当前主账号
+                        {{ rowActivePrimaryLabel(item) }}
                       </span>
                       <span
                         v-if="item.is_manual_primary"
                         class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                       >
-                        手动主账号
+                        {{ t('admin.groups.qualityPanel.primaryLabels.manualPrimary') }}
                       </span>
                       <span
                         v-if="item.is_pool_mode"
@@ -398,6 +416,9 @@ const primaryMeta = ref<{
   active_primary_switched_at?: string | null
   primary_failover_cooldown_seconds?: number
   primary_allow_manual_auto_replace?: boolean
+  recent_schedule_trace?: import('@/types').UsageScheduleTrace | null
+  recent_schedule_request_id?: string
+  recent_schedule_created_at?: string | null
 } | null>(null)
 
 const platformColorClass = computed(() => {
@@ -438,6 +459,7 @@ const lowConfidenceCount = computed(() => sortedItems.value.filter(item => !item
 
 const activePrimaryItem = computed(() => sortedItems.value.find(item => item.account_id === primaryMeta.value?.active_primary_account_id) || null)
 const manualPrimaryItem = computed(() => sortedItems.value.find(item => item.account_id === primaryMeta.value?.manual_primary_account_id) || null)
+const isFailoverPromoted = computed(() => primaryMeta.value?.active_primary_source === 'failover_promoted')
 const primaryModeLabel = computed(() => {
   switch (primaryMeta.value?.primary_account_mode) {
     case 'auto': return '自动'
@@ -445,9 +467,74 @@ const primaryModeLabel = computed(() => {
     default: return '关闭'
   }
 })
+const activePrimaryBadgeLabel = computed(() => {
+  return isFailoverPromoted.value
+    ? t('admin.groups.qualityPanel.primaryLabels.failoverPrimary')
+    : t('admin.groups.qualityPanel.primaryLabels.activePrimary')
+})
 const activePrimaryMeta = computed(() => {
-  if (!primaryMeta.value?.active_primary_source && !primaryMeta.value?.active_primary_reason) return ''
-  return [primaryMeta.value.active_primary_source, primaryMeta.value.active_primary_reason].filter(Boolean).join(' / ')
+  if (!primaryMeta.value) return ''
+
+  const source = primaryMeta.value.active_primary_source
+  const reason = primaryMeta.value.active_primary_reason
+  const switchedAt = primaryMeta.value.active_primary_switched_at
+
+  let label = ''
+  if (source === 'manual_override' && reason === 'manual_set') {
+    label = t('admin.groups.qualityPanel.primaryMeta.manualSet')
+  } else if (source === 'failover_promoted' && reason === 'same_account_retry_exhausted') {
+    label = t('admin.groups.qualityPanel.primaryMeta.failoverPromoted')
+  } else {
+    label = [source, reason].filter(Boolean).join(' / ')
+  }
+
+  if (!label) return ''
+  if (!switchedAt) return label
+
+  const switchedText = new Date(switchedAt).toLocaleString()
+  return t('admin.groups.qualityPanel.primaryMeta.withTime', {
+    status: label,
+    time: switchedText
+  })
+})
+const failoverTakeoverHint = computed(() => {
+  if (!isFailoverPromoted.value || !activePrimaryItem.value) return ''
+  return t('admin.groups.qualityPanel.failoverTakeoverHint', {
+    account: activePrimaryItem.value.account_name
+  })
+})
+const recentScheduleSummary = computed(() => {
+  const trace = primaryMeta.value?.recent_schedule_trace
+  if (!trace) return ''
+
+  const selectedName = sortedItems.value.find(item => item.account_id === trace.selected_account_id)?.account_name
+  const selectedLabel = selectedName || (trace.selected_account_id ? `#${trace.selected_account_id}` : '')
+  const createdAt = primaryMeta.value?.recent_schedule_created_at
+    ? new Date(primaryMeta.value.recent_schedule_created_at).toLocaleString()
+    : ''
+
+  let reason = ''
+  if (trace.layer === 'previous_response_id') {
+    reason = t('admin.groups.qualityPanel.recentScheduleReasons.previousResponse')
+  } else if (trace.primary_hit) {
+    reason = t('admin.groups.qualityPanel.recentScheduleReasons.primaryHit')
+  } else if (trace.sticky_hit) {
+    reason = t('admin.groups.qualityPanel.recentScheduleReasons.stickyHit')
+  } else if (trace.primary_bypass_reason) {
+    reason = t('admin.groups.qualityPanel.recentScheduleReasons.primaryBypass', {
+      reason: trace.primary_bypass_reason
+    })
+  } else if (trace.layer === 'load_balance') {
+    reason = t('admin.groups.qualityPanel.recentScheduleReasons.loadBalance')
+  } else {
+    reason = trace.layer || t('admin.groups.qualityPanel.recentScheduleReasons.unknown')
+  }
+
+  return t('admin.groups.qualityPanel.recentScheduleSummary', {
+    reason,
+    account: selectedLabel || '-',
+    time: createdAt || '-'
+  })
 })
 
 const loadQuality = async () => {
@@ -464,7 +551,10 @@ const loadQuality = async () => {
       active_primary_reason: data.active_primary_reason,
       active_primary_switched_at: data.active_primary_switched_at,
       primary_failover_cooldown_seconds: data.primary_failover_cooldown_seconds,
-      primary_allow_manual_auto_replace: data.primary_allow_manual_auto_replace
+      primary_allow_manual_auto_replace: data.primary_allow_manual_auto_replace,
+      recent_schedule_trace: data.recent_schedule_trace,
+      recent_schedule_request_id: data.recent_schedule_request_id,
+      recent_schedule_created_at: data.recent_schedule_created_at
     }
     expandedAccountIds.value = []
     totalCount.value = data.account_count
@@ -560,6 +650,13 @@ const mainStateClass = (item: GroupAccountQualityItem) => {
   if (state === 'risk') return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
   if (state === 'lowConfidence') return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
   return 'bg-gray-200 text-gray-700 dark:bg-dark-600 dark:text-gray-300'
+}
+
+const rowActivePrimaryLabel = (item: GroupAccountQualityItem) => {
+  if (item.account_id === primaryMeta.value?.active_primary_account_id && isFailoverPromoted.value) {
+    return t('admin.groups.qualityPanel.primaryLabels.failoverPrimary')
+  }
+  return t('admin.groups.qualityPanel.primaryLabels.activePrimary')
 }
 
 const rankReason = (item: GroupAccountQualityItem) => {

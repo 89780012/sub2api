@@ -43,6 +43,11 @@ func (g *Group) currentPreferredPrimaryAccountID() int64 {
 	mode := g.EffectivePrimaryAccountMode()
 	switch mode {
 	case GroupPrimaryAccountModeManual:
+		if g.PrimaryAllowManualAutoReplace &&
+			g.ActivePrimaryAccountID != nil && *g.ActivePrimaryAccountID > 0 &&
+			strings.TrimSpace(g.ActivePrimarySource) == "failover_promoted" {
+			return *g.ActivePrimaryAccountID
+		}
 		if g.ManualPrimaryAccountID != nil && *g.ManualPrimaryAccountID > 0 {
 			return *g.ManualPrimaryAccountID
 		}
@@ -55,6 +60,14 @@ func (g *Group) currentPreferredPrimaryAccountID() int64 {
 		}
 	}
 	return 0
+}
+
+func (g *Group) shouldPreferPrimaryBeforeStickySession() bool {
+	if g == nil {
+		return false
+	}
+	return g.EffectivePrimaryAccountMode() == GroupPrimaryAccountModeManual &&
+		g.currentPreferredPrimaryAccountID() > 0
 }
 
 func (g *Group) shouldPersistPrimaryPromotion(promotedAccountID int64) bool {
@@ -90,11 +103,17 @@ func persistGroupPrimarySelection(
 	if repo == nil || group == nil || accountID <= 0 {
 		return
 	}
+	shouldTakeOverManual := group.EffectivePrimaryAccountMode() == GroupPrimaryAccountModeManual &&
+		group.PrimaryAllowManualAutoReplace &&
+		source == "failover_promoted"
 	currentID := int64(0)
 	if group.ActivePrimaryAccountID != nil {
 		currentID = *group.ActivePrimaryAccountID
 	}
-	if currentID == accountID && strings.TrimSpace(group.ActivePrimarySource) == source && strings.TrimSpace(group.ActivePrimaryReason) == reason {
+	if currentID == accountID &&
+		strings.TrimSpace(group.ActivePrimarySource) == source &&
+		strings.TrimSpace(group.ActivePrimaryReason) == reason &&
+		(!shouldTakeOverManual || (group.ManualPrimaryAccountID == nil && group.EffectivePrimaryAccountMode() == GroupPrimaryAccountModeAuto)) {
 		return
 	}
 	now := time.Now()
@@ -102,6 +121,10 @@ func persistGroupPrimarySelection(
 	group.ActivePrimarySource = source
 	group.ActivePrimaryReason = reason
 	group.ActivePrimarySwitchedAt = &now
+	if shouldTakeOverManual {
+		group.ManualPrimaryAccountID = nil
+		group.PrimaryAccountMode = GroupPrimaryAccountModeAuto
+	}
 	if err := repo.Update(ctx, group); err != nil {
 		slog.Warn("group primary account update failed",
 			"group_id", group.ID,

@@ -649,6 +649,9 @@ export interface GroupAccountQualityResponse {
   active_primary_switched_at?: string | null
   primary_failover_cooldown_seconds?: number
   primary_allow_manual_auto_replace?: boolean
+  recent_schedule_trace?: UsageScheduleTrace | null
+  recent_schedule_request_id?: string
+  recent_schedule_created_at?: string | null
   account_count: number
   known_account_count: number
   unknown_account_count: number
@@ -1388,6 +1391,9 @@ export interface UsageScheduleTrace {
   account_type?: string | null
   selected_account_id?: number
   priority?: number | null
+  primary_hit?: boolean
+  primary_source?: string | null
+  primary_bypass_reason?: string | null
   sticky_hit?: boolean
   sticky_escape?: boolean
   sticky_escape_reason?: string | null

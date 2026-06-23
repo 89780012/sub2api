@@ -2238,6 +2238,28 @@ export default {
           recovering: 'Recovering',
           auxHeavy: 'Aux Heavy'
         },
+        primaryModeLabel: 'Primary mode: {mode}',
+        primaryLabels: {
+          activePrimary: 'Current primary:',
+          manualPrimary: 'Manual primary:',
+          failoverPrimary: 'Failover primary:'
+        },
+        primaryMeta: {
+          manualSet: 'Manual primary is active',
+          failoverPromoted: 'Primary control was handed over after local failover',
+          withTime: '{status} | switched at {time}'
+        },
+        failoverTakeoverHint: 'The previous manual primary has been taken over by failover. {account} is now the active primary in auto mode.',
+        recentScheduleTitle: 'Latest scheduling result',
+        recentScheduleSummary: '{reason}. Selected account: {account}. Time: {time}',
+        recentScheduleReasons: {
+          previousResponse: 'Matched previous_response_id continuation',
+          primaryHit: 'Primary account was selected directly',
+          stickyHit: 'Matched existing sticky session',
+          primaryBypass: 'Primary account was bypassed: {reason}',
+          loadBalance: 'Fell back to load-balance selection',
+          unknown: 'Latest scheduling reason is unknown'
+        },
         priorityLabel: 'Priority {priority}',
         scheduleRankLabel: 'Schedule #{rank}',
         concurrencyLabel: 'Concurrency {concurrency}',

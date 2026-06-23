@@ -1701,10 +1701,30 @@ func (s *OpenAIGatewayService) selectAccountForModelWithExclusions(ctx context.C
 		return nil, fmt.Errorf("%w supporting model: %s (channel pricing restriction)", ErrNoAvailableAccounts, requestedModel)
 	}
 
+	group := s.getGroupPrimaryConfig(ctx, groupID)
+	preferPrimaryBeforeSticky := group != nil && group.shouldPreferPrimaryBeforeStickySession()
+	if preferPrimaryBeforeSticky {
+		if account := s.tryPrimaryAccountHit(ctx, group, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, requiredCapability); account != nil {
+			if sessionHash != "" {
+				_ = s.setStickySessionAccountID(ctx, groupID, sessionHash, account.ID, openaiStickySessionTTL)
+			}
+			return account, nil
+		}
+	}
+
 	// 1. 尝试粘性会话命中
 	// Try sticky session hit
 	if account := s.tryStickySessionHit(ctx, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, stickyAccountID, requiredCapability); account != nil {
 		return account, nil
+	}
+
+	if !preferPrimaryBeforeSticky {
+		if account := s.tryPrimaryAccountHit(ctx, group, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, requiredCapability); account != nil {
+			if sessionHash != "" {
+				_ = s.setStickySessionAccountID(ctx, groupID, sessionHash, account.ID, openaiStickySessionTTL)
+			}
+			return account, nil
+		}
 	}
 
 	// 2. 获取可调度的 OpenAI 账号
