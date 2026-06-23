@@ -297,6 +297,8 @@ func (s *defaultOpenAIAccountScheduler) Select(
 	req OpenAIAccountScheduleRequest,
 ) (*AccountSelectionResult, OpenAIAccountScheduleDecision, error) {
 	decision := OpenAIAccountScheduleDecision{}
+	group := s.service.getGroupPrimaryConfig(ctx, req.GroupID)
+	hadExcludedFailures := len(req.ExcludedIDs) > 0
 	start := time.Now()
 	defer func() {
 		decision.LatencyMs = time.Since(start).Milliseconds()
@@ -356,6 +358,26 @@ func (s *defaultOpenAIAccountScheduler) Select(
 		req.PreserveStickyBinding = true
 	}
 
+	if primaryAccount := s.service.tryPrimaryAccountHit(ctx, group, req.GroupID, req.SessionHash, req.RequestedModel, req.ExcludedIDs, req.RequireCompact, req.RequiredCapability); primaryAccount != nil {
+		result, acquireErr := s.service.tryAcquireAccountSlot(ctx, primaryAccount.ID, primaryAccount.Concurrency)
+		if acquireErr == nil && result != nil && result.Acquired {
+			selection, selectErr := s.service.newAcquiredSelectionResult(ctx, primaryAccount, result.ReleaseFunc)
+			if selectErr != nil {
+				return nil, decision, selectErr
+			}
+			if req.SessionHash != "" {
+				_ = s.service.BindStickySession(ctx, req.GroupID, req.SessionHash, primaryAccount.ID)
+			}
+			decision.Layer = "group_primary"
+			decision.SelectedAccountID = primaryAccount.ID
+			decision.SelectedAccountType = primaryAccount.Type
+			selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
+			attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
+			s.service.persistPrimaryPromotionFromSelection(ctx, group, primaryAccount.ID, hadExcludedFailures)
+			return selection, decision, nil
+		}
+	}
+
 	selection, candidateCount, topK, loadSkew, traceCandidates, scoreFormula, err := s.selectByLoadBalance(ctx, req)
 	decision.Layer = openAIAccountScheduleLayerLoadBalance
 	decision.CandidateCount = candidateCount
@@ -376,6 +398,8 @@ func (s *defaultOpenAIAccountScheduler) Select(
 		}
 		decision.Candidates = traceCandidates
 		selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
+		attachPrimaryTrace(selection.ScheduleTrace, group, false, "primary_unavailable")
+		s.service.persistPrimaryPromotionFromSelection(ctx, group, selection.Account.ID, hadExcludedFailures)
 	}
 	return selection, decision, nil
 }

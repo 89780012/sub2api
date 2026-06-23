@@ -136,6 +136,7 @@ func newOpenAIRecordUsageServiceForTest(usageRepo UsageLogRepository, userRepo U
 	cfg.Default.RateMultiplier = 1.1
 	svc := NewOpenAIGatewayService(
 		nil,
+		nil,
 		usageRepo,
 		nil,
 		userRepo,

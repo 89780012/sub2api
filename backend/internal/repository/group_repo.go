@@ -67,12 +67,20 @@ func (r *groupRepository) Create(ctx context.Context, groupIn *service.Group) er
 		SetDefaultMappedModel(groupIn.DefaultMappedModel).
 		SetMessagesDispatchModelConfig(groupIn.MessagesDispatchModelConfig).
 		SetModelsListConfig(groupIn.ModelsListConfig).
-		SetRpmLimit(groupIn.RPMLimit)
+		SetRpmLimit(groupIn.RPMLimit).
+		SetPrimaryAccountMode(groupIn.PrimaryAccountMode).
+		SetActivePrimarySource(groupIn.ActivePrimarySource).
+		SetActivePrimaryReason(groupIn.ActivePrimaryReason).
+		SetPrimaryFailoverCooldownSeconds(groupIn.PrimaryFailoverCooldownSeconds).
+		SetPrimaryAllowManualAutoReplace(groupIn.PrimaryAllowManualAutoReplace)
 
 	// 设置模型路由配置
 	if groupIn.ModelRouting != nil {
 		builder = builder.SetModelRouting(groupIn.ModelRouting)
 	}
+	builder = builder.SetNillableManualPrimaryAccountID(groupIn.ManualPrimaryAccountID)
+	builder = builder.SetNillableActivePrimaryAccountID(groupIn.ActivePrimaryAccountID)
+	builder = builder.SetNillableActivePrimarySwitchedAt(groupIn.ActivePrimarySwitchedAt)
 
 	// 设置支持的模型系列（始终设置，空数组表示不限制）
 	builder = builder.SetSupportedModelScopes(groupIn.SupportedModelScopes)
@@ -143,7 +151,12 @@ func (r *groupRepository) Update(ctx context.Context, groupIn *service.Group) er
 		SetDefaultMappedModel(groupIn.DefaultMappedModel).
 		SetMessagesDispatchModelConfig(groupIn.MessagesDispatchModelConfig).
 		SetModelsListConfig(groupIn.ModelsListConfig).
-		SetRpmLimit(groupIn.RPMLimit)
+		SetRpmLimit(groupIn.RPMLimit).
+		SetPrimaryAccountMode(groupIn.PrimaryAccountMode).
+		SetActivePrimarySource(groupIn.ActivePrimarySource).
+		SetActivePrimaryReason(groupIn.ActivePrimaryReason).
+		SetPrimaryFailoverCooldownSeconds(groupIn.PrimaryFailoverCooldownSeconds).
+		SetPrimaryAllowManualAutoReplace(groupIn.PrimaryAllowManualAutoReplace)
 
 	// 显式处理可空字段：nil 需要 clear，非 nil 需要 set。
 	if groupIn.DailyLimitUSD != nil {
@@ -195,6 +208,21 @@ func (r *groupRepository) Update(ctx context.Context, groupIn *service.Group) er
 		builder = builder.SetModelRouting(groupIn.ModelRouting)
 	} else {
 		builder = builder.ClearModelRouting()
+	}
+	if groupIn.ManualPrimaryAccountID != nil {
+		builder = builder.SetManualPrimaryAccountID(*groupIn.ManualPrimaryAccountID)
+	} else {
+		builder = builder.ClearManualPrimaryAccountID()
+	}
+	if groupIn.ActivePrimaryAccountID != nil {
+		builder = builder.SetActivePrimaryAccountID(*groupIn.ActivePrimaryAccountID)
+	} else {
+		builder = builder.ClearActivePrimaryAccountID()
+	}
+	if groupIn.ActivePrimarySwitchedAt != nil {
+		builder = builder.SetActivePrimarySwitchedAt(*groupIn.ActivePrimarySwitchedAt)
+	} else {
+		builder = builder.ClearActivePrimarySwitchedAt()
 	}
 
 	// 处理 SupportedModelScopes（始终设置，空数组表示不限制）

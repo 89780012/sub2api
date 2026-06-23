@@ -528,6 +528,14 @@ export interface Group {
   messages_dispatch_model_config?: OpenAIMessagesDispatchModelConfig
   require_oauth_only: boolean
   require_privacy_set: boolean
+  primary_account_mode: 'off' | 'auto' | 'manual'
+  manual_primary_account_id?: number | null
+  active_primary_account_id?: number | null
+  active_primary_source?: string
+  active_primary_reason?: string
+  active_primary_switched_at?: string | null
+  primary_failover_cooldown_seconds?: number
+  primary_allow_manual_auto_replace?: boolean
   created_at: string
   updated_at: string
 }
@@ -620,12 +628,27 @@ export interface GroupAccountQualityItem {
   auxiliary_weight: number
   schedule_rank: number
   schedule_sort_key: string
+  is_manual_primary: boolean
+  is_active_primary: boolean
+  is_pool_mode: boolean
+  pool_mode_retry_count: number
+  pool_mode_retry_status_codes?: number[]
+  primary_eligible: boolean
+  primary_ineligible_reason?: string
 }
 
 export interface GroupAccountQualityResponse {
   group_id: number
   group_name: string
   group_platform: string
+  primary_account_mode: 'off' | 'auto' | 'manual'
+  manual_primary_account_id?: number | null
+  active_primary_account_id?: number | null
+  active_primary_source?: string
+  active_primary_reason?: string
+  active_primary_switched_at?: string | null
+  primary_failover_cooldown_seconds?: number
+  primary_allow_manual_auto_replace?: boolean
   account_count: number
   known_account_count: number
   unknown_account_count: number
@@ -761,6 +784,13 @@ export interface UpdateGroupRequest {
   require_oauth_only?: boolean
   require_privacy_set?: boolean
   copy_accounts_from_group_ids?: number[]
+}
+
+export interface UpdateGroupPrimaryAccountRequest {
+  primary_account_mode: 'off' | 'auto' | 'manual'
+  manual_primary_account_id?: number | null
+  primary_failover_cooldown_seconds?: number
+  primary_allow_manual_auto_replace?: boolean
 }
 
 // ==================== Account & Proxy Types ====================

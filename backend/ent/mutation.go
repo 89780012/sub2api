@@ -15011,6 +15011,17 @@ type GroupMutation struct {
 	models_list_config                      *domain.GroupModelsListConfig
 	rpm_limit                               *int
 	addrpm_limit                            *int
+	primary_account_mode                    *string
+	manual_primary_account_id               *int64
+	addmanual_primary_account_id            *int64
+	active_primary_account_id               *int64
+	addactive_primary_account_id            *int64
+	active_primary_source                   *string
+	active_primary_reason                   *string
+	active_primary_switched_at              *time.Time
+	primary_failover_cooldown_seconds       *int
+	addprimary_failover_cooldown_seconds    *int
+	primary_allow_manual_auto_replace       *bool
 	clearedFields                           map[string]struct{}
 	api_keys                                map[int64]struct{}
 	removedapi_keys                         map[int64]struct{}
@@ -16819,6 +16830,395 @@ func (m *GroupMutation) ResetRpmLimit() {
 	m.addrpm_limit = nil
 }
 
+// SetPrimaryAccountMode sets the "primary_account_mode" field.
+func (m *GroupMutation) SetPrimaryAccountMode(s string) {
+	m.primary_account_mode = &s
+}
+
+// PrimaryAccountMode returns the value of the "primary_account_mode" field in the mutation.
+func (m *GroupMutation) PrimaryAccountMode() (r string, exists bool) {
+	v := m.primary_account_mode
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrimaryAccountMode returns the old "primary_account_mode" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldPrimaryAccountMode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrimaryAccountMode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrimaryAccountMode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrimaryAccountMode: %w", err)
+	}
+	return oldValue.PrimaryAccountMode, nil
+}
+
+// ResetPrimaryAccountMode resets all changes to the "primary_account_mode" field.
+func (m *GroupMutation) ResetPrimaryAccountMode() {
+	m.primary_account_mode = nil
+}
+
+// SetManualPrimaryAccountID sets the "manual_primary_account_id" field.
+func (m *GroupMutation) SetManualPrimaryAccountID(i int64) {
+	m.manual_primary_account_id = &i
+	m.addmanual_primary_account_id = nil
+}
+
+// ManualPrimaryAccountID returns the value of the "manual_primary_account_id" field in the mutation.
+func (m *GroupMutation) ManualPrimaryAccountID() (r int64, exists bool) {
+	v := m.manual_primary_account_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldManualPrimaryAccountID returns the old "manual_primary_account_id" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldManualPrimaryAccountID(ctx context.Context) (v *int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldManualPrimaryAccountID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldManualPrimaryAccountID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldManualPrimaryAccountID: %w", err)
+	}
+	return oldValue.ManualPrimaryAccountID, nil
+}
+
+// AddManualPrimaryAccountID adds i to the "manual_primary_account_id" field.
+func (m *GroupMutation) AddManualPrimaryAccountID(i int64) {
+	if m.addmanual_primary_account_id != nil {
+		*m.addmanual_primary_account_id += i
+	} else {
+		m.addmanual_primary_account_id = &i
+	}
+}
+
+// AddedManualPrimaryAccountID returns the value that was added to the "manual_primary_account_id" field in this mutation.
+func (m *GroupMutation) AddedManualPrimaryAccountID() (r int64, exists bool) {
+	v := m.addmanual_primary_account_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearManualPrimaryAccountID clears the value of the "manual_primary_account_id" field.
+func (m *GroupMutation) ClearManualPrimaryAccountID() {
+	m.manual_primary_account_id = nil
+	m.addmanual_primary_account_id = nil
+	m.clearedFields[group.FieldManualPrimaryAccountID] = struct{}{}
+}
+
+// ManualPrimaryAccountIDCleared returns if the "manual_primary_account_id" field was cleared in this mutation.
+func (m *GroupMutation) ManualPrimaryAccountIDCleared() bool {
+	_, ok := m.clearedFields[group.FieldManualPrimaryAccountID]
+	return ok
+}
+
+// ResetManualPrimaryAccountID resets all changes to the "manual_primary_account_id" field.
+func (m *GroupMutation) ResetManualPrimaryAccountID() {
+	m.manual_primary_account_id = nil
+	m.addmanual_primary_account_id = nil
+	delete(m.clearedFields, group.FieldManualPrimaryAccountID)
+}
+
+// SetActivePrimaryAccountID sets the "active_primary_account_id" field.
+func (m *GroupMutation) SetActivePrimaryAccountID(i int64) {
+	m.active_primary_account_id = &i
+	m.addactive_primary_account_id = nil
+}
+
+// ActivePrimaryAccountID returns the value of the "active_primary_account_id" field in the mutation.
+func (m *GroupMutation) ActivePrimaryAccountID() (r int64, exists bool) {
+	v := m.active_primary_account_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldActivePrimaryAccountID returns the old "active_primary_account_id" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldActivePrimaryAccountID(ctx context.Context) (v *int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActivePrimaryAccountID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActivePrimaryAccountID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActivePrimaryAccountID: %w", err)
+	}
+	return oldValue.ActivePrimaryAccountID, nil
+}
+
+// AddActivePrimaryAccountID adds i to the "active_primary_account_id" field.
+func (m *GroupMutation) AddActivePrimaryAccountID(i int64) {
+	if m.addactive_primary_account_id != nil {
+		*m.addactive_primary_account_id += i
+	} else {
+		m.addactive_primary_account_id = &i
+	}
+}
+
+// AddedActivePrimaryAccountID returns the value that was added to the "active_primary_account_id" field in this mutation.
+func (m *GroupMutation) AddedActivePrimaryAccountID() (r int64, exists bool) {
+	v := m.addactive_primary_account_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearActivePrimaryAccountID clears the value of the "active_primary_account_id" field.
+func (m *GroupMutation) ClearActivePrimaryAccountID() {
+	m.active_primary_account_id = nil
+	m.addactive_primary_account_id = nil
+	m.clearedFields[group.FieldActivePrimaryAccountID] = struct{}{}
+}
+
+// ActivePrimaryAccountIDCleared returns if the "active_primary_account_id" field was cleared in this mutation.
+func (m *GroupMutation) ActivePrimaryAccountIDCleared() bool {
+	_, ok := m.clearedFields[group.FieldActivePrimaryAccountID]
+	return ok
+}
+
+// ResetActivePrimaryAccountID resets all changes to the "active_primary_account_id" field.
+func (m *GroupMutation) ResetActivePrimaryAccountID() {
+	m.active_primary_account_id = nil
+	m.addactive_primary_account_id = nil
+	delete(m.clearedFields, group.FieldActivePrimaryAccountID)
+}
+
+// SetActivePrimarySource sets the "active_primary_source" field.
+func (m *GroupMutation) SetActivePrimarySource(s string) {
+	m.active_primary_source = &s
+}
+
+// ActivePrimarySource returns the value of the "active_primary_source" field in the mutation.
+func (m *GroupMutation) ActivePrimarySource() (r string, exists bool) {
+	v := m.active_primary_source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldActivePrimarySource returns the old "active_primary_source" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldActivePrimarySource(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActivePrimarySource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActivePrimarySource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActivePrimarySource: %w", err)
+	}
+	return oldValue.ActivePrimarySource, nil
+}
+
+// ResetActivePrimarySource resets all changes to the "active_primary_source" field.
+func (m *GroupMutation) ResetActivePrimarySource() {
+	m.active_primary_source = nil
+}
+
+// SetActivePrimaryReason sets the "active_primary_reason" field.
+func (m *GroupMutation) SetActivePrimaryReason(s string) {
+	m.active_primary_reason = &s
+}
+
+// ActivePrimaryReason returns the value of the "active_primary_reason" field in the mutation.
+func (m *GroupMutation) ActivePrimaryReason() (r string, exists bool) {
+	v := m.active_primary_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldActivePrimaryReason returns the old "active_primary_reason" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldActivePrimaryReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActivePrimaryReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActivePrimaryReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActivePrimaryReason: %w", err)
+	}
+	return oldValue.ActivePrimaryReason, nil
+}
+
+// ResetActivePrimaryReason resets all changes to the "active_primary_reason" field.
+func (m *GroupMutation) ResetActivePrimaryReason() {
+	m.active_primary_reason = nil
+}
+
+// SetActivePrimarySwitchedAt sets the "active_primary_switched_at" field.
+func (m *GroupMutation) SetActivePrimarySwitchedAt(t time.Time) {
+	m.active_primary_switched_at = &t
+}
+
+// ActivePrimarySwitchedAt returns the value of the "active_primary_switched_at" field in the mutation.
+func (m *GroupMutation) ActivePrimarySwitchedAt() (r time.Time, exists bool) {
+	v := m.active_primary_switched_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldActivePrimarySwitchedAt returns the old "active_primary_switched_at" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldActivePrimarySwitchedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActivePrimarySwitchedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActivePrimarySwitchedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActivePrimarySwitchedAt: %w", err)
+	}
+	return oldValue.ActivePrimarySwitchedAt, nil
+}
+
+// ClearActivePrimarySwitchedAt clears the value of the "active_primary_switched_at" field.
+func (m *GroupMutation) ClearActivePrimarySwitchedAt() {
+	m.active_primary_switched_at = nil
+	m.clearedFields[group.FieldActivePrimarySwitchedAt] = struct{}{}
+}
+
+// ActivePrimarySwitchedAtCleared returns if the "active_primary_switched_at" field was cleared in this mutation.
+func (m *GroupMutation) ActivePrimarySwitchedAtCleared() bool {
+	_, ok := m.clearedFields[group.FieldActivePrimarySwitchedAt]
+	return ok
+}
+
+// ResetActivePrimarySwitchedAt resets all changes to the "active_primary_switched_at" field.
+func (m *GroupMutation) ResetActivePrimarySwitchedAt() {
+	m.active_primary_switched_at = nil
+	delete(m.clearedFields, group.FieldActivePrimarySwitchedAt)
+}
+
+// SetPrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field.
+func (m *GroupMutation) SetPrimaryFailoverCooldownSeconds(i int) {
+	m.primary_failover_cooldown_seconds = &i
+	m.addprimary_failover_cooldown_seconds = nil
+}
+
+// PrimaryFailoverCooldownSeconds returns the value of the "primary_failover_cooldown_seconds" field in the mutation.
+func (m *GroupMutation) PrimaryFailoverCooldownSeconds() (r int, exists bool) {
+	v := m.primary_failover_cooldown_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrimaryFailoverCooldownSeconds returns the old "primary_failover_cooldown_seconds" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldPrimaryFailoverCooldownSeconds(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrimaryFailoverCooldownSeconds is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrimaryFailoverCooldownSeconds requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrimaryFailoverCooldownSeconds: %w", err)
+	}
+	return oldValue.PrimaryFailoverCooldownSeconds, nil
+}
+
+// AddPrimaryFailoverCooldownSeconds adds i to the "primary_failover_cooldown_seconds" field.
+func (m *GroupMutation) AddPrimaryFailoverCooldownSeconds(i int) {
+	if m.addprimary_failover_cooldown_seconds != nil {
+		*m.addprimary_failover_cooldown_seconds += i
+	} else {
+		m.addprimary_failover_cooldown_seconds = &i
+	}
+}
+
+// AddedPrimaryFailoverCooldownSeconds returns the value that was added to the "primary_failover_cooldown_seconds" field in this mutation.
+func (m *GroupMutation) AddedPrimaryFailoverCooldownSeconds() (r int, exists bool) {
+	v := m.addprimary_failover_cooldown_seconds
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPrimaryFailoverCooldownSeconds resets all changes to the "primary_failover_cooldown_seconds" field.
+func (m *GroupMutation) ResetPrimaryFailoverCooldownSeconds() {
+	m.primary_failover_cooldown_seconds = nil
+	m.addprimary_failover_cooldown_seconds = nil
+}
+
+// SetPrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field.
+func (m *GroupMutation) SetPrimaryAllowManualAutoReplace(b bool) {
+	m.primary_allow_manual_auto_replace = &b
+}
+
+// PrimaryAllowManualAutoReplace returns the value of the "primary_allow_manual_auto_replace" field in the mutation.
+func (m *GroupMutation) PrimaryAllowManualAutoReplace() (r bool, exists bool) {
+	v := m.primary_allow_manual_auto_replace
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrimaryAllowManualAutoReplace returns the old "primary_allow_manual_auto_replace" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldPrimaryAllowManualAutoReplace(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrimaryAllowManualAutoReplace is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrimaryAllowManualAutoReplace requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrimaryAllowManualAutoReplace: %w", err)
+	}
+	return oldValue.PrimaryAllowManualAutoReplace, nil
+}
+
+// ResetPrimaryAllowManualAutoReplace resets all changes to the "primary_allow_manual_auto_replace" field.
+func (m *GroupMutation) ResetPrimaryAllowManualAutoReplace() {
+	m.primary_allow_manual_auto_replace = nil
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by ids.
 func (m *GroupMutation) AddAPIKeyIDs(ids ...int64) {
 	if m.api_keys == nil {
@@ -17177,7 +17577,7 @@ func (m *GroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 35)
+	fields := make([]string, 0, 43)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 	}
@@ -17283,6 +17683,30 @@ func (m *GroupMutation) Fields() []string {
 	if m.rpm_limit != nil {
 		fields = append(fields, group.FieldRpmLimit)
 	}
+	if m.primary_account_mode != nil {
+		fields = append(fields, group.FieldPrimaryAccountMode)
+	}
+	if m.manual_primary_account_id != nil {
+		fields = append(fields, group.FieldManualPrimaryAccountID)
+	}
+	if m.active_primary_account_id != nil {
+		fields = append(fields, group.FieldActivePrimaryAccountID)
+	}
+	if m.active_primary_source != nil {
+		fields = append(fields, group.FieldActivePrimarySource)
+	}
+	if m.active_primary_reason != nil {
+		fields = append(fields, group.FieldActivePrimaryReason)
+	}
+	if m.active_primary_switched_at != nil {
+		fields = append(fields, group.FieldActivePrimarySwitchedAt)
+	}
+	if m.primary_failover_cooldown_seconds != nil {
+		fields = append(fields, group.FieldPrimaryFailoverCooldownSeconds)
+	}
+	if m.primary_allow_manual_auto_replace != nil {
+		fields = append(fields, group.FieldPrimaryAllowManualAutoReplace)
+	}
 	return fields
 }
 
@@ -17361,6 +17785,22 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.ModelsListConfig()
 	case group.FieldRpmLimit:
 		return m.RpmLimit()
+	case group.FieldPrimaryAccountMode:
+		return m.PrimaryAccountMode()
+	case group.FieldManualPrimaryAccountID:
+		return m.ManualPrimaryAccountID()
+	case group.FieldActivePrimaryAccountID:
+		return m.ActivePrimaryAccountID()
+	case group.FieldActivePrimarySource:
+		return m.ActivePrimarySource()
+	case group.FieldActivePrimaryReason:
+		return m.ActivePrimaryReason()
+	case group.FieldActivePrimarySwitchedAt:
+		return m.ActivePrimarySwitchedAt()
+	case group.FieldPrimaryFailoverCooldownSeconds:
+		return m.PrimaryFailoverCooldownSeconds()
+	case group.FieldPrimaryAllowManualAutoReplace:
+		return m.PrimaryAllowManualAutoReplace()
 	}
 	return nil, false
 }
@@ -17440,6 +17880,22 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldModelsListConfig(ctx)
 	case group.FieldRpmLimit:
 		return m.OldRpmLimit(ctx)
+	case group.FieldPrimaryAccountMode:
+		return m.OldPrimaryAccountMode(ctx)
+	case group.FieldManualPrimaryAccountID:
+		return m.OldManualPrimaryAccountID(ctx)
+	case group.FieldActivePrimaryAccountID:
+		return m.OldActivePrimaryAccountID(ctx)
+	case group.FieldActivePrimarySource:
+		return m.OldActivePrimarySource(ctx)
+	case group.FieldActivePrimaryReason:
+		return m.OldActivePrimaryReason(ctx)
+	case group.FieldActivePrimarySwitchedAt:
+		return m.OldActivePrimarySwitchedAt(ctx)
+	case group.FieldPrimaryFailoverCooldownSeconds:
+		return m.OldPrimaryFailoverCooldownSeconds(ctx)
+	case group.FieldPrimaryAllowManualAutoReplace:
+		return m.OldPrimaryAllowManualAutoReplace(ctx)
 	}
 	return nil, fmt.Errorf("unknown Group field %s", name)
 }
@@ -17694,6 +18150,62 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetRpmLimit(v)
 		return nil
+	case group.FieldPrimaryAccountMode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrimaryAccountMode(v)
+		return nil
+	case group.FieldManualPrimaryAccountID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetManualPrimaryAccountID(v)
+		return nil
+	case group.FieldActivePrimaryAccountID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetActivePrimaryAccountID(v)
+		return nil
+	case group.FieldActivePrimarySource:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetActivePrimarySource(v)
+		return nil
+	case group.FieldActivePrimaryReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetActivePrimaryReason(v)
+		return nil
+	case group.FieldActivePrimarySwitchedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetActivePrimarySwitchedAt(v)
+		return nil
+	case group.FieldPrimaryFailoverCooldownSeconds:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrimaryFailoverCooldownSeconds(v)
+		return nil
+	case group.FieldPrimaryAllowManualAutoReplace:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrimaryAllowManualAutoReplace(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Group field %s", name)
 }
@@ -17741,6 +18253,15 @@ func (m *GroupMutation) AddedFields() []string {
 	if m.addrpm_limit != nil {
 		fields = append(fields, group.FieldRpmLimit)
 	}
+	if m.addmanual_primary_account_id != nil {
+		fields = append(fields, group.FieldManualPrimaryAccountID)
+	}
+	if m.addactive_primary_account_id != nil {
+		fields = append(fields, group.FieldActivePrimaryAccountID)
+	}
+	if m.addprimary_failover_cooldown_seconds != nil {
+		fields = append(fields, group.FieldPrimaryFailoverCooldownSeconds)
+	}
 	return fields
 }
 
@@ -17775,6 +18296,12 @@ func (m *GroupMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedSortOrder()
 	case group.FieldRpmLimit:
 		return m.AddedRpmLimit()
+	case group.FieldManualPrimaryAccountID:
+		return m.AddedManualPrimaryAccountID()
+	case group.FieldActivePrimaryAccountID:
+		return m.AddedActivePrimaryAccountID()
+	case group.FieldPrimaryFailoverCooldownSeconds:
+		return m.AddedPrimaryFailoverCooldownSeconds()
 	}
 	return nil, false
 }
@@ -17875,6 +18402,27 @@ func (m *GroupMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddRpmLimit(v)
 		return nil
+	case group.FieldManualPrimaryAccountID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddManualPrimaryAccountID(v)
+		return nil
+	case group.FieldActivePrimaryAccountID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddActivePrimaryAccountID(v)
+		return nil
+	case group.FieldPrimaryFailoverCooldownSeconds:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPrimaryFailoverCooldownSeconds(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Group numeric field %s", name)
 }
@@ -17915,6 +18463,15 @@ func (m *GroupMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(group.FieldModelRouting) {
 		fields = append(fields, group.FieldModelRouting)
+	}
+	if m.FieldCleared(group.FieldManualPrimaryAccountID) {
+		fields = append(fields, group.FieldManualPrimaryAccountID)
+	}
+	if m.FieldCleared(group.FieldActivePrimaryAccountID) {
+		fields = append(fields, group.FieldActivePrimaryAccountID)
+	}
+	if m.FieldCleared(group.FieldActivePrimarySwitchedAt) {
+		fields = append(fields, group.FieldActivePrimarySwitchedAt)
 	}
 	return fields
 }
@@ -17962,6 +18519,15 @@ func (m *GroupMutation) ClearField(name string) error {
 		return nil
 	case group.FieldModelRouting:
 		m.ClearModelRouting()
+		return nil
+	case group.FieldManualPrimaryAccountID:
+		m.ClearManualPrimaryAccountID()
+		return nil
+	case group.FieldActivePrimaryAccountID:
+		m.ClearActivePrimaryAccountID()
+		return nil
+	case group.FieldActivePrimarySwitchedAt:
+		m.ClearActivePrimarySwitchedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Group nullable field %s", name)
@@ -18075,6 +18641,30 @@ func (m *GroupMutation) ResetField(name string) error {
 		return nil
 	case group.FieldRpmLimit:
 		m.ResetRpmLimit()
+		return nil
+	case group.FieldPrimaryAccountMode:
+		m.ResetPrimaryAccountMode()
+		return nil
+	case group.FieldManualPrimaryAccountID:
+		m.ResetManualPrimaryAccountID()
+		return nil
+	case group.FieldActivePrimaryAccountID:
+		m.ResetActivePrimaryAccountID()
+		return nil
+	case group.FieldActivePrimarySource:
+		m.ResetActivePrimarySource()
+		return nil
+	case group.FieldActivePrimaryReason:
+		m.ResetActivePrimaryReason()
+		return nil
+	case group.FieldActivePrimarySwitchedAt:
+		m.ResetActivePrimarySwitchedAt()
+		return nil
+	case group.FieldPrimaryFailoverCooldownSeconds:
+		m.ResetPrimaryFailoverCooldownSeconds()
+		return nil
+	case group.FieldPrimaryAllowManualAutoReplace:
+		m.ResetPrimaryAllowManualAutoReplace()
 		return nil
 	}
 	return fmt.Errorf("unknown Group field %s", name)

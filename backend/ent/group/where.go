@@ -210,6 +210,46 @@ func RpmLimit(v int) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldRpmLimit, v))
 }
 
+// PrimaryAccountMode applies equality check predicate on the "primary_account_mode" field. It's identical to PrimaryAccountModeEQ.
+func PrimaryAccountMode(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPrimaryAccountMode, v))
+}
+
+// ManualPrimaryAccountID applies equality check predicate on the "manual_primary_account_id" field. It's identical to ManualPrimaryAccountIDEQ.
+func ManualPrimaryAccountID(v int64) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldManualPrimaryAccountID, v))
+}
+
+// ActivePrimaryAccountID applies equality check predicate on the "active_primary_account_id" field. It's identical to ActivePrimaryAccountIDEQ.
+func ActivePrimaryAccountID(v int64) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldActivePrimaryAccountID, v))
+}
+
+// ActivePrimarySource applies equality check predicate on the "active_primary_source" field. It's identical to ActivePrimarySourceEQ.
+func ActivePrimarySource(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldActivePrimarySource, v))
+}
+
+// ActivePrimaryReason applies equality check predicate on the "active_primary_reason" field. It's identical to ActivePrimaryReasonEQ.
+func ActivePrimaryReason(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldActivePrimaryReason, v))
+}
+
+// ActivePrimarySwitchedAt applies equality check predicate on the "active_primary_switched_at" field. It's identical to ActivePrimarySwitchedAtEQ.
+func ActivePrimarySwitchedAt(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldActivePrimarySwitchedAt, v))
+}
+
+// PrimaryFailoverCooldownSeconds applies equality check predicate on the "primary_failover_cooldown_seconds" field. It's identical to PrimaryFailoverCooldownSecondsEQ.
+func PrimaryFailoverCooldownSeconds(v int) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPrimaryFailoverCooldownSeconds, v))
+}
+
+// PrimaryAllowManualAutoReplace applies equality check predicate on the "primary_allow_manual_auto_replace" field. It's identical to PrimaryAllowManualAutoReplaceEQ.
+func PrimaryAllowManualAutoReplace(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPrimaryAllowManualAutoReplace, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldCreatedAt, v))
@@ -1438,6 +1478,401 @@ func RpmLimitLT(v int) predicate.Group {
 // RpmLimitLTE applies the LTE predicate on the "rpm_limit" field.
 func RpmLimitLTE(v int) predicate.Group {
 	return predicate.Group(sql.FieldLTE(FieldRpmLimit, v))
+}
+
+// PrimaryAccountModeEQ applies the EQ predicate on the "primary_account_mode" field.
+func PrimaryAccountModeEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPrimaryAccountMode, v))
+}
+
+// PrimaryAccountModeNEQ applies the NEQ predicate on the "primary_account_mode" field.
+func PrimaryAccountModeNEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldPrimaryAccountMode, v))
+}
+
+// PrimaryAccountModeIn applies the In predicate on the "primary_account_mode" field.
+func PrimaryAccountModeIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldPrimaryAccountMode, vs...))
+}
+
+// PrimaryAccountModeNotIn applies the NotIn predicate on the "primary_account_mode" field.
+func PrimaryAccountModeNotIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldPrimaryAccountMode, vs...))
+}
+
+// PrimaryAccountModeGT applies the GT predicate on the "primary_account_mode" field.
+func PrimaryAccountModeGT(v string) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldPrimaryAccountMode, v))
+}
+
+// PrimaryAccountModeGTE applies the GTE predicate on the "primary_account_mode" field.
+func PrimaryAccountModeGTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldPrimaryAccountMode, v))
+}
+
+// PrimaryAccountModeLT applies the LT predicate on the "primary_account_mode" field.
+func PrimaryAccountModeLT(v string) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldPrimaryAccountMode, v))
+}
+
+// PrimaryAccountModeLTE applies the LTE predicate on the "primary_account_mode" field.
+func PrimaryAccountModeLTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldPrimaryAccountMode, v))
+}
+
+// PrimaryAccountModeContains applies the Contains predicate on the "primary_account_mode" field.
+func PrimaryAccountModeContains(v string) predicate.Group {
+	return predicate.Group(sql.FieldContains(FieldPrimaryAccountMode, v))
+}
+
+// PrimaryAccountModeHasPrefix applies the HasPrefix predicate on the "primary_account_mode" field.
+func PrimaryAccountModeHasPrefix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasPrefix(FieldPrimaryAccountMode, v))
+}
+
+// PrimaryAccountModeHasSuffix applies the HasSuffix predicate on the "primary_account_mode" field.
+func PrimaryAccountModeHasSuffix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasSuffix(FieldPrimaryAccountMode, v))
+}
+
+// PrimaryAccountModeEqualFold applies the EqualFold predicate on the "primary_account_mode" field.
+func PrimaryAccountModeEqualFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldEqualFold(FieldPrimaryAccountMode, v))
+}
+
+// PrimaryAccountModeContainsFold applies the ContainsFold predicate on the "primary_account_mode" field.
+func PrimaryAccountModeContainsFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldContainsFold(FieldPrimaryAccountMode, v))
+}
+
+// ManualPrimaryAccountIDEQ applies the EQ predicate on the "manual_primary_account_id" field.
+func ManualPrimaryAccountIDEQ(v int64) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldManualPrimaryAccountID, v))
+}
+
+// ManualPrimaryAccountIDNEQ applies the NEQ predicate on the "manual_primary_account_id" field.
+func ManualPrimaryAccountIDNEQ(v int64) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldManualPrimaryAccountID, v))
+}
+
+// ManualPrimaryAccountIDIn applies the In predicate on the "manual_primary_account_id" field.
+func ManualPrimaryAccountIDIn(vs ...int64) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldManualPrimaryAccountID, vs...))
+}
+
+// ManualPrimaryAccountIDNotIn applies the NotIn predicate on the "manual_primary_account_id" field.
+func ManualPrimaryAccountIDNotIn(vs ...int64) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldManualPrimaryAccountID, vs...))
+}
+
+// ManualPrimaryAccountIDGT applies the GT predicate on the "manual_primary_account_id" field.
+func ManualPrimaryAccountIDGT(v int64) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldManualPrimaryAccountID, v))
+}
+
+// ManualPrimaryAccountIDGTE applies the GTE predicate on the "manual_primary_account_id" field.
+func ManualPrimaryAccountIDGTE(v int64) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldManualPrimaryAccountID, v))
+}
+
+// ManualPrimaryAccountIDLT applies the LT predicate on the "manual_primary_account_id" field.
+func ManualPrimaryAccountIDLT(v int64) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldManualPrimaryAccountID, v))
+}
+
+// ManualPrimaryAccountIDLTE applies the LTE predicate on the "manual_primary_account_id" field.
+func ManualPrimaryAccountIDLTE(v int64) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldManualPrimaryAccountID, v))
+}
+
+// ManualPrimaryAccountIDIsNil applies the IsNil predicate on the "manual_primary_account_id" field.
+func ManualPrimaryAccountIDIsNil() predicate.Group {
+	return predicate.Group(sql.FieldIsNull(FieldManualPrimaryAccountID))
+}
+
+// ManualPrimaryAccountIDNotNil applies the NotNil predicate on the "manual_primary_account_id" field.
+func ManualPrimaryAccountIDNotNil() predicate.Group {
+	return predicate.Group(sql.FieldNotNull(FieldManualPrimaryAccountID))
+}
+
+// ActivePrimaryAccountIDEQ applies the EQ predicate on the "active_primary_account_id" field.
+func ActivePrimaryAccountIDEQ(v int64) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldActivePrimaryAccountID, v))
+}
+
+// ActivePrimaryAccountIDNEQ applies the NEQ predicate on the "active_primary_account_id" field.
+func ActivePrimaryAccountIDNEQ(v int64) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldActivePrimaryAccountID, v))
+}
+
+// ActivePrimaryAccountIDIn applies the In predicate on the "active_primary_account_id" field.
+func ActivePrimaryAccountIDIn(vs ...int64) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldActivePrimaryAccountID, vs...))
+}
+
+// ActivePrimaryAccountIDNotIn applies the NotIn predicate on the "active_primary_account_id" field.
+func ActivePrimaryAccountIDNotIn(vs ...int64) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldActivePrimaryAccountID, vs...))
+}
+
+// ActivePrimaryAccountIDGT applies the GT predicate on the "active_primary_account_id" field.
+func ActivePrimaryAccountIDGT(v int64) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldActivePrimaryAccountID, v))
+}
+
+// ActivePrimaryAccountIDGTE applies the GTE predicate on the "active_primary_account_id" field.
+func ActivePrimaryAccountIDGTE(v int64) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldActivePrimaryAccountID, v))
+}
+
+// ActivePrimaryAccountIDLT applies the LT predicate on the "active_primary_account_id" field.
+func ActivePrimaryAccountIDLT(v int64) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldActivePrimaryAccountID, v))
+}
+
+// ActivePrimaryAccountIDLTE applies the LTE predicate on the "active_primary_account_id" field.
+func ActivePrimaryAccountIDLTE(v int64) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldActivePrimaryAccountID, v))
+}
+
+// ActivePrimaryAccountIDIsNil applies the IsNil predicate on the "active_primary_account_id" field.
+func ActivePrimaryAccountIDIsNil() predicate.Group {
+	return predicate.Group(sql.FieldIsNull(FieldActivePrimaryAccountID))
+}
+
+// ActivePrimaryAccountIDNotNil applies the NotNil predicate on the "active_primary_account_id" field.
+func ActivePrimaryAccountIDNotNil() predicate.Group {
+	return predicate.Group(sql.FieldNotNull(FieldActivePrimaryAccountID))
+}
+
+// ActivePrimarySourceEQ applies the EQ predicate on the "active_primary_source" field.
+func ActivePrimarySourceEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldActivePrimarySource, v))
+}
+
+// ActivePrimarySourceNEQ applies the NEQ predicate on the "active_primary_source" field.
+func ActivePrimarySourceNEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldActivePrimarySource, v))
+}
+
+// ActivePrimarySourceIn applies the In predicate on the "active_primary_source" field.
+func ActivePrimarySourceIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldActivePrimarySource, vs...))
+}
+
+// ActivePrimarySourceNotIn applies the NotIn predicate on the "active_primary_source" field.
+func ActivePrimarySourceNotIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldActivePrimarySource, vs...))
+}
+
+// ActivePrimarySourceGT applies the GT predicate on the "active_primary_source" field.
+func ActivePrimarySourceGT(v string) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldActivePrimarySource, v))
+}
+
+// ActivePrimarySourceGTE applies the GTE predicate on the "active_primary_source" field.
+func ActivePrimarySourceGTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldActivePrimarySource, v))
+}
+
+// ActivePrimarySourceLT applies the LT predicate on the "active_primary_source" field.
+func ActivePrimarySourceLT(v string) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldActivePrimarySource, v))
+}
+
+// ActivePrimarySourceLTE applies the LTE predicate on the "active_primary_source" field.
+func ActivePrimarySourceLTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldActivePrimarySource, v))
+}
+
+// ActivePrimarySourceContains applies the Contains predicate on the "active_primary_source" field.
+func ActivePrimarySourceContains(v string) predicate.Group {
+	return predicate.Group(sql.FieldContains(FieldActivePrimarySource, v))
+}
+
+// ActivePrimarySourceHasPrefix applies the HasPrefix predicate on the "active_primary_source" field.
+func ActivePrimarySourceHasPrefix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasPrefix(FieldActivePrimarySource, v))
+}
+
+// ActivePrimarySourceHasSuffix applies the HasSuffix predicate on the "active_primary_source" field.
+func ActivePrimarySourceHasSuffix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasSuffix(FieldActivePrimarySource, v))
+}
+
+// ActivePrimarySourceEqualFold applies the EqualFold predicate on the "active_primary_source" field.
+func ActivePrimarySourceEqualFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldEqualFold(FieldActivePrimarySource, v))
+}
+
+// ActivePrimarySourceContainsFold applies the ContainsFold predicate on the "active_primary_source" field.
+func ActivePrimarySourceContainsFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldContainsFold(FieldActivePrimarySource, v))
+}
+
+// ActivePrimaryReasonEQ applies the EQ predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldActivePrimaryReason, v))
+}
+
+// ActivePrimaryReasonNEQ applies the NEQ predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonNEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldActivePrimaryReason, v))
+}
+
+// ActivePrimaryReasonIn applies the In predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldActivePrimaryReason, vs...))
+}
+
+// ActivePrimaryReasonNotIn applies the NotIn predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonNotIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldActivePrimaryReason, vs...))
+}
+
+// ActivePrimaryReasonGT applies the GT predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonGT(v string) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldActivePrimaryReason, v))
+}
+
+// ActivePrimaryReasonGTE applies the GTE predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonGTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldActivePrimaryReason, v))
+}
+
+// ActivePrimaryReasonLT applies the LT predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonLT(v string) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldActivePrimaryReason, v))
+}
+
+// ActivePrimaryReasonLTE applies the LTE predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonLTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldActivePrimaryReason, v))
+}
+
+// ActivePrimaryReasonContains applies the Contains predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonContains(v string) predicate.Group {
+	return predicate.Group(sql.FieldContains(FieldActivePrimaryReason, v))
+}
+
+// ActivePrimaryReasonHasPrefix applies the HasPrefix predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonHasPrefix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasPrefix(FieldActivePrimaryReason, v))
+}
+
+// ActivePrimaryReasonHasSuffix applies the HasSuffix predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonHasSuffix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasSuffix(FieldActivePrimaryReason, v))
+}
+
+// ActivePrimaryReasonEqualFold applies the EqualFold predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonEqualFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldEqualFold(FieldActivePrimaryReason, v))
+}
+
+// ActivePrimaryReasonContainsFold applies the ContainsFold predicate on the "active_primary_reason" field.
+func ActivePrimaryReasonContainsFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldContainsFold(FieldActivePrimaryReason, v))
+}
+
+// ActivePrimarySwitchedAtEQ applies the EQ predicate on the "active_primary_switched_at" field.
+func ActivePrimarySwitchedAtEQ(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldActivePrimarySwitchedAt, v))
+}
+
+// ActivePrimarySwitchedAtNEQ applies the NEQ predicate on the "active_primary_switched_at" field.
+func ActivePrimarySwitchedAtNEQ(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldActivePrimarySwitchedAt, v))
+}
+
+// ActivePrimarySwitchedAtIn applies the In predicate on the "active_primary_switched_at" field.
+func ActivePrimarySwitchedAtIn(vs ...time.Time) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldActivePrimarySwitchedAt, vs...))
+}
+
+// ActivePrimarySwitchedAtNotIn applies the NotIn predicate on the "active_primary_switched_at" field.
+func ActivePrimarySwitchedAtNotIn(vs ...time.Time) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldActivePrimarySwitchedAt, vs...))
+}
+
+// ActivePrimarySwitchedAtGT applies the GT predicate on the "active_primary_switched_at" field.
+func ActivePrimarySwitchedAtGT(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldActivePrimarySwitchedAt, v))
+}
+
+// ActivePrimarySwitchedAtGTE applies the GTE predicate on the "active_primary_switched_at" field.
+func ActivePrimarySwitchedAtGTE(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldActivePrimarySwitchedAt, v))
+}
+
+// ActivePrimarySwitchedAtLT applies the LT predicate on the "active_primary_switched_at" field.
+func ActivePrimarySwitchedAtLT(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldActivePrimarySwitchedAt, v))
+}
+
+// ActivePrimarySwitchedAtLTE applies the LTE predicate on the "active_primary_switched_at" field.
+func ActivePrimarySwitchedAtLTE(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldActivePrimarySwitchedAt, v))
+}
+
+// ActivePrimarySwitchedAtIsNil applies the IsNil predicate on the "active_primary_switched_at" field.
+func ActivePrimarySwitchedAtIsNil() predicate.Group {
+	return predicate.Group(sql.FieldIsNull(FieldActivePrimarySwitchedAt))
+}
+
+// ActivePrimarySwitchedAtNotNil applies the NotNil predicate on the "active_primary_switched_at" field.
+func ActivePrimarySwitchedAtNotNil() predicate.Group {
+	return predicate.Group(sql.FieldNotNull(FieldActivePrimarySwitchedAt))
+}
+
+// PrimaryFailoverCooldownSecondsEQ applies the EQ predicate on the "primary_failover_cooldown_seconds" field.
+func PrimaryFailoverCooldownSecondsEQ(v int) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPrimaryFailoverCooldownSeconds, v))
+}
+
+// PrimaryFailoverCooldownSecondsNEQ applies the NEQ predicate on the "primary_failover_cooldown_seconds" field.
+func PrimaryFailoverCooldownSecondsNEQ(v int) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldPrimaryFailoverCooldownSeconds, v))
+}
+
+// PrimaryFailoverCooldownSecondsIn applies the In predicate on the "primary_failover_cooldown_seconds" field.
+func PrimaryFailoverCooldownSecondsIn(vs ...int) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldPrimaryFailoverCooldownSeconds, vs...))
+}
+
+// PrimaryFailoverCooldownSecondsNotIn applies the NotIn predicate on the "primary_failover_cooldown_seconds" field.
+func PrimaryFailoverCooldownSecondsNotIn(vs ...int) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldPrimaryFailoverCooldownSeconds, vs...))
+}
+
+// PrimaryFailoverCooldownSecondsGT applies the GT predicate on the "primary_failover_cooldown_seconds" field.
+func PrimaryFailoverCooldownSecondsGT(v int) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldPrimaryFailoverCooldownSeconds, v))
+}
+
+// PrimaryFailoverCooldownSecondsGTE applies the GTE predicate on the "primary_failover_cooldown_seconds" field.
+func PrimaryFailoverCooldownSecondsGTE(v int) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldPrimaryFailoverCooldownSeconds, v))
+}
+
+// PrimaryFailoverCooldownSecondsLT applies the LT predicate on the "primary_failover_cooldown_seconds" field.
+func PrimaryFailoverCooldownSecondsLT(v int) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldPrimaryFailoverCooldownSeconds, v))
+}
+
+// PrimaryFailoverCooldownSecondsLTE applies the LTE predicate on the "primary_failover_cooldown_seconds" field.
+func PrimaryFailoverCooldownSecondsLTE(v int) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldPrimaryFailoverCooldownSeconds, v))
+}
+
+// PrimaryAllowManualAutoReplaceEQ applies the EQ predicate on the "primary_allow_manual_auto_replace" field.
+func PrimaryAllowManualAutoReplaceEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPrimaryAllowManualAutoReplace, v))
+}
+
+// PrimaryAllowManualAutoReplaceNEQ applies the NEQ predicate on the "primary_allow_manual_auto_replace" field.
+func PrimaryAllowManualAutoReplaceNEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldPrimaryAllowManualAutoReplace, v))
 }
 
 // HasAPIKeys applies the HasEdge predicate on the "api_keys" edge.

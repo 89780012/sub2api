@@ -290,6 +290,28 @@ func (s *stubAdminService) UpdateGroup(ctx context.Context, id int64, input *ser
 	return &group, nil
 }
 
+func (s *stubAdminService) UpdateGroupPrimaryAccount(ctx context.Context, groupID int64, input *service.UpdateGroupPrimaryAccountInput) (*service.Group, error) {
+	group := service.Group{
+		ID:                             groupID,
+		Name:                           "group",
+		Status:                         service.StatusActive,
+		PrimaryAccountMode:             input.PrimaryAccountMode,
+		ManualPrimaryAccountID:         input.ManualPrimaryAccountID,
+		PrimaryAllowManualAutoReplace:  input.PrimaryAllowManualAutoReplace != nil && *input.PrimaryAllowManualAutoReplace,
+	}
+	if input.ManualPrimaryAccountID != nil && *input.ManualPrimaryAccountID > 0 {
+		group.ActivePrimaryAccountID = input.ManualPrimaryAccountID
+		group.ActivePrimarySource = "manual_override"
+		group.ActivePrimaryReason = "manual_set"
+		now := time.Now().UTC()
+		group.ActivePrimarySwitchedAt = &now
+	}
+	if input.PrimaryFailoverCooldownSeconds != nil {
+		group.PrimaryFailoverCooldownSeconds = *input.PrimaryFailoverCooldownSeconds
+	}
+	return &group, nil
+}
+
 func (s *stubAdminService) DeleteGroup(ctx context.Context, id int64) error {
 	return nil
 }

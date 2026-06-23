@@ -19,16 +19,40 @@
           <div class="text-sm text-gray-500 dark:text-gray-400">
             {{ t('admin.groups.qualityPanel.description') }}
           </div>
+          <div class="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+            <span class="inline-flex rounded-full bg-slate-100 px-2 py-1 dark:bg-dark-700">
+              主模式: {{ primaryModeLabel }}
+            </span>
+            <span v-if="activePrimaryItem" class="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+              当前主账号: {{ activePrimaryItem.account_name }}
+            </span>
+            <span v-if="manualPrimaryItem" class="inline-flex rounded-full bg-blue-100 px-2 py-1 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+              手动主账号: {{ manualPrimaryItem.account_name }}
+            </span>
+          </div>
+          <div v-if="activePrimaryMeta" class="text-xs text-gray-500 dark:text-gray-400">
+            {{ activePrimaryMeta }}
+          </div>
           <div class="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
             <Icon name="infoCircle" size="sm" class="mt-0.5 shrink-0" />
             <span>{{ t('admin.groups.qualityPanel.selectionHint') }}</span>
           </div>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm px-3 py-1.5" :disabled="loading" @click="loadQuality">
-          <Icon v-if="loading" name="refresh" size="sm" class="mr-1 animate-spin" />
-          <Icon v-else name="refresh" size="sm" class="mr-1" />
-          {{ t('common.refresh') }}
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm px-3 py-1.5"
+            :disabled="loading || actionLoading"
+            @click="switchToAuto"
+          >
+            切回自动
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm px-3 py-1.5" :disabled="loading || actionLoading" @click="loadQuality">
+            <Icon v-if="loading" name="refresh" size="sm" class="mr-1 animate-spin" />
+            <Icon v-else name="refresh" size="sm" class="mr-1" />
+            {{ t('common.refresh') }}
+          </button>
+        </div>
       </div>
 
       <div v-if="loading" class="flex justify-center py-10">
@@ -124,6 +148,24 @@
                         {{ mainStateLabel(item) }}
                       </span>
                       <span
+                        v-if="item.is_active_primary"
+                        class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                      >
+                        当前主账号
+                      </span>
+                      <span
+                        v-if="item.is_manual_primary"
+                        class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                      >
+                        手动主账号
+                      </span>
+                      <span
+                        v-if="item.is_pool_mode"
+                        class="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                      >
+                        池模式
+                      </span>
+                      <span
                         v-for="chip in extraStateChips(item)"
                         :key="chip.label"
                         class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
@@ -210,14 +252,24 @@
                   </div>
 
                   <div class="flex items-start justify-end xl:justify-center">
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100 dark:border-dark-500 dark:text-gray-300 dark:hover:bg-dark-700"
-                      @click="toggleExpanded(item.account_id)"
-                    >
-                      <Icon :name="isExpanded(item.account_id) ? 'chevronUp' : 'chevronDown'" size="xs" />
-                      {{ isExpanded(item.account_id) ? t('common.collapse') : t('common.expand') }}
-                    </button>
+                    <div class="flex flex-col items-end gap-2">
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-1 rounded-md border border-blue-200 px-2.5 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-900/50 dark:text-blue-300 dark:hover:bg-blue-950/30"
+                        :disabled="actionLoading || item.is_manual_primary"
+                        @click="setPrimary(item)"
+                      >
+                        设为主账号
+                      </button>
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100 dark:border-dark-500 dark:text-gray-300 dark:hover:bg-dark-700"
+                        @click="toggleExpanded(item.account_id)"
+                      >
+                        <Icon :name="isExpanded(item.account_id) ? 'chevronUp' : 'chevronDown'" size="xs" />
+                        {{ isExpanded(item.account_id) ? t('common.collapse') : t('common.expand') }}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -331,11 +383,22 @@ type PanelChip = {
 }
 
 const loading = ref(false)
+const actionLoading = ref(false)
 const items = ref<GroupAccountQualityItem[]>([])
 const expandedAccountIds = ref<number[]>([])
 const totalCount = ref(0)
 const knownCount = ref(0)
 const unknownCount = ref(0)
+const primaryMeta = ref<{
+  primary_account_mode: 'off' | 'auto' | 'manual'
+  manual_primary_account_id?: number | null
+  active_primary_account_id?: number | null
+  active_primary_source?: string
+  active_primary_reason?: string
+  active_primary_switched_at?: string | null
+  primary_failover_cooldown_seconds?: number
+  primary_allow_manual_auto_replace?: boolean
+} | null>(null)
 
 const platformColorClass = computed(() => {
   switch (props.group?.platform) {
@@ -373,12 +436,36 @@ const watchCount = computed(() => sortedItems.value.filter(item => {
 const riskCount = computed(() => sortedItems.value.filter(item => getMainState(item) === 'risk').length)
 const lowConfidenceCount = computed(() => sortedItems.value.filter(item => !item.quality_known || item.sample_confidence < 0.4 || item.total_requests < 3).length)
 
+const activePrimaryItem = computed(() => sortedItems.value.find(item => item.account_id === primaryMeta.value?.active_primary_account_id) || null)
+const manualPrimaryItem = computed(() => sortedItems.value.find(item => item.account_id === primaryMeta.value?.manual_primary_account_id) || null)
+const primaryModeLabel = computed(() => {
+  switch (primaryMeta.value?.primary_account_mode) {
+    case 'auto': return '自动'
+    case 'manual': return '手动'
+    default: return '关闭'
+  }
+})
+const activePrimaryMeta = computed(() => {
+  if (!primaryMeta.value?.active_primary_source && !primaryMeta.value?.active_primary_reason) return ''
+  return [primaryMeta.value.active_primary_source, primaryMeta.value.active_primary_reason].filter(Boolean).join(' / ')
+})
+
 const loadQuality = async () => {
   if (!props.group) return
   loading.value = true
   try {
     const data = await adminAPI.groups.getAccountQuality(props.group.id)
     items.value = data.items
+    primaryMeta.value = {
+      primary_account_mode: data.primary_account_mode,
+      manual_primary_account_id: data.manual_primary_account_id,
+      active_primary_account_id: data.active_primary_account_id,
+      active_primary_source: data.active_primary_source,
+      active_primary_reason: data.active_primary_reason,
+      active_primary_switched_at: data.active_primary_switched_at,
+      primary_failover_cooldown_seconds: data.primary_failover_cooldown_seconds,
+      primary_allow_manual_auto_replace: data.primary_allow_manual_auto_replace
+    }
     expandedAccountIds.value = []
     totalCount.value = data.account_count
     knownCount.value = data.known_account_count
@@ -388,6 +475,44 @@ const loadQuality = async () => {
     appStore.showError(t('admin.groups.qualityPanel.failedToLoad'))
   } finally {
     loading.value = false
+  }
+}
+
+const setPrimary = async (item: GroupAccountQualityItem) => {
+  if (!props.group) return
+  actionLoading.value = true
+  try {
+    await adminAPI.groups.updatePrimaryAccount(props.group.id, {
+      primary_account_mode: 'manual',
+      manual_primary_account_id: item.account_id,
+      primary_failover_cooldown_seconds: primaryMeta.value?.primary_failover_cooldown_seconds ?? 30,
+      primary_allow_manual_auto_replace: primaryMeta.value?.primary_allow_manual_auto_replace ?? false
+    })
+    await loadQuality()
+  } catch (error) {
+    console.error('Failed to update primary account:', error)
+    appStore.showError('设置主账号失败')
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+const switchToAuto = async () => {
+  if (!props.group) return
+  actionLoading.value = true
+  try {
+    await adminAPI.groups.updatePrimaryAccount(props.group.id, {
+      primary_account_mode: 'auto',
+      manual_primary_account_id: null,
+      primary_failover_cooldown_seconds: primaryMeta.value?.primary_failover_cooldown_seconds ?? 30,
+      primary_allow_manual_auto_replace: primaryMeta.value?.primary_allow_manual_auto_replace ?? false
+    })
+    await loadQuality()
+  } catch (error) {
+    console.error('Failed to switch primary account mode:', error)
+    appStore.showError('切回自动失败')
+  } finally {
+    actionLoading.value = false
   }
 }
 
@@ -487,6 +612,12 @@ const extraStateChips = (item: GroupAccountQualityItem): PanelChip[] => {
     chips.push({
       label: t('admin.groups.qualityPanel.states.auxHeavy'),
       className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+    })
+  }
+  if (item.is_pool_mode) {
+    chips.push({
+      label: `同号重试 ${item.pool_mode_retry_count} 次`,
+      className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
     })
   }
   return chips

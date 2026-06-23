@@ -495,6 +495,118 @@ func (_c *GroupCreate) SetNillableRpmLimit(v *int) *GroupCreate {
 	return _c
 }
 
+// SetPrimaryAccountMode sets the "primary_account_mode" field.
+func (_c *GroupCreate) SetPrimaryAccountMode(v string) *GroupCreate {
+	_c.mutation.SetPrimaryAccountMode(v)
+	return _c
+}
+
+// SetNillablePrimaryAccountMode sets the "primary_account_mode" field if the given value is not nil.
+func (_c *GroupCreate) SetNillablePrimaryAccountMode(v *string) *GroupCreate {
+	if v != nil {
+		_c.SetPrimaryAccountMode(*v)
+	}
+	return _c
+}
+
+// SetManualPrimaryAccountID sets the "manual_primary_account_id" field.
+func (_c *GroupCreate) SetManualPrimaryAccountID(v int64) *GroupCreate {
+	_c.mutation.SetManualPrimaryAccountID(v)
+	return _c
+}
+
+// SetNillableManualPrimaryAccountID sets the "manual_primary_account_id" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableManualPrimaryAccountID(v *int64) *GroupCreate {
+	if v != nil {
+		_c.SetManualPrimaryAccountID(*v)
+	}
+	return _c
+}
+
+// SetActivePrimaryAccountID sets the "active_primary_account_id" field.
+func (_c *GroupCreate) SetActivePrimaryAccountID(v int64) *GroupCreate {
+	_c.mutation.SetActivePrimaryAccountID(v)
+	return _c
+}
+
+// SetNillableActivePrimaryAccountID sets the "active_primary_account_id" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableActivePrimaryAccountID(v *int64) *GroupCreate {
+	if v != nil {
+		_c.SetActivePrimaryAccountID(*v)
+	}
+	return _c
+}
+
+// SetActivePrimarySource sets the "active_primary_source" field.
+func (_c *GroupCreate) SetActivePrimarySource(v string) *GroupCreate {
+	_c.mutation.SetActivePrimarySource(v)
+	return _c
+}
+
+// SetNillableActivePrimarySource sets the "active_primary_source" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableActivePrimarySource(v *string) *GroupCreate {
+	if v != nil {
+		_c.SetActivePrimarySource(*v)
+	}
+	return _c
+}
+
+// SetActivePrimaryReason sets the "active_primary_reason" field.
+func (_c *GroupCreate) SetActivePrimaryReason(v string) *GroupCreate {
+	_c.mutation.SetActivePrimaryReason(v)
+	return _c
+}
+
+// SetNillableActivePrimaryReason sets the "active_primary_reason" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableActivePrimaryReason(v *string) *GroupCreate {
+	if v != nil {
+		_c.SetActivePrimaryReason(*v)
+	}
+	return _c
+}
+
+// SetActivePrimarySwitchedAt sets the "active_primary_switched_at" field.
+func (_c *GroupCreate) SetActivePrimarySwitchedAt(v time.Time) *GroupCreate {
+	_c.mutation.SetActivePrimarySwitchedAt(v)
+	return _c
+}
+
+// SetNillableActivePrimarySwitchedAt sets the "active_primary_switched_at" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableActivePrimarySwitchedAt(v *time.Time) *GroupCreate {
+	if v != nil {
+		_c.SetActivePrimarySwitchedAt(*v)
+	}
+	return _c
+}
+
+// SetPrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field.
+func (_c *GroupCreate) SetPrimaryFailoverCooldownSeconds(v int) *GroupCreate {
+	_c.mutation.SetPrimaryFailoverCooldownSeconds(v)
+	return _c
+}
+
+// SetNillablePrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field if the given value is not nil.
+func (_c *GroupCreate) SetNillablePrimaryFailoverCooldownSeconds(v *int) *GroupCreate {
+	if v != nil {
+		_c.SetPrimaryFailoverCooldownSeconds(*v)
+	}
+	return _c
+}
+
+// SetPrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field.
+func (_c *GroupCreate) SetPrimaryAllowManualAutoReplace(v bool) *GroupCreate {
+	_c.mutation.SetPrimaryAllowManualAutoReplace(v)
+	return _c
+}
+
+// SetNillablePrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field if the given value is not nil.
+func (_c *GroupCreate) SetNillablePrimaryAllowManualAutoReplace(v *bool) *GroupCreate {
+	if v != nil {
+		_c.SetPrimaryAllowManualAutoReplace(*v)
+	}
+	return _c
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_c *GroupCreate) AddAPIKeyIDs(ids ...int64) *GroupCreate {
 	_c.mutation.AddAPIKeyIDs(ids...)
@@ -720,6 +832,26 @@ func (_c *GroupCreate) defaults() error {
 		v := group.DefaultRpmLimit
 		_c.mutation.SetRpmLimit(v)
 	}
+	if _, ok := _c.mutation.PrimaryAccountMode(); !ok {
+		v := group.DefaultPrimaryAccountMode
+		_c.mutation.SetPrimaryAccountMode(v)
+	}
+	if _, ok := _c.mutation.ActivePrimarySource(); !ok {
+		v := group.DefaultActivePrimarySource
+		_c.mutation.SetActivePrimarySource(v)
+	}
+	if _, ok := _c.mutation.ActivePrimaryReason(); !ok {
+		v := group.DefaultActivePrimaryReason
+		_c.mutation.SetActivePrimaryReason(v)
+	}
+	if _, ok := _c.mutation.PrimaryFailoverCooldownSeconds(); !ok {
+		v := group.DefaultPrimaryFailoverCooldownSeconds
+		_c.mutation.SetPrimaryFailoverCooldownSeconds(v)
+	}
+	if _, ok := _c.mutation.PrimaryAllowManualAutoReplace(); !ok {
+		v := group.DefaultPrimaryAllowManualAutoReplace
+		_c.mutation.SetPrimaryAllowManualAutoReplace(v)
+	}
 	return nil
 }
 
@@ -821,6 +953,36 @@ func (_c *GroupCreate) check() error {
 	}
 	if _, ok := _c.mutation.RpmLimit(); !ok {
 		return &ValidationError{Name: "rpm_limit", err: errors.New(`ent: missing required field "Group.rpm_limit"`)}
+	}
+	if _, ok := _c.mutation.PrimaryAccountMode(); !ok {
+		return &ValidationError{Name: "primary_account_mode", err: errors.New(`ent: missing required field "Group.primary_account_mode"`)}
+	}
+	if v, ok := _c.mutation.PrimaryAccountMode(); ok {
+		if err := group.PrimaryAccountModeValidator(v); err != nil {
+			return &ValidationError{Name: "primary_account_mode", err: fmt.Errorf(`ent: validator failed for field "Group.primary_account_mode": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.ActivePrimarySource(); !ok {
+		return &ValidationError{Name: "active_primary_source", err: errors.New(`ent: missing required field "Group.active_primary_source"`)}
+	}
+	if v, ok := _c.mutation.ActivePrimarySource(); ok {
+		if err := group.ActivePrimarySourceValidator(v); err != nil {
+			return &ValidationError{Name: "active_primary_source", err: fmt.Errorf(`ent: validator failed for field "Group.active_primary_source": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.ActivePrimaryReason(); !ok {
+		return &ValidationError{Name: "active_primary_reason", err: errors.New(`ent: missing required field "Group.active_primary_reason"`)}
+	}
+	if v, ok := _c.mutation.ActivePrimaryReason(); ok {
+		if err := group.ActivePrimaryReasonValidator(v); err != nil {
+			return &ValidationError{Name: "active_primary_reason", err: fmt.Errorf(`ent: validator failed for field "Group.active_primary_reason": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.PrimaryFailoverCooldownSeconds(); !ok {
+		return &ValidationError{Name: "primary_failover_cooldown_seconds", err: errors.New(`ent: missing required field "Group.primary_failover_cooldown_seconds"`)}
+	}
+	if _, ok := _c.mutation.PrimaryAllowManualAutoReplace(); !ok {
+		return &ValidationError{Name: "primary_allow_manual_auto_replace", err: errors.New(`ent: missing required field "Group.primary_allow_manual_auto_replace"`)}
 	}
 	return nil
 }
@@ -988,6 +1150,38 @@ func (_c *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.RpmLimit(); ok {
 		_spec.SetField(group.FieldRpmLimit, field.TypeInt, value)
 		_node.RpmLimit = value
+	}
+	if value, ok := _c.mutation.PrimaryAccountMode(); ok {
+		_spec.SetField(group.FieldPrimaryAccountMode, field.TypeString, value)
+		_node.PrimaryAccountMode = value
+	}
+	if value, ok := _c.mutation.ManualPrimaryAccountID(); ok {
+		_spec.SetField(group.FieldManualPrimaryAccountID, field.TypeInt64, value)
+		_node.ManualPrimaryAccountID = &value
+	}
+	if value, ok := _c.mutation.ActivePrimaryAccountID(); ok {
+		_spec.SetField(group.FieldActivePrimaryAccountID, field.TypeInt64, value)
+		_node.ActivePrimaryAccountID = &value
+	}
+	if value, ok := _c.mutation.ActivePrimarySource(); ok {
+		_spec.SetField(group.FieldActivePrimarySource, field.TypeString, value)
+		_node.ActivePrimarySource = value
+	}
+	if value, ok := _c.mutation.ActivePrimaryReason(); ok {
+		_spec.SetField(group.FieldActivePrimaryReason, field.TypeString, value)
+		_node.ActivePrimaryReason = value
+	}
+	if value, ok := _c.mutation.ActivePrimarySwitchedAt(); ok {
+		_spec.SetField(group.FieldActivePrimarySwitchedAt, field.TypeTime, value)
+		_node.ActivePrimarySwitchedAt = &value
+	}
+	if value, ok := _c.mutation.PrimaryFailoverCooldownSeconds(); ok {
+		_spec.SetField(group.FieldPrimaryFailoverCooldownSeconds, field.TypeInt, value)
+		_node.PrimaryFailoverCooldownSeconds = value
+	}
+	if value, ok := _c.mutation.PrimaryAllowManualAutoReplace(); ok {
+		_spec.SetField(group.FieldPrimaryAllowManualAutoReplace, field.TypeBool, value)
+		_node.PrimaryAllowManualAutoReplace = value
 	}
 	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -1697,6 +1891,138 @@ func (u *GroupUpsert) AddRpmLimit(v int) *GroupUpsert {
 	return u
 }
 
+// SetPrimaryAccountMode sets the "primary_account_mode" field.
+func (u *GroupUpsert) SetPrimaryAccountMode(v string) *GroupUpsert {
+	u.Set(group.FieldPrimaryAccountMode, v)
+	return u
+}
+
+// UpdatePrimaryAccountMode sets the "primary_account_mode" field to the value that was provided on create.
+func (u *GroupUpsert) UpdatePrimaryAccountMode() *GroupUpsert {
+	u.SetExcluded(group.FieldPrimaryAccountMode)
+	return u
+}
+
+// SetManualPrimaryAccountID sets the "manual_primary_account_id" field.
+func (u *GroupUpsert) SetManualPrimaryAccountID(v int64) *GroupUpsert {
+	u.Set(group.FieldManualPrimaryAccountID, v)
+	return u
+}
+
+// UpdateManualPrimaryAccountID sets the "manual_primary_account_id" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateManualPrimaryAccountID() *GroupUpsert {
+	u.SetExcluded(group.FieldManualPrimaryAccountID)
+	return u
+}
+
+// AddManualPrimaryAccountID adds v to the "manual_primary_account_id" field.
+func (u *GroupUpsert) AddManualPrimaryAccountID(v int64) *GroupUpsert {
+	u.Add(group.FieldManualPrimaryAccountID, v)
+	return u
+}
+
+// ClearManualPrimaryAccountID clears the value of the "manual_primary_account_id" field.
+func (u *GroupUpsert) ClearManualPrimaryAccountID() *GroupUpsert {
+	u.SetNull(group.FieldManualPrimaryAccountID)
+	return u
+}
+
+// SetActivePrimaryAccountID sets the "active_primary_account_id" field.
+func (u *GroupUpsert) SetActivePrimaryAccountID(v int64) *GroupUpsert {
+	u.Set(group.FieldActivePrimaryAccountID, v)
+	return u
+}
+
+// UpdateActivePrimaryAccountID sets the "active_primary_account_id" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateActivePrimaryAccountID() *GroupUpsert {
+	u.SetExcluded(group.FieldActivePrimaryAccountID)
+	return u
+}
+
+// AddActivePrimaryAccountID adds v to the "active_primary_account_id" field.
+func (u *GroupUpsert) AddActivePrimaryAccountID(v int64) *GroupUpsert {
+	u.Add(group.FieldActivePrimaryAccountID, v)
+	return u
+}
+
+// ClearActivePrimaryAccountID clears the value of the "active_primary_account_id" field.
+func (u *GroupUpsert) ClearActivePrimaryAccountID() *GroupUpsert {
+	u.SetNull(group.FieldActivePrimaryAccountID)
+	return u
+}
+
+// SetActivePrimarySource sets the "active_primary_source" field.
+func (u *GroupUpsert) SetActivePrimarySource(v string) *GroupUpsert {
+	u.Set(group.FieldActivePrimarySource, v)
+	return u
+}
+
+// UpdateActivePrimarySource sets the "active_primary_source" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateActivePrimarySource() *GroupUpsert {
+	u.SetExcluded(group.FieldActivePrimarySource)
+	return u
+}
+
+// SetActivePrimaryReason sets the "active_primary_reason" field.
+func (u *GroupUpsert) SetActivePrimaryReason(v string) *GroupUpsert {
+	u.Set(group.FieldActivePrimaryReason, v)
+	return u
+}
+
+// UpdateActivePrimaryReason sets the "active_primary_reason" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateActivePrimaryReason() *GroupUpsert {
+	u.SetExcluded(group.FieldActivePrimaryReason)
+	return u
+}
+
+// SetActivePrimarySwitchedAt sets the "active_primary_switched_at" field.
+func (u *GroupUpsert) SetActivePrimarySwitchedAt(v time.Time) *GroupUpsert {
+	u.Set(group.FieldActivePrimarySwitchedAt, v)
+	return u
+}
+
+// UpdateActivePrimarySwitchedAt sets the "active_primary_switched_at" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateActivePrimarySwitchedAt() *GroupUpsert {
+	u.SetExcluded(group.FieldActivePrimarySwitchedAt)
+	return u
+}
+
+// ClearActivePrimarySwitchedAt clears the value of the "active_primary_switched_at" field.
+func (u *GroupUpsert) ClearActivePrimarySwitchedAt() *GroupUpsert {
+	u.SetNull(group.FieldActivePrimarySwitchedAt)
+	return u
+}
+
+// SetPrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field.
+func (u *GroupUpsert) SetPrimaryFailoverCooldownSeconds(v int) *GroupUpsert {
+	u.Set(group.FieldPrimaryFailoverCooldownSeconds, v)
+	return u
+}
+
+// UpdatePrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field to the value that was provided on create.
+func (u *GroupUpsert) UpdatePrimaryFailoverCooldownSeconds() *GroupUpsert {
+	u.SetExcluded(group.FieldPrimaryFailoverCooldownSeconds)
+	return u
+}
+
+// AddPrimaryFailoverCooldownSeconds adds v to the "primary_failover_cooldown_seconds" field.
+func (u *GroupUpsert) AddPrimaryFailoverCooldownSeconds(v int) *GroupUpsert {
+	u.Add(group.FieldPrimaryFailoverCooldownSeconds, v)
+	return u
+}
+
+// SetPrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field.
+func (u *GroupUpsert) SetPrimaryAllowManualAutoReplace(v bool) *GroupUpsert {
+	u.Set(group.FieldPrimaryAllowManualAutoReplace, v)
+	return u
+}
+
+// UpdatePrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field to the value that was provided on create.
+func (u *GroupUpsert) UpdatePrimaryAllowManualAutoReplace() *GroupUpsert {
+	u.SetExcluded(group.FieldPrimaryAllowManualAutoReplace)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -2383,6 +2709,160 @@ func (u *GroupUpsertOne) AddRpmLimit(v int) *GroupUpsertOne {
 func (u *GroupUpsertOne) UpdateRpmLimit() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateRpmLimit()
+	})
+}
+
+// SetPrimaryAccountMode sets the "primary_account_mode" field.
+func (u *GroupUpsertOne) SetPrimaryAccountMode(v string) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetPrimaryAccountMode(v)
+	})
+}
+
+// UpdatePrimaryAccountMode sets the "primary_account_mode" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdatePrimaryAccountMode() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdatePrimaryAccountMode()
+	})
+}
+
+// SetManualPrimaryAccountID sets the "manual_primary_account_id" field.
+func (u *GroupUpsertOne) SetManualPrimaryAccountID(v int64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetManualPrimaryAccountID(v)
+	})
+}
+
+// AddManualPrimaryAccountID adds v to the "manual_primary_account_id" field.
+func (u *GroupUpsertOne) AddManualPrimaryAccountID(v int64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddManualPrimaryAccountID(v)
+	})
+}
+
+// UpdateManualPrimaryAccountID sets the "manual_primary_account_id" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateManualPrimaryAccountID() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateManualPrimaryAccountID()
+	})
+}
+
+// ClearManualPrimaryAccountID clears the value of the "manual_primary_account_id" field.
+func (u *GroupUpsertOne) ClearManualPrimaryAccountID() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearManualPrimaryAccountID()
+	})
+}
+
+// SetActivePrimaryAccountID sets the "active_primary_account_id" field.
+func (u *GroupUpsertOne) SetActivePrimaryAccountID(v int64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetActivePrimaryAccountID(v)
+	})
+}
+
+// AddActivePrimaryAccountID adds v to the "active_primary_account_id" field.
+func (u *GroupUpsertOne) AddActivePrimaryAccountID(v int64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddActivePrimaryAccountID(v)
+	})
+}
+
+// UpdateActivePrimaryAccountID sets the "active_primary_account_id" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateActivePrimaryAccountID() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateActivePrimaryAccountID()
+	})
+}
+
+// ClearActivePrimaryAccountID clears the value of the "active_primary_account_id" field.
+func (u *GroupUpsertOne) ClearActivePrimaryAccountID() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearActivePrimaryAccountID()
+	})
+}
+
+// SetActivePrimarySource sets the "active_primary_source" field.
+func (u *GroupUpsertOne) SetActivePrimarySource(v string) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetActivePrimarySource(v)
+	})
+}
+
+// UpdateActivePrimarySource sets the "active_primary_source" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateActivePrimarySource() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateActivePrimarySource()
+	})
+}
+
+// SetActivePrimaryReason sets the "active_primary_reason" field.
+func (u *GroupUpsertOne) SetActivePrimaryReason(v string) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetActivePrimaryReason(v)
+	})
+}
+
+// UpdateActivePrimaryReason sets the "active_primary_reason" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateActivePrimaryReason() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateActivePrimaryReason()
+	})
+}
+
+// SetActivePrimarySwitchedAt sets the "active_primary_switched_at" field.
+func (u *GroupUpsertOne) SetActivePrimarySwitchedAt(v time.Time) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetActivePrimarySwitchedAt(v)
+	})
+}
+
+// UpdateActivePrimarySwitchedAt sets the "active_primary_switched_at" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateActivePrimarySwitchedAt() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateActivePrimarySwitchedAt()
+	})
+}
+
+// ClearActivePrimarySwitchedAt clears the value of the "active_primary_switched_at" field.
+func (u *GroupUpsertOne) ClearActivePrimarySwitchedAt() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearActivePrimarySwitchedAt()
+	})
+}
+
+// SetPrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field.
+func (u *GroupUpsertOne) SetPrimaryFailoverCooldownSeconds(v int) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetPrimaryFailoverCooldownSeconds(v)
+	})
+}
+
+// AddPrimaryFailoverCooldownSeconds adds v to the "primary_failover_cooldown_seconds" field.
+func (u *GroupUpsertOne) AddPrimaryFailoverCooldownSeconds(v int) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddPrimaryFailoverCooldownSeconds(v)
+	})
+}
+
+// UpdatePrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdatePrimaryFailoverCooldownSeconds() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdatePrimaryFailoverCooldownSeconds()
+	})
+}
+
+// SetPrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field.
+func (u *GroupUpsertOne) SetPrimaryAllowManualAutoReplace(v bool) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetPrimaryAllowManualAutoReplace(v)
+	})
+}
+
+// UpdatePrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdatePrimaryAllowManualAutoReplace() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdatePrimaryAllowManualAutoReplace()
 	})
 }
 
@@ -3238,6 +3718,160 @@ func (u *GroupUpsertBulk) AddRpmLimit(v int) *GroupUpsertBulk {
 func (u *GroupUpsertBulk) UpdateRpmLimit() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateRpmLimit()
+	})
+}
+
+// SetPrimaryAccountMode sets the "primary_account_mode" field.
+func (u *GroupUpsertBulk) SetPrimaryAccountMode(v string) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetPrimaryAccountMode(v)
+	})
+}
+
+// UpdatePrimaryAccountMode sets the "primary_account_mode" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdatePrimaryAccountMode() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdatePrimaryAccountMode()
+	})
+}
+
+// SetManualPrimaryAccountID sets the "manual_primary_account_id" field.
+func (u *GroupUpsertBulk) SetManualPrimaryAccountID(v int64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetManualPrimaryAccountID(v)
+	})
+}
+
+// AddManualPrimaryAccountID adds v to the "manual_primary_account_id" field.
+func (u *GroupUpsertBulk) AddManualPrimaryAccountID(v int64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddManualPrimaryAccountID(v)
+	})
+}
+
+// UpdateManualPrimaryAccountID sets the "manual_primary_account_id" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateManualPrimaryAccountID() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateManualPrimaryAccountID()
+	})
+}
+
+// ClearManualPrimaryAccountID clears the value of the "manual_primary_account_id" field.
+func (u *GroupUpsertBulk) ClearManualPrimaryAccountID() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearManualPrimaryAccountID()
+	})
+}
+
+// SetActivePrimaryAccountID sets the "active_primary_account_id" field.
+func (u *GroupUpsertBulk) SetActivePrimaryAccountID(v int64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetActivePrimaryAccountID(v)
+	})
+}
+
+// AddActivePrimaryAccountID adds v to the "active_primary_account_id" field.
+func (u *GroupUpsertBulk) AddActivePrimaryAccountID(v int64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddActivePrimaryAccountID(v)
+	})
+}
+
+// UpdateActivePrimaryAccountID sets the "active_primary_account_id" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateActivePrimaryAccountID() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateActivePrimaryAccountID()
+	})
+}
+
+// ClearActivePrimaryAccountID clears the value of the "active_primary_account_id" field.
+func (u *GroupUpsertBulk) ClearActivePrimaryAccountID() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearActivePrimaryAccountID()
+	})
+}
+
+// SetActivePrimarySource sets the "active_primary_source" field.
+func (u *GroupUpsertBulk) SetActivePrimarySource(v string) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetActivePrimarySource(v)
+	})
+}
+
+// UpdateActivePrimarySource sets the "active_primary_source" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateActivePrimarySource() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateActivePrimarySource()
+	})
+}
+
+// SetActivePrimaryReason sets the "active_primary_reason" field.
+func (u *GroupUpsertBulk) SetActivePrimaryReason(v string) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetActivePrimaryReason(v)
+	})
+}
+
+// UpdateActivePrimaryReason sets the "active_primary_reason" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateActivePrimaryReason() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateActivePrimaryReason()
+	})
+}
+
+// SetActivePrimarySwitchedAt sets the "active_primary_switched_at" field.
+func (u *GroupUpsertBulk) SetActivePrimarySwitchedAt(v time.Time) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetActivePrimarySwitchedAt(v)
+	})
+}
+
+// UpdateActivePrimarySwitchedAt sets the "active_primary_switched_at" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateActivePrimarySwitchedAt() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateActivePrimarySwitchedAt()
+	})
+}
+
+// ClearActivePrimarySwitchedAt clears the value of the "active_primary_switched_at" field.
+func (u *GroupUpsertBulk) ClearActivePrimarySwitchedAt() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearActivePrimarySwitchedAt()
+	})
+}
+
+// SetPrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field.
+func (u *GroupUpsertBulk) SetPrimaryFailoverCooldownSeconds(v int) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetPrimaryFailoverCooldownSeconds(v)
+	})
+}
+
+// AddPrimaryFailoverCooldownSeconds adds v to the "primary_failover_cooldown_seconds" field.
+func (u *GroupUpsertBulk) AddPrimaryFailoverCooldownSeconds(v int) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddPrimaryFailoverCooldownSeconds(v)
+	})
+}
+
+// UpdatePrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdatePrimaryFailoverCooldownSeconds() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdatePrimaryFailoverCooldownSeconds()
+	})
+}
+
+// SetPrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field.
+func (u *GroupUpsertBulk) SetPrimaryAllowManualAutoReplace(v bool) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetPrimaryAllowManualAutoReplace(v)
+	})
+}
+
+// UpdatePrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdatePrimaryAllowManualAutoReplace() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdatePrimaryAllowManualAutoReplace()
 	})
 }
 

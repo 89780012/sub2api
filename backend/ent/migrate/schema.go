@@ -672,6 +672,14 @@ var (
 		{Name: "messages_dispatch_model_config", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "models_list_config", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "rpm_limit", Type: field.TypeInt, Default: 0},
+		{Name: "primary_account_mode", Type: field.TypeString, Size: 20, Default: "off"},
+		{Name: "manual_primary_account_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "active_primary_account_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "active_primary_source", Type: field.TypeString, Size: 50, Default: ""},
+		{Name: "active_primary_reason", Type: field.TypeString, Size: 255, Default: ""},
+		{Name: "active_primary_switched_at", Type: field.TypeTime, Nullable: true},
+		{Name: "primary_failover_cooldown_seconds", Type: field.TypeInt, Default: 30},
+		{Name: "primary_allow_manual_auto_replace", Type: field.TypeBool, Default: false},
 	}
 	// GroupsTable holds the schema information for the "groups" table.
 	GroupsTable = &schema.Table{

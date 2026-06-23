@@ -332,6 +332,7 @@ var ErrNoAvailableCompactAccounts = errors.New("no available OpenAI accounts sup
 // OpenAIGatewayService handles OpenAI API gateway operations
 type OpenAIGatewayService struct {
 	accountRepo           AccountRepository
+	groupRepo             GroupRepository
 	usageLogRepo          UsageLogRepository
 	usageBillingRepo      UsageBillingRepository
 	userRepo              UserRepository
@@ -378,9 +379,69 @@ type OpenAIGatewayService struct {
 	openaiCompatAnthropicDigestSessions sync.Map
 }
 
+func (s *OpenAIGatewayService) tryPrimaryAccountHit(
+	ctx context.Context,
+	group *Group,
+	groupID *int64,
+	sessionHash string,
+	requestedModel string,
+	excludedIDs map[int64]struct{},
+	requireCompact bool,
+	requiredCapability OpenAIEndpointCapability,
+) *Account {
+	if s == nil || group == nil {
+		return nil
+	}
+	primaryAccountID := group.currentPreferredPrimaryAccountID()
+	if primaryAccountID <= 0 {
+		return nil
+	}
+	if _, excluded := excludedIDs[primaryAccountID]; excluded {
+		return nil
+	}
+	account, err := s.getSchedulableAccount(ctx, primaryAccountID)
+	if err != nil || account == nil {
+		return nil
+	}
+	if !isOpenAIAccountEligibleForRequest(ctx, account, requestedModel, requireCompact, requiredCapability) {
+		return nil
+	}
+	if s.isOpenAIAccountRuntimeBlocked(account) {
+		return nil
+	}
+	account = s.recheckSelectedOpenAIAccountFromDB(ctx, account, requestedModel, requireCompact, requiredCapability)
+	if account == nil || !openAIStickyAccountMatchesGroup(account, groupID) {
+		return nil
+	}
+	if groupID != nil && s.needsUpstreamChannelRestrictionCheck(ctx, groupID) &&
+		s.isUpstreamModelRestrictedByChannel(ctx, *groupID, account, requestedModel, requireCompact) {
+		return nil
+	}
+	if sessionHash != "" {
+		_ = s.refreshStickySessionTTL(ctx, groupID, sessionHash, openaiStickySessionTTL)
+	}
+	return account
+}
+
+func (s *OpenAIGatewayService) persistPrimaryPromotionFromSelection(
+	ctx context.Context,
+	group *Group,
+	selectedAccountID int64,
+	hadExcludedFailures bool,
+) {
+	if s == nil || group == nil || !hadExcludedFailures || selectedAccountID <= 0 {
+		return
+	}
+	if !group.shouldPersistPrimaryPromotion(selectedAccountID) {
+		return
+	}
+	persistGroupPrimarySelection(ctx, s.groupRepo, group, selectedAccountID, "failover_promoted", "same_account_retry_exhausted")
+}
+
 // NewOpenAIGatewayService creates a new OpenAIGatewayService
 func NewOpenAIGatewayService(
 	accountRepo AccountRepository,
+	groupRepo GroupRepository,
 	usageLogRepo UsageLogRepository,
 	usageBillingRepo UsageBillingRepository,
 	userRepo UserRepository,
@@ -404,6 +465,7 @@ func NewOpenAIGatewayService(
 ) *OpenAIGatewayService {
 	svc := &OpenAIGatewayService{
 		accountRepo:         accountRepo,
+		groupRepo:           groupRepo,
 		usageLogRepo:        usageLogRepo,
 		usageBillingRepo:    usageBillingRepo,
 		userRepo:            userRepo,
@@ -1854,6 +1916,8 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 
 	cfg := s.schedulingConfig()
 	needsUpstreamCheck := s.needsUpstreamChannelRestrictionCheck(ctx, groupID)
+	group := s.getGroupPrimaryConfig(ctx, groupID)
+	hadExcludedFailures := len(excludedIDs) > 0
 	var stickyAccountID int64
 	if sessionHash != "" && s.cache != nil {
 		if accountID, err := s.getStickySessionAccountID(ctx, groupID, sessionHash); err == nil {
@@ -1948,6 +2012,43 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 					}
 				}
 			}
+		}
+	}
+
+	// ============ Layer 1.5: Group primary account ============
+	if primaryAccount := s.tryPrimaryAccountHit(ctx, group, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, requiredCapability); primaryAccount != nil {
+		result, err := s.tryAcquireAccountSlot(ctx, primaryAccount.ID, primaryAccount.Concurrency)
+		if err == nil && result != nil && result.Acquired {
+			selection, selectErr := s.newAcquiredSelectionResult(ctx, primaryAccount, result.ReleaseFunc)
+			if selectErr != nil {
+				return nil, selectErr
+			}
+			if sessionHash != "" {
+				_ = s.setStickySessionAccountID(ctx, groupID, sessionHash, primaryAccount.ID, openaiStickySessionTTL)
+			}
+			if selection.ScheduleTrace != nil {
+				attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
+			}
+			s.persistPrimaryPromotionFromSelection(ctx, group, primaryAccount.ID, hadExcludedFailures)
+			return selection, nil
+		}
+
+		waitingCount, _ := s.concurrencyService.GetAccountWaitingCount(ctx, primaryAccount.ID)
+		if waitingCount < cfg.StickySessionMaxWaiting {
+			selection, selectErr := s.newSelectionResult(ctx, primaryAccount, false, nil, &AccountWaitPlan{
+				AccountID:      primaryAccount.ID,
+				MaxConcurrency: primaryAccount.Concurrency,
+				Timeout:        cfg.StickySessionWaitTimeout,
+				MaxWaiting:     cfg.StickySessionMaxWaiting,
+			})
+			if selectErr != nil {
+				return nil, selectErr
+			}
+			if selection.ScheduleTrace != nil {
+				attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
+			}
+			s.persistPrimaryPromotionFromSelection(ctx, group, primaryAccount.ID, hadExcludedFailures)
+			return selection, nil
 		}
 	}
 
@@ -2071,6 +2172,10 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 				if sessionHash != "" {
 					_ = s.setStickySessionAccountID(ctx, groupID, sessionHash, fresh.ID, openaiStickySessionTTL)
 				}
+				if selection.ScheduleTrace != nil {
+					attachPrimaryTrace(selection.ScheduleTrace, group, false, "primary_unavailable")
+				}
+				s.persistPrimaryPromotionFromSelection(ctx, group, fresh.ID, hadExcludedFailures)
 				return selection, true, nil
 			}
 		}
@@ -2106,6 +2211,10 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 				if sessionHash != "" {
 					_ = s.setStickySessionAccountID(ctx, groupID, sessionHash, fresh.ID, openaiStickySessionTTL)
 				}
+				if selection.ScheduleTrace != nil {
+					attachPrimaryTrace(selection.ScheduleTrace, group, false, "primary_unavailable")
+				}
+				s.persistPrimaryPromotionFromSelection(ctx, group, fresh.ID, hadExcludedFailures)
 				return selection, nil
 			}
 		}
@@ -2143,12 +2252,20 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 		if needsUpstreamCheck && s.isUpstreamModelRestrictedByChannel(ctx, *groupID, fresh, requestedModel, requireCompact) {
 			continue
 		}
-		return s.newSelectionResult(ctx, fresh, false, nil, &AccountWaitPlan{
+		selection, err := s.newSelectionResult(ctx, fresh, false, nil, &AccountWaitPlan{
 			AccountID:      fresh.ID,
 			MaxConcurrency: fresh.Concurrency,
 			Timeout:        cfg.FallbackWaitTimeout,
 			MaxWaiting:     cfg.FallbackMaxWaiting,
 		})
+		if err != nil {
+			return nil, err
+		}
+		if selection.ScheduleTrace != nil {
+			attachPrimaryTrace(selection.ScheduleTrace, group, false, "primary_unavailable")
+		}
+		s.persistPrimaryPromotionFromSelection(ctx, group, fresh.ID, hadExcludedFailures)
+		return selection, nil
 	}
 
 	if requireCompact && baseCandidateCount > 0 {

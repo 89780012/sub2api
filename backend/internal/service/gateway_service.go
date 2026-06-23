@@ -1652,6 +1652,7 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 		}
 	}
 
+	hadExcludedFailures := len(excludedIDs) > 0
 	platform, hasForcePlatform, err := s.resolvePlatform(ctx, groupID, group)
 	if err != nil {
 		return nil, err
@@ -1682,6 +1683,39 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 		}
 		_, excluded := excludedIDs[accountID]
 		return excluded
+	}
+
+	if group != nil {
+		primaryAccountID := group.currentPreferredPrimaryAccountID()
+		if primaryAccountID > 0 && !isExcluded(primaryAccountID) {
+			if primaryAccount, ok := accountByID[primaryAccountID]; ok &&
+				s.isAccountSchedulableForSelection(primaryAccount) &&
+				s.isAccountAllowedForPlatform(primaryAccount, platform, useMixed) &&
+				(requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, primaryAccount, requestedModel)) &&
+				s.isAccountSchedulableForModelSelection(ctx, primaryAccount, requestedModel) &&
+				s.isAccountSchedulableForQuota(primaryAccount) &&
+				s.isAccountSchedulableForWindowCost(ctx, primaryAccount, false) &&
+				s.isAccountSchedulableForRPM(ctx, primaryAccount, false) {
+				result, err := s.tryAcquireAccountSlot(ctx, primaryAccount.ID, primaryAccount.Concurrency)
+				if err == nil && result.Acquired {
+					if s.checkAndRegisterSession(ctx, primaryAccount, sessionHash) {
+						selection, selectErr := s.newSelectionResult(ctx, primaryAccount, true, result.ReleaseFunc, nil)
+						if selectErr != nil {
+							return nil, selectErr
+						}
+						if sessionHash != "" && s.cache != nil {
+							_ = s.cache.SetSessionAccountID(ctx, derefGroupID(groupID), sessionHash, primaryAccount.ID, stickySessionTTL)
+						}
+						if selection.ScheduleTrace != nil {
+							attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
+						}
+						s.persistPrimaryPromotionFromSelection(ctx, group, primaryAccount.ID, hadExcludedFailures)
+						return selection, nil
+					}
+					result.ReleaseFunc()
+				}
+			}
+		}
 	}
 
 	// 获取模型路由配置（仅 anthropic 平台）
@@ -2161,7 +2195,7 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 
 	loadMap, err := s.concurrencyService.GetAccountsLoadBatch(ctx, accountLoads)
 	if err != nil {
-		if result, ok, legacyErr := s.tryAcquireByLegacyOrder(ctx, candidates, groupID, sessionHash, preferOAuth); legacyErr != nil {
+		if result, ok, legacyErr := s.tryAcquireByLegacyOrder(ctx, candidates, groupID, sessionHash, preferOAuth, group, hadExcludedFailures); legacyErr != nil {
 			return nil, legacyErr
 		} else if ok {
 			return result, nil
@@ -2220,7 +2254,10 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 						traceCandidates[i].Selected = traceCandidates[i].AccountID == selected.account.ID
 					}
 					trace.setCandidates(traceCandidates)
-					return attachUsageScheduleTrace(selection, trace), nil
+					selection = attachUsageScheduleTrace(selection, trace)
+					attachPrimaryTrace(selection.ScheduleTrace, group, false, "primary_unavailable")
+					s.persistPrimaryPromotionFromSelection(ctx, group, selected.account.ID, hadExcludedFailures)
+					return selection, nil
 				}
 			}
 
@@ -2263,12 +2300,15 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 			traceCandidates[i].Selected = traceCandidates[i].AccountID == acc.ID
 		}
 		trace.setCandidates(traceCandidates)
-		return attachUsageScheduleTrace(selection, trace), nil
+		selection = attachUsageScheduleTrace(selection, trace)
+		attachPrimaryTrace(selection.ScheduleTrace, group, false, "primary_unavailable")
+		s.persistPrimaryPromotionFromSelection(ctx, group, acc.ID, hadExcludedFailures)
+		return selection, nil
 	}
 	return nil, ErrNoAvailableAccounts
 }
 
-func (s *GatewayService) tryAcquireByLegacyOrder(ctx context.Context, candidates []*Account, groupID *int64, sessionHash string, preferOAuth bool) (*AccountSelectionResult, bool, error) {
+func (s *GatewayService) tryAcquireByLegacyOrder(ctx context.Context, candidates []*Account, groupID *int64, sessionHash string, preferOAuth bool, group *Group, hadExcludedFailures bool) (*AccountSelectionResult, bool, error) {
 	ordered := append([]*Account(nil), candidates...)
 	qualitySnapshots := accountQualitySnapshotsForReader(ctx, s.accountQualityReader, accountIDsFromAccounts(ordered), "service.gateway")
 	sortAccountsByPriorityQualityAndLastUsed(ordered, preferOAuth, qualitySnapshots)
@@ -2298,6 +2338,8 @@ func (s *GatewayService) tryAcquireByLegacyOrder(ctx context.Context, candidates
 			}
 			trace.setCandidates(traceCandidates)
 			selection.ScheduleTrace = trace
+			attachPrimaryTrace(selection.ScheduleTrace, group, false, "primary_unavailable")
+			s.persistPrimaryPromotionFromSelection(ctx, group, acc.ID, hadExcludedFailures)
 			return selection, true, nil
 		}
 	}

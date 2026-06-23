@@ -10,7 +10,8 @@ import type {
   CreateGroupRequest,
   UpdateGroupRequest,
   PaginatedResponse,
-  GroupAccountQualityResponse
+  GroupAccountQualityResponse,
+  UpdateGroupPrimaryAccountRequest
 } from '@/types'
 
 /**
@@ -335,6 +336,14 @@ export async function getAccountQuality(id: number): Promise<GroupAccountQuality
   return data
 }
 
+export async function updatePrimaryAccount(
+  id: number,
+  payload: UpdateGroupPrimaryAccountRequest
+): Promise<AdminGroup> {
+  const { data } = await apiClient.put<AdminGroup>(`/admin/groups/${id}/primary-account`, payload)
+  return data
+}
+
 export const groupsAPI = {
   list,
   getAll,
@@ -357,7 +366,8 @@ export const groupsAPI = {
   updateSortOrder,
   getUsageSummary,
   getCapacitySummary,
-  getAccountQuality
+  getAccountQuality,
+  updatePrimaryAccount
 }
 
 export default groupsAPI

@@ -47,11 +47,11 @@ type Group struct {
 	MonthlyLimitUsd *float64 `json:"monthly_limit_usd,omitempty"`
 	// DefaultValidityDays holds the value of the "default_validity_days" field.
 	DefaultValidityDays int `json:"default_validity_days,omitempty"`
-	// 是否允许该分组使用图片生成能力
+	// AllowImageGeneration holds the value of the "allow_image_generation" field.
 	AllowImageGeneration bool `json:"allow_image_generation,omitempty"`
-	// 图片生成是否使用独立倍率；false 表示共享分组有效倍率
+	// ImageRateIndependent holds the value of the "image_rate_independent" field.
 	ImageRateIndependent bool `json:"image_rate_independent,omitempty"`
-	// 图片生成独立倍率，仅 image_rate_independent=true 时生效
+	// ImageRateMultiplier holds the value of the "image_rate_multiplier" field.
 	ImageRateMultiplier float64 `json:"image_rate_multiplier,omitempty"`
 	// ImagePrice1k holds the value of the "image_price_1k" field.
 	ImagePrice1k *float64 `json:"image_price_1k,omitempty"`
@@ -59,36 +59,52 @@ type Group struct {
 	ImagePrice2k *float64 `json:"image_price_2k,omitempty"`
 	// ImagePrice4k holds the value of the "image_price_4k" field.
 	ImagePrice4k *float64 `json:"image_price_4k,omitempty"`
-	// 是否仅允许 Claude Code 客户端
+	// ClaudeCodeOnly holds the value of the "claude_code_only" field.
 	ClaudeCodeOnly bool `json:"claude_code_only,omitempty"`
-	// 非 Claude Code 请求降级使用的分组 ID
+	// FallbackGroupID holds the value of the "fallback_group_id" field.
 	FallbackGroupID *int64 `json:"fallback_group_id,omitempty"`
-	// 无效请求兜底使用的分组 ID
+	// FallbackGroupIDOnInvalidRequest holds the value of the "fallback_group_id_on_invalid_request" field.
 	FallbackGroupIDOnInvalidRequest *int64 `json:"fallback_group_id_on_invalid_request,omitempty"`
-	// 模型路由配置：模型模式 -> 优先账号ID列表
+	// ModelRouting holds the value of the "model_routing" field.
 	ModelRouting map[string][]int64 `json:"model_routing,omitempty"`
-	// 是否启用模型路由配置
+	// ModelRoutingEnabled holds the value of the "model_routing_enabled" field.
 	ModelRoutingEnabled bool `json:"model_routing_enabled,omitempty"`
-	// 是否注入 MCP XML 调用协议提示词（仅 antigravity 平台）
+	// McpXMLInject holds the value of the "mcp_xml_inject" field.
 	McpXMLInject bool `json:"mcp_xml_inject,omitempty"`
-	// 支持的模型系列：claude, gemini_text, gemini_image
+	// SupportedModelScopes holds the value of the "supported_model_scopes" field.
 	SupportedModelScopes []string `json:"supported_model_scopes,omitempty"`
-	// 分组显示排序，数值越小越靠前
+	// SortOrder holds the value of the "sort_order" field.
 	SortOrder int `json:"sort_order,omitempty"`
-	// 是否允许 /v1/messages 调度到此 OpenAI 分组
+	// AllowMessagesDispatch holds the value of the "allow_messages_dispatch" field.
 	AllowMessagesDispatch bool `json:"allow_messages_dispatch,omitempty"`
-	// 仅允许非 apikey 类型账号关联到此分组
+	// RequireOauthOnly holds the value of the "require_oauth_only" field.
 	RequireOauthOnly bool `json:"require_oauth_only,omitempty"`
-	// 调度时仅允许 privacy 已成功设置的账号
+	// RequirePrivacySet holds the value of the "require_privacy_set" field.
 	RequirePrivacySet bool `json:"require_privacy_set,omitempty"`
-	// 默认映射模型 ID，当账号级映射找不到时使用此值
+	// DefaultMappedModel holds the value of the "default_mapped_model" field.
 	DefaultMappedModel string `json:"default_mapped_model,omitempty"`
-	// OpenAI Messages 调度模型配置：按 Claude 系列/精确模型映射到目标 GPT 模型
+	// MessagesDispatchModelConfig holds the value of the "messages_dispatch_model_config" field.
 	MessagesDispatchModelConfig domain.OpenAIMessagesDispatchModelConfig `json:"messages_dispatch_model_config,omitempty"`
-	// 自定义 /v1/models 展示列表配置；仅影响模型列表响应，不影响调度
+	// ModelsListConfig holds the value of the "models_list_config" field.
 	ModelsListConfig domain.GroupModelsListConfig `json:"models_list_config,omitempty"`
-	// 分组 RPM 上限，0 表示不限制；设置后接管该分组用户的限流
+	// RpmLimit holds the value of the "rpm_limit" field.
 	RpmLimit int `json:"rpm_limit,omitempty"`
+	// PrimaryAccountMode holds the value of the "primary_account_mode" field.
+	PrimaryAccountMode string `json:"primary_account_mode,omitempty"`
+	// ManualPrimaryAccountID holds the value of the "manual_primary_account_id" field.
+	ManualPrimaryAccountID *int64 `json:"manual_primary_account_id,omitempty"`
+	// ActivePrimaryAccountID holds the value of the "active_primary_account_id" field.
+	ActivePrimaryAccountID *int64 `json:"active_primary_account_id,omitempty"`
+	// ActivePrimarySource holds the value of the "active_primary_source" field.
+	ActivePrimarySource string `json:"active_primary_source,omitempty"`
+	// ActivePrimaryReason holds the value of the "active_primary_reason" field.
+	ActivePrimaryReason string `json:"active_primary_reason,omitempty"`
+	// ActivePrimarySwitchedAt holds the value of the "active_primary_switched_at" field.
+	ActivePrimarySwitchedAt *time.Time `json:"active_primary_switched_at,omitempty"`
+	// PrimaryFailoverCooldownSeconds holds the value of the "primary_failover_cooldown_seconds" field.
+	PrimaryFailoverCooldownSeconds int `json:"primary_failover_cooldown_seconds,omitempty"`
+	// PrimaryAllowManualAutoReplace holds the value of the "primary_allow_manual_auto_replace" field.
+	PrimaryAllowManualAutoReplace bool `json:"primary_allow_manual_auto_replace,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the GroupQuery when eager-loading is set.
 	Edges        GroupEdges `json:"edges"`
@@ -197,15 +213,15 @@ func (*Group) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case group.FieldModelRouting, group.FieldSupportedModelScopes, group.FieldMessagesDispatchModelConfig, group.FieldModelsListConfig:
 			values[i] = new([]byte)
-		case group.FieldIsExclusive, group.FieldAllowImageGeneration, group.FieldImageRateIndependent, group.FieldClaudeCodeOnly, group.FieldModelRoutingEnabled, group.FieldMcpXMLInject, group.FieldAllowMessagesDispatch, group.FieldRequireOauthOnly, group.FieldRequirePrivacySet:
+		case group.FieldIsExclusive, group.FieldAllowImageGeneration, group.FieldImageRateIndependent, group.FieldClaudeCodeOnly, group.FieldModelRoutingEnabled, group.FieldMcpXMLInject, group.FieldAllowMessagesDispatch, group.FieldRequireOauthOnly, group.FieldRequirePrivacySet, group.FieldPrimaryAllowManualAutoReplace:
 			values[i] = new(sql.NullBool)
 		case group.FieldRateMultiplier, group.FieldDailyLimitUsd, group.FieldWeeklyLimitUsd, group.FieldMonthlyLimitUsd, group.FieldImageRateMultiplier, group.FieldImagePrice1k, group.FieldImagePrice2k, group.FieldImagePrice4k:
 			values[i] = new(sql.NullFloat64)
-		case group.FieldID, group.FieldDefaultValidityDays, group.FieldFallbackGroupID, group.FieldFallbackGroupIDOnInvalidRequest, group.FieldSortOrder, group.FieldRpmLimit:
+		case group.FieldID, group.FieldDefaultValidityDays, group.FieldFallbackGroupID, group.FieldFallbackGroupIDOnInvalidRequest, group.FieldSortOrder, group.FieldRpmLimit, group.FieldManualPrimaryAccountID, group.FieldActivePrimaryAccountID, group.FieldPrimaryFailoverCooldownSeconds:
 			values[i] = new(sql.NullInt64)
-		case group.FieldName, group.FieldDescription, group.FieldStatus, group.FieldPlatform, group.FieldSubscriptionType, group.FieldDefaultMappedModel:
+		case group.FieldName, group.FieldDescription, group.FieldStatus, group.FieldPlatform, group.FieldSubscriptionType, group.FieldDefaultMappedModel, group.FieldPrimaryAccountMode, group.FieldActivePrimarySource, group.FieldActivePrimaryReason:
 			values[i] = new(sql.NullString)
-		case group.FieldCreatedAt, group.FieldUpdatedAt, group.FieldDeletedAt:
+		case group.FieldCreatedAt, group.FieldUpdatedAt, group.FieldDeletedAt, group.FieldActivePrimarySwitchedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -456,6 +472,57 @@ func (_m *Group) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.RpmLimit = int(value.Int64)
 			}
+		case group.FieldPrimaryAccountMode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field primary_account_mode", values[i])
+			} else if value.Valid {
+				_m.PrimaryAccountMode = value.String
+			}
+		case group.FieldManualPrimaryAccountID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field manual_primary_account_id", values[i])
+			} else if value.Valid {
+				_m.ManualPrimaryAccountID = new(int64)
+				*_m.ManualPrimaryAccountID = value.Int64
+			}
+		case group.FieldActivePrimaryAccountID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field active_primary_account_id", values[i])
+			} else if value.Valid {
+				_m.ActivePrimaryAccountID = new(int64)
+				*_m.ActivePrimaryAccountID = value.Int64
+			}
+		case group.FieldActivePrimarySource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field active_primary_source", values[i])
+			} else if value.Valid {
+				_m.ActivePrimarySource = value.String
+			}
+		case group.FieldActivePrimaryReason:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field active_primary_reason", values[i])
+			} else if value.Valid {
+				_m.ActivePrimaryReason = value.String
+			}
+		case group.FieldActivePrimarySwitchedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field active_primary_switched_at", values[i])
+			} else if value.Valid {
+				_m.ActivePrimarySwitchedAt = new(time.Time)
+				*_m.ActivePrimarySwitchedAt = value.Time
+			}
+		case group.FieldPrimaryFailoverCooldownSeconds:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field primary_failover_cooldown_seconds", values[i])
+			} else if value.Valid {
+				_m.PrimaryFailoverCooldownSeconds = int(value.Int64)
+			}
+		case group.FieldPrimaryAllowManualAutoReplace:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field primary_allow_manual_auto_replace", values[i])
+			} else if value.Valid {
+				_m.PrimaryAllowManualAutoReplace = value.Bool
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -656,6 +723,36 @@ func (_m *Group) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("rpm_limit=")
 	builder.WriteString(fmt.Sprintf("%v", _m.RpmLimit))
+	builder.WriteString(", ")
+	builder.WriteString("primary_account_mode=")
+	builder.WriteString(_m.PrimaryAccountMode)
+	builder.WriteString(", ")
+	if v := _m.ManualPrimaryAccountID; v != nil {
+		builder.WriteString("manual_primary_account_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.ActivePrimaryAccountID; v != nil {
+		builder.WriteString("active_primary_account_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("active_primary_source=")
+	builder.WriteString(_m.ActivePrimarySource)
+	builder.WriteString(", ")
+	builder.WriteString("active_primary_reason=")
+	builder.WriteString(_m.ActivePrimaryReason)
+	builder.WriteString(", ")
+	if v := _m.ActivePrimarySwitchedAt; v != nil {
+		builder.WriteString("active_primary_switched_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("primary_failover_cooldown_seconds=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PrimaryFailoverCooldownSeconds))
+	builder.WriteString(", ")
+	builder.WriteString("primary_allow_manual_auto_replace=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PrimaryAllowManualAutoReplace))
 	builder.WriteByte(')')
 	return builder.String()
 }

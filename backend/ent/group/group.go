@@ -86,6 +86,22 @@ const (
 	FieldModelsListConfig = "models_list_config"
 	// FieldRpmLimit holds the string denoting the rpm_limit field in the database.
 	FieldRpmLimit = "rpm_limit"
+	// FieldPrimaryAccountMode holds the string denoting the primary_account_mode field in the database.
+	FieldPrimaryAccountMode = "primary_account_mode"
+	// FieldManualPrimaryAccountID holds the string denoting the manual_primary_account_id field in the database.
+	FieldManualPrimaryAccountID = "manual_primary_account_id"
+	// FieldActivePrimaryAccountID holds the string denoting the active_primary_account_id field in the database.
+	FieldActivePrimaryAccountID = "active_primary_account_id"
+	// FieldActivePrimarySource holds the string denoting the active_primary_source field in the database.
+	FieldActivePrimarySource = "active_primary_source"
+	// FieldActivePrimaryReason holds the string denoting the active_primary_reason field in the database.
+	FieldActivePrimaryReason = "active_primary_reason"
+	// FieldActivePrimarySwitchedAt holds the string denoting the active_primary_switched_at field in the database.
+	FieldActivePrimarySwitchedAt = "active_primary_switched_at"
+	// FieldPrimaryFailoverCooldownSeconds holds the string denoting the primary_failover_cooldown_seconds field in the database.
+	FieldPrimaryFailoverCooldownSeconds = "primary_failover_cooldown_seconds"
+	// FieldPrimaryAllowManualAutoReplace holds the string denoting the primary_allow_manual_auto_replace field in the database.
+	FieldPrimaryAllowManualAutoReplace = "primary_allow_manual_auto_replace"
 	// EdgeAPIKeys holds the string denoting the api_keys edge name in mutations.
 	EdgeAPIKeys = "api_keys"
 	// EdgeRedeemCodes holds the string denoting the redeem_codes edge name in mutations.
@@ -196,6 +212,14 @@ var Columns = []string{
 	FieldMessagesDispatchModelConfig,
 	FieldModelsListConfig,
 	FieldRpmLimit,
+	FieldPrimaryAccountMode,
+	FieldManualPrimaryAccountID,
+	FieldActivePrimaryAccountID,
+	FieldActivePrimarySource,
+	FieldActivePrimaryReason,
+	FieldActivePrimarySwitchedAt,
+	FieldPrimaryFailoverCooldownSeconds,
+	FieldPrimaryAllowManualAutoReplace,
 }
 
 var (
@@ -283,6 +307,22 @@ var (
 	DefaultModelsListConfig domain.GroupModelsListConfig
 	// DefaultRpmLimit holds the default value on creation for the "rpm_limit" field.
 	DefaultRpmLimit int
+	// DefaultPrimaryAccountMode holds the default value on creation for the "primary_account_mode" field.
+	DefaultPrimaryAccountMode string
+	// PrimaryAccountModeValidator is a validator for the "primary_account_mode" field. It is called by the builders before save.
+	PrimaryAccountModeValidator func(string) error
+	// DefaultActivePrimarySource holds the default value on creation for the "active_primary_source" field.
+	DefaultActivePrimarySource string
+	// ActivePrimarySourceValidator is a validator for the "active_primary_source" field. It is called by the builders before save.
+	ActivePrimarySourceValidator func(string) error
+	// DefaultActivePrimaryReason holds the default value on creation for the "active_primary_reason" field.
+	DefaultActivePrimaryReason string
+	// ActivePrimaryReasonValidator is a validator for the "active_primary_reason" field. It is called by the builders before save.
+	ActivePrimaryReasonValidator func(string) error
+	// DefaultPrimaryFailoverCooldownSeconds holds the default value on creation for the "primary_failover_cooldown_seconds" field.
+	DefaultPrimaryFailoverCooldownSeconds int
+	// DefaultPrimaryAllowManualAutoReplace holds the default value on creation for the "primary_allow_manual_auto_replace" field.
+	DefaultPrimaryAllowManualAutoReplace bool
 )
 
 // OrderOption defines the ordering options for the Group queries.
@@ -446,6 +486,46 @@ func ByDefaultMappedModel(opts ...sql.OrderTermOption) OrderOption {
 // ByRpmLimit orders the results by the rpm_limit field.
 func ByRpmLimit(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRpmLimit, opts...).ToFunc()
+}
+
+// ByPrimaryAccountMode orders the results by the primary_account_mode field.
+func ByPrimaryAccountMode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPrimaryAccountMode, opts...).ToFunc()
+}
+
+// ByManualPrimaryAccountID orders the results by the manual_primary_account_id field.
+func ByManualPrimaryAccountID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldManualPrimaryAccountID, opts...).ToFunc()
+}
+
+// ByActivePrimaryAccountID orders the results by the active_primary_account_id field.
+func ByActivePrimaryAccountID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldActivePrimaryAccountID, opts...).ToFunc()
+}
+
+// ByActivePrimarySource orders the results by the active_primary_source field.
+func ByActivePrimarySource(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldActivePrimarySource, opts...).ToFunc()
+}
+
+// ByActivePrimaryReason orders the results by the active_primary_reason field.
+func ByActivePrimaryReason(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldActivePrimaryReason, opts...).ToFunc()
+}
+
+// ByActivePrimarySwitchedAt orders the results by the active_primary_switched_at field.
+func ByActivePrimarySwitchedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldActivePrimarySwitchedAt, opts...).ToFunc()
+}
+
+// ByPrimaryFailoverCooldownSeconds orders the results by the primary_failover_cooldown_seconds field.
+func ByPrimaryFailoverCooldownSeconds(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPrimaryFailoverCooldownSeconds, opts...).ToFunc()
+}
+
+// ByPrimaryAllowManualAutoReplace orders the results by the primary_allow_manual_auto_replace field.
+func ByPrimaryAllowManualAutoReplace(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPrimaryAllowManualAutoReplace, opts...).ToFunc()
 }
 
 // ByAPIKeysCount orders the results by api_keys count.

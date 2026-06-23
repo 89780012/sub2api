@@ -651,6 +651,157 @@ func (_u *GroupUpdate) AddRpmLimit(v int) *GroupUpdate {
 	return _u
 }
 
+// SetPrimaryAccountMode sets the "primary_account_mode" field.
+func (_u *GroupUpdate) SetPrimaryAccountMode(v string) *GroupUpdate {
+	_u.mutation.SetPrimaryAccountMode(v)
+	return _u
+}
+
+// SetNillablePrimaryAccountMode sets the "primary_account_mode" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillablePrimaryAccountMode(v *string) *GroupUpdate {
+	if v != nil {
+		_u.SetPrimaryAccountMode(*v)
+	}
+	return _u
+}
+
+// SetManualPrimaryAccountID sets the "manual_primary_account_id" field.
+func (_u *GroupUpdate) SetManualPrimaryAccountID(v int64) *GroupUpdate {
+	_u.mutation.ResetManualPrimaryAccountID()
+	_u.mutation.SetManualPrimaryAccountID(v)
+	return _u
+}
+
+// SetNillableManualPrimaryAccountID sets the "manual_primary_account_id" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableManualPrimaryAccountID(v *int64) *GroupUpdate {
+	if v != nil {
+		_u.SetManualPrimaryAccountID(*v)
+	}
+	return _u
+}
+
+// AddManualPrimaryAccountID adds value to the "manual_primary_account_id" field.
+func (_u *GroupUpdate) AddManualPrimaryAccountID(v int64) *GroupUpdate {
+	_u.mutation.AddManualPrimaryAccountID(v)
+	return _u
+}
+
+// ClearManualPrimaryAccountID clears the value of the "manual_primary_account_id" field.
+func (_u *GroupUpdate) ClearManualPrimaryAccountID() *GroupUpdate {
+	_u.mutation.ClearManualPrimaryAccountID()
+	return _u
+}
+
+// SetActivePrimaryAccountID sets the "active_primary_account_id" field.
+func (_u *GroupUpdate) SetActivePrimaryAccountID(v int64) *GroupUpdate {
+	_u.mutation.ResetActivePrimaryAccountID()
+	_u.mutation.SetActivePrimaryAccountID(v)
+	return _u
+}
+
+// SetNillableActivePrimaryAccountID sets the "active_primary_account_id" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableActivePrimaryAccountID(v *int64) *GroupUpdate {
+	if v != nil {
+		_u.SetActivePrimaryAccountID(*v)
+	}
+	return _u
+}
+
+// AddActivePrimaryAccountID adds value to the "active_primary_account_id" field.
+func (_u *GroupUpdate) AddActivePrimaryAccountID(v int64) *GroupUpdate {
+	_u.mutation.AddActivePrimaryAccountID(v)
+	return _u
+}
+
+// ClearActivePrimaryAccountID clears the value of the "active_primary_account_id" field.
+func (_u *GroupUpdate) ClearActivePrimaryAccountID() *GroupUpdate {
+	_u.mutation.ClearActivePrimaryAccountID()
+	return _u
+}
+
+// SetActivePrimarySource sets the "active_primary_source" field.
+func (_u *GroupUpdate) SetActivePrimarySource(v string) *GroupUpdate {
+	_u.mutation.SetActivePrimarySource(v)
+	return _u
+}
+
+// SetNillableActivePrimarySource sets the "active_primary_source" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableActivePrimarySource(v *string) *GroupUpdate {
+	if v != nil {
+		_u.SetActivePrimarySource(*v)
+	}
+	return _u
+}
+
+// SetActivePrimaryReason sets the "active_primary_reason" field.
+func (_u *GroupUpdate) SetActivePrimaryReason(v string) *GroupUpdate {
+	_u.mutation.SetActivePrimaryReason(v)
+	return _u
+}
+
+// SetNillableActivePrimaryReason sets the "active_primary_reason" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableActivePrimaryReason(v *string) *GroupUpdate {
+	if v != nil {
+		_u.SetActivePrimaryReason(*v)
+	}
+	return _u
+}
+
+// SetActivePrimarySwitchedAt sets the "active_primary_switched_at" field.
+func (_u *GroupUpdate) SetActivePrimarySwitchedAt(v time.Time) *GroupUpdate {
+	_u.mutation.SetActivePrimarySwitchedAt(v)
+	return _u
+}
+
+// SetNillableActivePrimarySwitchedAt sets the "active_primary_switched_at" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableActivePrimarySwitchedAt(v *time.Time) *GroupUpdate {
+	if v != nil {
+		_u.SetActivePrimarySwitchedAt(*v)
+	}
+	return _u
+}
+
+// ClearActivePrimarySwitchedAt clears the value of the "active_primary_switched_at" field.
+func (_u *GroupUpdate) ClearActivePrimarySwitchedAt() *GroupUpdate {
+	_u.mutation.ClearActivePrimarySwitchedAt()
+	return _u
+}
+
+// SetPrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field.
+func (_u *GroupUpdate) SetPrimaryFailoverCooldownSeconds(v int) *GroupUpdate {
+	_u.mutation.ResetPrimaryFailoverCooldownSeconds()
+	_u.mutation.SetPrimaryFailoverCooldownSeconds(v)
+	return _u
+}
+
+// SetNillablePrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillablePrimaryFailoverCooldownSeconds(v *int) *GroupUpdate {
+	if v != nil {
+		_u.SetPrimaryFailoverCooldownSeconds(*v)
+	}
+	return _u
+}
+
+// AddPrimaryFailoverCooldownSeconds adds value to the "primary_failover_cooldown_seconds" field.
+func (_u *GroupUpdate) AddPrimaryFailoverCooldownSeconds(v int) *GroupUpdate {
+	_u.mutation.AddPrimaryFailoverCooldownSeconds(v)
+	return _u
+}
+
+// SetPrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field.
+func (_u *GroupUpdate) SetPrimaryAllowManualAutoReplace(v bool) *GroupUpdate {
+	_u.mutation.SetPrimaryAllowManualAutoReplace(v)
+	return _u
+}
+
+// SetNillablePrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillablePrimaryAllowManualAutoReplace(v *bool) *GroupUpdate {
+	if v != nil {
+		_u.SetPrimaryAllowManualAutoReplace(*v)
+	}
+	return _u
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_u *GroupUpdate) AddAPIKeyIDs(ids ...int64) *GroupUpdate {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -941,6 +1092,21 @@ func (_u *GroupUpdate) check() error {
 			return &ValidationError{Name: "default_mapped_model", err: fmt.Errorf(`ent: validator failed for field "Group.default_mapped_model": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.PrimaryAccountMode(); ok {
+		if err := group.PrimaryAccountModeValidator(v); err != nil {
+			return &ValidationError{Name: "primary_account_mode", err: fmt.Errorf(`ent: validator failed for field "Group.primary_account_mode": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ActivePrimarySource(); ok {
+		if err := group.ActivePrimarySourceValidator(v); err != nil {
+			return &ValidationError{Name: "active_primary_source", err: fmt.Errorf(`ent: validator failed for field "Group.active_primary_source": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ActivePrimaryReason(); ok {
+		if err := group.ActivePrimaryReasonValidator(v); err != nil {
+			return &ValidationError{Name: "active_primary_reason", err: fmt.Errorf(`ent: validator failed for field "Group.active_primary_reason": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -1134,6 +1300,48 @@ func (_u *GroupUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedRpmLimit(); ok {
 		_spec.AddField(group.FieldRpmLimit, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.PrimaryAccountMode(); ok {
+		_spec.SetField(group.FieldPrimaryAccountMode, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ManualPrimaryAccountID(); ok {
+		_spec.SetField(group.FieldManualPrimaryAccountID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedManualPrimaryAccountID(); ok {
+		_spec.AddField(group.FieldManualPrimaryAccountID, field.TypeInt64, value)
+	}
+	if _u.mutation.ManualPrimaryAccountIDCleared() {
+		_spec.ClearField(group.FieldManualPrimaryAccountID, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.ActivePrimaryAccountID(); ok {
+		_spec.SetField(group.FieldActivePrimaryAccountID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedActivePrimaryAccountID(); ok {
+		_spec.AddField(group.FieldActivePrimaryAccountID, field.TypeInt64, value)
+	}
+	if _u.mutation.ActivePrimaryAccountIDCleared() {
+		_spec.ClearField(group.FieldActivePrimaryAccountID, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.ActivePrimarySource(); ok {
+		_spec.SetField(group.FieldActivePrimarySource, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ActivePrimaryReason(); ok {
+		_spec.SetField(group.FieldActivePrimaryReason, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ActivePrimarySwitchedAt(); ok {
+		_spec.SetField(group.FieldActivePrimarySwitchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ActivePrimarySwitchedAtCleared() {
+		_spec.ClearField(group.FieldActivePrimarySwitchedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.PrimaryFailoverCooldownSeconds(); ok {
+		_spec.SetField(group.FieldPrimaryFailoverCooldownSeconds, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPrimaryFailoverCooldownSeconds(); ok {
+		_spec.AddField(group.FieldPrimaryFailoverCooldownSeconds, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.PrimaryAllowManualAutoReplace(); ok {
+		_spec.SetField(group.FieldPrimaryAllowManualAutoReplace, field.TypeBool, value)
 	}
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -2064,6 +2272,157 @@ func (_u *GroupUpdateOne) AddRpmLimit(v int) *GroupUpdateOne {
 	return _u
 }
 
+// SetPrimaryAccountMode sets the "primary_account_mode" field.
+func (_u *GroupUpdateOne) SetPrimaryAccountMode(v string) *GroupUpdateOne {
+	_u.mutation.SetPrimaryAccountMode(v)
+	return _u
+}
+
+// SetNillablePrimaryAccountMode sets the "primary_account_mode" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillablePrimaryAccountMode(v *string) *GroupUpdateOne {
+	if v != nil {
+		_u.SetPrimaryAccountMode(*v)
+	}
+	return _u
+}
+
+// SetManualPrimaryAccountID sets the "manual_primary_account_id" field.
+func (_u *GroupUpdateOne) SetManualPrimaryAccountID(v int64) *GroupUpdateOne {
+	_u.mutation.ResetManualPrimaryAccountID()
+	_u.mutation.SetManualPrimaryAccountID(v)
+	return _u
+}
+
+// SetNillableManualPrimaryAccountID sets the "manual_primary_account_id" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableManualPrimaryAccountID(v *int64) *GroupUpdateOne {
+	if v != nil {
+		_u.SetManualPrimaryAccountID(*v)
+	}
+	return _u
+}
+
+// AddManualPrimaryAccountID adds value to the "manual_primary_account_id" field.
+func (_u *GroupUpdateOne) AddManualPrimaryAccountID(v int64) *GroupUpdateOne {
+	_u.mutation.AddManualPrimaryAccountID(v)
+	return _u
+}
+
+// ClearManualPrimaryAccountID clears the value of the "manual_primary_account_id" field.
+func (_u *GroupUpdateOne) ClearManualPrimaryAccountID() *GroupUpdateOne {
+	_u.mutation.ClearManualPrimaryAccountID()
+	return _u
+}
+
+// SetActivePrimaryAccountID sets the "active_primary_account_id" field.
+func (_u *GroupUpdateOne) SetActivePrimaryAccountID(v int64) *GroupUpdateOne {
+	_u.mutation.ResetActivePrimaryAccountID()
+	_u.mutation.SetActivePrimaryAccountID(v)
+	return _u
+}
+
+// SetNillableActivePrimaryAccountID sets the "active_primary_account_id" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableActivePrimaryAccountID(v *int64) *GroupUpdateOne {
+	if v != nil {
+		_u.SetActivePrimaryAccountID(*v)
+	}
+	return _u
+}
+
+// AddActivePrimaryAccountID adds value to the "active_primary_account_id" field.
+func (_u *GroupUpdateOne) AddActivePrimaryAccountID(v int64) *GroupUpdateOne {
+	_u.mutation.AddActivePrimaryAccountID(v)
+	return _u
+}
+
+// ClearActivePrimaryAccountID clears the value of the "active_primary_account_id" field.
+func (_u *GroupUpdateOne) ClearActivePrimaryAccountID() *GroupUpdateOne {
+	_u.mutation.ClearActivePrimaryAccountID()
+	return _u
+}
+
+// SetActivePrimarySource sets the "active_primary_source" field.
+func (_u *GroupUpdateOne) SetActivePrimarySource(v string) *GroupUpdateOne {
+	_u.mutation.SetActivePrimarySource(v)
+	return _u
+}
+
+// SetNillableActivePrimarySource sets the "active_primary_source" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableActivePrimarySource(v *string) *GroupUpdateOne {
+	if v != nil {
+		_u.SetActivePrimarySource(*v)
+	}
+	return _u
+}
+
+// SetActivePrimaryReason sets the "active_primary_reason" field.
+func (_u *GroupUpdateOne) SetActivePrimaryReason(v string) *GroupUpdateOne {
+	_u.mutation.SetActivePrimaryReason(v)
+	return _u
+}
+
+// SetNillableActivePrimaryReason sets the "active_primary_reason" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableActivePrimaryReason(v *string) *GroupUpdateOne {
+	if v != nil {
+		_u.SetActivePrimaryReason(*v)
+	}
+	return _u
+}
+
+// SetActivePrimarySwitchedAt sets the "active_primary_switched_at" field.
+func (_u *GroupUpdateOne) SetActivePrimarySwitchedAt(v time.Time) *GroupUpdateOne {
+	_u.mutation.SetActivePrimarySwitchedAt(v)
+	return _u
+}
+
+// SetNillableActivePrimarySwitchedAt sets the "active_primary_switched_at" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableActivePrimarySwitchedAt(v *time.Time) *GroupUpdateOne {
+	if v != nil {
+		_u.SetActivePrimarySwitchedAt(*v)
+	}
+	return _u
+}
+
+// ClearActivePrimarySwitchedAt clears the value of the "active_primary_switched_at" field.
+func (_u *GroupUpdateOne) ClearActivePrimarySwitchedAt() *GroupUpdateOne {
+	_u.mutation.ClearActivePrimarySwitchedAt()
+	return _u
+}
+
+// SetPrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field.
+func (_u *GroupUpdateOne) SetPrimaryFailoverCooldownSeconds(v int) *GroupUpdateOne {
+	_u.mutation.ResetPrimaryFailoverCooldownSeconds()
+	_u.mutation.SetPrimaryFailoverCooldownSeconds(v)
+	return _u
+}
+
+// SetNillablePrimaryFailoverCooldownSeconds sets the "primary_failover_cooldown_seconds" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillablePrimaryFailoverCooldownSeconds(v *int) *GroupUpdateOne {
+	if v != nil {
+		_u.SetPrimaryFailoverCooldownSeconds(*v)
+	}
+	return _u
+}
+
+// AddPrimaryFailoverCooldownSeconds adds value to the "primary_failover_cooldown_seconds" field.
+func (_u *GroupUpdateOne) AddPrimaryFailoverCooldownSeconds(v int) *GroupUpdateOne {
+	_u.mutation.AddPrimaryFailoverCooldownSeconds(v)
+	return _u
+}
+
+// SetPrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field.
+func (_u *GroupUpdateOne) SetPrimaryAllowManualAutoReplace(v bool) *GroupUpdateOne {
+	_u.mutation.SetPrimaryAllowManualAutoReplace(v)
+	return _u
+}
+
+// SetNillablePrimaryAllowManualAutoReplace sets the "primary_allow_manual_auto_replace" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillablePrimaryAllowManualAutoReplace(v *bool) *GroupUpdateOne {
+	if v != nil {
+		_u.SetPrimaryAllowManualAutoReplace(*v)
+	}
+	return _u
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_u *GroupUpdateOne) AddAPIKeyIDs(ids ...int64) *GroupUpdateOne {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -2367,6 +2726,21 @@ func (_u *GroupUpdateOne) check() error {
 			return &ValidationError{Name: "default_mapped_model", err: fmt.Errorf(`ent: validator failed for field "Group.default_mapped_model": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.PrimaryAccountMode(); ok {
+		if err := group.PrimaryAccountModeValidator(v); err != nil {
+			return &ValidationError{Name: "primary_account_mode", err: fmt.Errorf(`ent: validator failed for field "Group.primary_account_mode": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ActivePrimarySource(); ok {
+		if err := group.ActivePrimarySourceValidator(v); err != nil {
+			return &ValidationError{Name: "active_primary_source", err: fmt.Errorf(`ent: validator failed for field "Group.active_primary_source": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ActivePrimaryReason(); ok {
+		if err := group.ActivePrimaryReasonValidator(v); err != nil {
+			return &ValidationError{Name: "active_primary_reason", err: fmt.Errorf(`ent: validator failed for field "Group.active_primary_reason": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -2577,6 +2951,48 @@ func (_u *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error)
 	}
 	if value, ok := _u.mutation.AddedRpmLimit(); ok {
 		_spec.AddField(group.FieldRpmLimit, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.PrimaryAccountMode(); ok {
+		_spec.SetField(group.FieldPrimaryAccountMode, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ManualPrimaryAccountID(); ok {
+		_spec.SetField(group.FieldManualPrimaryAccountID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedManualPrimaryAccountID(); ok {
+		_spec.AddField(group.FieldManualPrimaryAccountID, field.TypeInt64, value)
+	}
+	if _u.mutation.ManualPrimaryAccountIDCleared() {
+		_spec.ClearField(group.FieldManualPrimaryAccountID, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.ActivePrimaryAccountID(); ok {
+		_spec.SetField(group.FieldActivePrimaryAccountID, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedActivePrimaryAccountID(); ok {
+		_spec.AddField(group.FieldActivePrimaryAccountID, field.TypeInt64, value)
+	}
+	if _u.mutation.ActivePrimaryAccountIDCleared() {
+		_spec.ClearField(group.FieldActivePrimaryAccountID, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.ActivePrimarySource(); ok {
+		_spec.SetField(group.FieldActivePrimarySource, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ActivePrimaryReason(); ok {
+		_spec.SetField(group.FieldActivePrimaryReason, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ActivePrimarySwitchedAt(); ok {
+		_spec.SetField(group.FieldActivePrimarySwitchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ActivePrimarySwitchedAtCleared() {
+		_spec.ClearField(group.FieldActivePrimarySwitchedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.PrimaryFailoverCooldownSeconds(); ok {
+		_spec.SetField(group.FieldPrimaryFailoverCooldownSeconds, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPrimaryFailoverCooldownSeconds(); ok {
+		_spec.AddField(group.FieldPrimaryFailoverCooldownSeconds, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.PrimaryAllowManualAutoReplace(); ok {
+		_spec.SetField(group.FieldPrimaryAllowManualAutoReplace, field.TypeBool, value)
 	}
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{

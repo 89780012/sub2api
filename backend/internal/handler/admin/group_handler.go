@@ -88,12 +88,27 @@ type groupAccountQualityItem struct {
 	AuxiliaryWeight          float64    `json:"auxiliary_weight"`
 	ScheduleRank             int        `json:"schedule_rank"`
 	ScheduleSortKey          string     `json:"schedule_sort_key"`
+	IsManualPrimary          bool       `json:"is_manual_primary"`
+	IsActivePrimary          bool       `json:"is_active_primary"`
+	IsPoolMode               bool       `json:"is_pool_mode"`
+	PoolModeRetryCount       int        `json:"pool_mode_retry_count"`
+	PoolModeRetryStatusCodes []int      `json:"pool_mode_retry_status_codes,omitempty"`
+	PrimaryEligible          bool       `json:"primary_eligible"`
+	PrimaryIneligibleReason  string     `json:"primary_ineligible_reason,omitempty"`
 }
 
 type groupAccountQualityResponse struct {
 	GroupID             int64                     `json:"group_id"`
 	GroupName           string                    `json:"group_name"`
 	GroupPlatform       string                    `json:"group_platform"`
+	PrimaryAccountMode             string     `json:"primary_account_mode"`
+	ManualPrimaryAccountID         *int64     `json:"manual_primary_account_id"`
+	ActivePrimaryAccountID         *int64     `json:"active_primary_account_id"`
+	ActivePrimarySource            string     `json:"active_primary_source"`
+	ActivePrimaryReason            string     `json:"active_primary_reason"`
+	ActivePrimarySwitchedAt        *time.Time `json:"active_primary_switched_at"`
+	PrimaryFailoverCooldownSeconds int        `json:"primary_failover_cooldown_seconds"`
+	PrimaryAllowManualAutoReplace  bool       `json:"primary_allow_manual_auto_replace"`
 	AccountCount        int                       `json:"account_count"`
 	KnownAccountCount   int                       `json:"known_account_count"`
 	UnknownAccountCount int                       `json:"unknown_account_count"`
@@ -237,6 +252,13 @@ type UpdateGroupRequest struct {
 	RPMLimit *int `json:"rpm_limit"`
 	// 从指定分组复制账号（同步操作：先清空当前分组的账号绑定，再绑定源分组的账号）
 	CopyAccountsFromGroupIDs []int64 `json:"copy_accounts_from_group_ids"`
+}
+
+type UpdateGroupPrimaryAccountRequest struct {
+	PrimaryAccountMode             string `json:"primary_account_mode" binding:"required,oneof=off auto manual"`
+	ManualPrimaryAccountID         *int64 `json:"manual_primary_account_id"`
+	PrimaryFailoverCooldownSeconds *int   `json:"primary_failover_cooldown_seconds"`
+	PrimaryAllowManualAutoReplace  *bool  `json:"primary_allow_manual_auto_replace"`
 }
 
 // List handles listing all groups with pagination
@@ -417,6 +439,24 @@ func (h *GroupHandler) GetAccountQuality(c *gin.Context) {
 			TransientPenalty:      components.TransientPenalty,
 			RecoveryCredit:        components.RecoveryCredit,
 			AppliedPenalty:        components.AppliedPenalty,
+			IsManualPrimary:       group.ManualPrimaryAccountID != nil && *group.ManualPrimaryAccountID == account.ID,
+			IsActivePrimary:       group.ActivePrimaryAccountID != nil && *group.ActivePrimaryAccountID == account.ID,
+			IsPoolMode:            account.IsPoolMode(),
+			PoolModeRetryCount:    account.GetPoolModeRetryCount(),
+			PrimaryEligible:       account.Schedulable && account.Status == service.StatusActive,
+		}
+		if item.IsPoolMode {
+			item.PoolModeRetryStatusCodes = account.GetPoolModeRetryStatusCodes()
+			if len(item.PoolModeRetryStatusCodes) == 0 {
+				item.PoolModeRetryStatusCodes = []int{401, 403, 429}
+			}
+		}
+		if !item.PrimaryEligible {
+			if !account.Schedulable {
+				item.PrimaryIneligibleReason = "unschedulable"
+			} else if account.Status != service.StatusActive {
+				item.PrimaryIneligibleReason = account.Status
+			}
 		}
 		if snapshot != nil {
 			item.WindowStart = &snapshot.WindowStart
@@ -489,11 +529,46 @@ func (h *GroupHandler) GetAccountQuality(c *gin.Context) {
 		GroupID:             group.ID,
 		GroupName:           group.Name,
 		GroupPlatform:       group.Platform,
+		PrimaryAccountMode:             group.PrimaryAccountMode,
+		ManualPrimaryAccountID:         group.ManualPrimaryAccountID,
+		ActivePrimaryAccountID:         group.ActivePrimaryAccountID,
+		ActivePrimarySource:            group.ActivePrimarySource,
+		ActivePrimaryReason:            group.ActivePrimaryReason,
+		ActivePrimarySwitchedAt:        group.ActivePrimarySwitchedAt,
+		PrimaryFailoverCooldownSeconds: group.PrimaryFailoverCooldownSeconds,
+		PrimaryAllowManualAutoReplace:  group.PrimaryAllowManualAutoReplace,
 		AccountCount:        len(items),
 		KnownAccountCount:   knownCount,
 		UnknownAccountCount: len(items) - knownCount,
 		Items:               items,
 	})
+}
+
+func (h *GroupHandler) UpdatePrimaryAccount(c *gin.Context) {
+	groupID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid group ID")
+		return
+	}
+
+	var req UpdateGroupPrimaryAccountRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	group, err := h.adminService.UpdateGroupPrimaryAccount(c.Request.Context(), groupID, &service.UpdateGroupPrimaryAccountInput{
+		PrimaryAccountMode:             req.PrimaryAccountMode,
+		ManualPrimaryAccountID:         req.ManualPrimaryAccountID,
+		PrimaryFailoverCooldownSeconds: req.PrimaryFailoverCooldownSeconds,
+		PrimaryAllowManualAutoReplace:  req.PrimaryAllowManualAutoReplace,
+	})
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, dto.GroupFromServiceAdmin(group))
 }
 
 func compareQualityItemsForSchedule(a, b *groupAccountQualityItem) int {

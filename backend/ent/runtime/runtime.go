@@ -878,6 +878,32 @@ func init() {
 	groupDescRpmLimit := groupFields[31].Descriptor()
 	// group.DefaultRpmLimit holds the default value on creation for the rpm_limit field.
 	group.DefaultRpmLimit = groupDescRpmLimit.Default.(int)
+	// groupDescPrimaryAccountMode is the schema descriptor for primary_account_mode field.
+	groupDescPrimaryAccountMode := groupFields[32].Descriptor()
+	// group.DefaultPrimaryAccountMode holds the default value on creation for the primary_account_mode field.
+	group.DefaultPrimaryAccountMode = groupDescPrimaryAccountMode.Default.(string)
+	// group.PrimaryAccountModeValidator is a validator for the "primary_account_mode" field. It is called by the builders before save.
+	group.PrimaryAccountModeValidator = groupDescPrimaryAccountMode.Validators[0].(func(string) error)
+	// groupDescActivePrimarySource is the schema descriptor for active_primary_source field.
+	groupDescActivePrimarySource := groupFields[35].Descriptor()
+	// group.DefaultActivePrimarySource holds the default value on creation for the active_primary_source field.
+	group.DefaultActivePrimarySource = groupDescActivePrimarySource.Default.(string)
+	// group.ActivePrimarySourceValidator is a validator for the "active_primary_source" field. It is called by the builders before save.
+	group.ActivePrimarySourceValidator = groupDescActivePrimarySource.Validators[0].(func(string) error)
+	// groupDescActivePrimaryReason is the schema descriptor for active_primary_reason field.
+	groupDescActivePrimaryReason := groupFields[36].Descriptor()
+	// group.DefaultActivePrimaryReason holds the default value on creation for the active_primary_reason field.
+	group.DefaultActivePrimaryReason = groupDescActivePrimaryReason.Default.(string)
+	// group.ActivePrimaryReasonValidator is a validator for the "active_primary_reason" field. It is called by the builders before save.
+	group.ActivePrimaryReasonValidator = groupDescActivePrimaryReason.Validators[0].(func(string) error)
+	// groupDescPrimaryFailoverCooldownSeconds is the schema descriptor for primary_failover_cooldown_seconds field.
+	groupDescPrimaryFailoverCooldownSeconds := groupFields[38].Descriptor()
+	// group.DefaultPrimaryFailoverCooldownSeconds holds the default value on creation for the primary_failover_cooldown_seconds field.
+	group.DefaultPrimaryFailoverCooldownSeconds = groupDescPrimaryFailoverCooldownSeconds.Default.(int)
+	// groupDescPrimaryAllowManualAutoReplace is the schema descriptor for primary_allow_manual_auto_replace field.
+	groupDescPrimaryAllowManualAutoReplace := groupFields[39].Descriptor()
+	// group.DefaultPrimaryAllowManualAutoReplace holds the default value on creation for the primary_allow_manual_auto_replace field.
+	group.DefaultPrimaryAllowManualAutoReplace = groupDescPrimaryAllowManualAutoReplace.Default.(bool)
 	idempotencyrecordMixin := schema.IdempotencyRecord{}.Mixin()
 	idempotencyrecordMixinFields0 := idempotencyrecordMixin[0].Fields()
 	_ = idempotencyrecordMixinFields0

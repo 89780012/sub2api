@@ -67,6 +67,7 @@ type AdminService interface {
 	ClearGroupRPMOverrides(ctx context.Context, groupID int64) error
 	BatchSetGroupRPMOverrides(ctx context.Context, groupID int64, entries []GroupRPMOverrideInput) error
 	UpdateGroupSortOrders(ctx context.Context, updates []GroupSortOrderUpdate) error
+	UpdateGroupPrimaryAccount(ctx context.Context, groupID int64, input *UpdateGroupPrimaryAccountInput) (*Group, error)
 
 	// API Key management (admin)
 	AdminUpdateAPIKeyGroupID(ctx context.Context, keyID int64, groupID *int64) (*AdminUpdateAPIKeyGroupIDResult, error)
@@ -273,6 +274,13 @@ type UpdateGroupInput struct {
 	RPMLimit *int
 	// 从指定分组复制账号（同步操作：先清空当前分组的账号绑定，再绑定源分组的账号）
 	CopyAccountsFromGroupIDs []int64
+}
+
+type UpdateGroupPrimaryAccountInput struct {
+	PrimaryAccountMode             string
+	ManualPrimaryAccountID         *int64
+	PrimaryFailoverCooldownSeconds *int
+	PrimaryAllowManualAutoReplace  *bool
 }
 
 type CreateAccountInput struct {
@@ -2236,6 +2244,85 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 		}
 	}
 
+	return group, nil
+}
+
+func (s *adminServiceImpl) UpdateGroupPrimaryAccount(ctx context.Context, groupID int64, input *UpdateGroupPrimaryAccountInput) (*Group, error) {
+	if input == nil {
+		return nil, errors.New("primary account input is required")
+	}
+
+	group, err := s.groupRepo.GetByID(ctx, groupID)
+	if err != nil {
+		return nil, err
+	}
+
+	mode := strings.TrimSpace(input.PrimaryAccountMode)
+	if mode == "" {
+		mode = group.EffectivePrimaryAccountMode()
+	}
+	switch mode {
+	case GroupPrimaryAccountModeOff, GroupPrimaryAccountModeAuto, GroupPrimaryAccountModeManual:
+	default:
+		return nil, errors.New("invalid primary_account_mode")
+	}
+
+	var manualAccount *Account
+	if input.ManualPrimaryAccountID != nil {
+		if *input.ManualPrimaryAccountID > 0 {
+			account, accountErr := s.accountRepo.GetByID(ctx, *input.ManualPrimaryAccountID)
+			if accountErr != nil {
+				return nil, accountErr
+			}
+			if account == nil {
+				return nil, ErrAccountNotFound
+			}
+			inGroup := false
+			for _, gid := range account.GroupIDs {
+				if gid == groupID {
+					inGroup = true
+					break
+				}
+			}
+			if !inGroup {
+				return nil, errors.New("manual primary account is not in group")
+			}
+			manualAccount = account
+		}
+		group.ManualPrimaryAccountID = input.ManualPrimaryAccountID
+	}
+
+	if mode == GroupPrimaryAccountModeOff {
+		group.ManualPrimaryAccountID = nil
+		group.ActivePrimaryAccountID = nil
+		group.ActivePrimarySource = ""
+		group.ActivePrimaryReason = ""
+		group.ActivePrimarySwitchedAt = nil
+	} else if mode == GroupPrimaryAccountModeManual && manualAccount != nil {
+		now := time.Now()
+		group.ActivePrimaryAccountID = &manualAccount.ID
+		group.ActivePrimarySource = "manual_override"
+		group.ActivePrimaryReason = "manual_set"
+		group.ActivePrimarySwitchedAt = &now
+	}
+
+	group.PrimaryAccountMode = mode
+	if input.PrimaryFailoverCooldownSeconds != nil {
+		if *input.PrimaryFailoverCooldownSeconds < 0 {
+			return nil, errors.New("primary_failover_cooldown_seconds must be >= 0")
+		}
+		group.PrimaryFailoverCooldownSeconds = *input.PrimaryFailoverCooldownSeconds
+	}
+	if input.PrimaryAllowManualAutoReplace != nil {
+		group.PrimaryAllowManualAutoReplace = *input.PrimaryAllowManualAutoReplace
+	}
+
+	if err := s.groupRepo.Update(ctx, group); err != nil {
+		return nil, err
+	}
+	if s.authCacheInvalidator != nil {
+		s.authCacheInvalidator.InvalidateAuthCacheByGroupID(ctx, groupID)
+	}
 	return group, nil
 }
 

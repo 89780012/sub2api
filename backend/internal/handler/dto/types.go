@@ -116,6 +116,14 @@ type Group struct {
 	// 账号过滤控制（仅 OpenAI/Antigravity 平台有效）
 	RequireOAuthOnly  bool `json:"require_oauth_only"`
 	RequirePrivacySet bool `json:"require_privacy_set"`
+	PrimaryAccountMode             string     `json:"primary_account_mode"`
+	ManualPrimaryAccountID         *int64     `json:"manual_primary_account_id"`
+	ActivePrimaryAccountID         *int64     `json:"active_primary_account_id"`
+	ActivePrimarySource            string     `json:"active_primary_source"`
+	ActivePrimaryReason            string     `json:"active_primary_reason"`
+	ActivePrimarySwitchedAt        *time.Time `json:"active_primary_switched_at"`
+	PrimaryFailoverCooldownSeconds int        `json:"primary_failover_cooldown_seconds"`
+	PrimaryAllowManualAutoReplace  bool       `json:"primary_allow_manual_auto_replace"`
 
 	// RPMLimit 分组级每分钟请求数上限（0 = 不限制），设置后覆盖用户级 rpm_limit。
 	RPMLimit int `json:"rpm_limit"`
