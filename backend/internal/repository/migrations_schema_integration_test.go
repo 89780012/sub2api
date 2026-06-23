@@ -149,6 +149,21 @@ func TestMigrationsRunner_IsIdempotent_AndSchemaIsUpToDate(t *testing.T) {
 
 	// user_allowed_groups: created_at should be timestamptz
 	requireColumn(t, tx, "user_allowed_groups", "created_at", "timestamp with time zone", 0, false)
+
+	// groups: primary account routing fields
+	requireColumn(t, tx, "groups", "primary_account_mode", "character varying", 20, false)
+	requireColumnDefaultContains(t, tx, "groups", "primary_account_mode", "off")
+	requireColumn(t, tx, "groups", "manual_primary_account_id", "bigint", 0, true)
+	requireColumn(t, tx, "groups", "active_primary_account_id", "bigint", 0, true)
+	requireColumn(t, tx, "groups", "active_primary_source", "character varying", 50, false)
+	requireColumnDefaultContains(t, tx, "groups", "active_primary_source", "''")
+	requireColumn(t, tx, "groups", "active_primary_reason", "character varying", 255, false)
+	requireColumnDefaultContains(t, tx, "groups", "active_primary_reason", "''")
+	requireColumn(t, tx, "groups", "active_primary_switched_at", "timestamp with time zone", 0, true)
+	requireColumn(t, tx, "groups", "primary_failover_cooldown_seconds", "integer", 0, false)
+	requireColumnDefaultContains(t, tx, "groups", "primary_failover_cooldown_seconds", "30")
+	requireColumn(t, tx, "groups", "primary_allow_manual_auto_replace", "boolean", 0, false)
+	requireColumnDefaultContains(t, tx, "groups", "primary_allow_manual_auto_replace", "false")
 }
 
 func TestMigrationsRunner_AuthIdentityAndPaymentSchemaStayAligned(t *testing.T) {
