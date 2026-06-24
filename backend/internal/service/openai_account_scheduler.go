@@ -351,6 +351,7 @@ func (s *defaultOpenAIAccountScheduler) Select(
 			decision.SelectedAccountType = selection.Account.Type
 			selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
 			attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
+			s.service.promotePrimaryCandidateIfReady(ctx, group, selection.Account.ID)
 			return selection, decision, nil
 		}
 	}
@@ -382,6 +383,7 @@ func (s *defaultOpenAIAccountScheduler) Select(
 			decision.SelectedAccountType = selection.Account.Type
 			selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
 			attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
+			s.service.promotePrimaryCandidateIfReady(ctx, group, selection.Account.ID)
 			return selection, decision, nil
 		}
 	}
@@ -448,6 +450,7 @@ func (s *defaultOpenAIAccountScheduler) trySelectPrimaryAccount(
 	if req.SessionHash != "" {
 		_ = s.service.BindStickySession(ctx, req.GroupID, req.SessionHash, primaryAccount.ID)
 	}
+	s.service.promotePrimaryCandidateIfReady(ctx, group, primaryAccount.ID)
 	s.service.persistPrimaryPromotionFromSelection(ctx, group, primaryAccount.ID, hadExcludedFailures)
 	return selection, true, nil
 }

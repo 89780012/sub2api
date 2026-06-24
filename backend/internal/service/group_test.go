@@ -3,10 +3,46 @@
 package service
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
+
+type groupRepoStubForGroupTest struct {
+	updated *Group
+}
+
+func (s *groupRepoStubForGroupTest) Create(ctx context.Context, group *Group) (*Group, error) {
+	return group, nil
+}
+
+func (s *groupRepoStubForGroupTest) GetByID(ctx context.Context, id int64) (*Group, error) {
+	return nil, nil
+}
+
+func (s *groupRepoStubForGroupTest) GetByIDLite(ctx context.Context, id int64) (*Group, error) {
+	return nil, nil
+}
+
+func (s *groupRepoStubForGroupTest) GetByName(ctx context.Context, name string) (*Group, error) {
+	return nil, nil
+}
+
+func (s *groupRepoStubForGroupTest) List(ctx context.Context) ([]*Group, error) {
+	return nil, nil
+}
+
+func (s *groupRepoStubForGroupTest) Update(ctx context.Context, group *Group) error {
+	clone := *group
+	s.updated = &clone
+	return nil
+}
+
+func (s *groupRepoStubForGroupTest) Delete(ctx context.Context, id int64) error {
+	return nil
+}
 
 func TestGroup_CurrentPreferredPrimaryAccountID_ManualFailoverPromotionTakesOver(t *testing.T) {
 	manualID := int64(101)
@@ -15,11 +51,35 @@ func TestGroup_CurrentPreferredPrimaryAccountID_ManualFailoverPromotionTakesOver
 		PrimaryAccountMode:            GroupPrimaryAccountModeManual,
 		ManualPrimaryAccountID:        &manualID,
 		ActivePrimaryAccountID:        &activeID,
-		ActivePrimarySource:           "failover_promoted",
+		ActivePrimarySource:           groupPrimarySourceFailoverCandidate,
 		PrimaryAllowManualAutoReplace: true,
 	}
 
 	require.Equal(t, activeID, group.currentPreferredPrimaryAccountID())
+}
+
+func TestGroup_MaybePromotePrimaryCandidate_RequiresCooldownElapsed(t *testing.T) {
+	accountID := int64(202)
+	switchedAt := time.Now()
+	group := &Group{
+		PrimaryAccountMode:             GroupPrimaryAccountModeAuto,
+		ActivePrimaryAccountID:         &accountID,
+		ActivePrimarySource:            groupPrimarySourceFailoverCandidate,
+		ActivePrimaryReason:            groupPrimaryReasonRetryExhausted,
+		ActivePrimarySwitchedAt:        &switchedAt,
+		PrimaryFailoverCooldownSeconds: 30,
+	}
+	repo := &groupRepoStubForGroupTest{}
+
+	maybePromoteGroupPrimaryCandidate(context.Background(), repo, group, accountID)
+	require.Nil(t, repo.updated)
+
+	elapsed := time.Now().Add(-31 * time.Second)
+	group.ActivePrimarySwitchedAt = &elapsed
+	maybePromoteGroupPrimaryCandidate(context.Background(), repo, group, accountID)
+	require.NotNil(t, repo.updated)
+	require.Equal(t, groupPrimarySourceFailoverPromoted, repo.updated.ActivePrimarySource)
+	require.Equal(t, groupPrimaryReasonFailoverStabilized, repo.updated.ActivePrimaryReason)
 }
 
 // TestGroup_GetImagePrice_1K 测试 1K 尺寸返回正确价格

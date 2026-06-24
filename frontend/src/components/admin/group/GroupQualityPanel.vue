@@ -459,7 +459,9 @@ const lowConfidenceCount = computed(() => sortedItems.value.filter(item => !item
 
 const activePrimaryItem = computed(() => sortedItems.value.find(item => item.account_id === primaryMeta.value?.active_primary_account_id) || null)
 const manualPrimaryItem = computed(() => sortedItems.value.find(item => item.account_id === primaryMeta.value?.manual_primary_account_id) || null)
-const isFailoverPromoted = computed(() => primaryMeta.value?.active_primary_source === 'failover_promoted')
+const activePrimarySource = computed(() => primaryMeta.value?.active_primary_source || '')
+const isFailoverCandidate = computed(() => activePrimarySource.value === 'failover_candidate')
+const isFailoverPromoted = computed(() => activePrimarySource.value === 'failover_promoted')
 const primaryModeLabel = computed(() => {
   switch (primaryMeta.value?.primary_account_mode) {
     case 'auto': return '自动'
@@ -468,6 +470,9 @@ const primaryModeLabel = computed(() => {
   }
 })
 const activePrimaryBadgeLabel = computed(() => {
+  if (isFailoverCandidate.value) {
+    return t('admin.groups.qualityPanel.primaryLabels.failoverCandidate') || '接管候选主账号'
+  }
   return isFailoverPromoted.value
     ? t('admin.groups.qualityPanel.primaryLabels.failoverPrimary')
     : t('admin.groups.qualityPanel.primaryLabels.activePrimary')
@@ -482,7 +487,12 @@ const activePrimaryMeta = computed(() => {
   let label = ''
   if (source === 'manual_override' && reason === 'manual_set') {
     label = t('admin.groups.qualityPanel.primaryMeta.manualSet')
-  } else if (source === 'failover_promoted' && reason === 'same_account_retry_exhausted') {
+  } else if (source === 'failover_candidate' && reason === 'same_account_retry_exhausted') {
+    const candidateLabel = t('admin.groups.qualityPanel.primaryMeta.failoverCandidate')
+    label = candidateLabel === 'admin.groups.qualityPanel.primaryMeta.failoverCandidate'
+      ? '故障转移接管中，仍在冷却确认期'
+      : candidateLabel
+  } else if (source === 'failover_promoted' && (reason === 'same_account_retry_exhausted' || reason === 'failover_stabilized')) {
     label = t('admin.groups.qualityPanel.primaryMeta.failoverPromoted')
   } else {
     label = [source, reason].filter(Boolean).join(' / ')
@@ -498,7 +508,15 @@ const activePrimaryMeta = computed(() => {
   })
 })
 const failoverTakeoverHint = computed(() => {
-  if (!isFailoverPromoted.value || !activePrimaryItem.value) return ''
+  if ((!isFailoverPromoted.value && !isFailoverCandidate.value) || !activePrimaryItem.value) return ''
+  if (isFailoverCandidate.value) {
+    const message = t('admin.groups.qualityPanel.failoverCandidateHint', {
+      account: activePrimaryItem.value.account_name
+    })
+    return message === 'admin.groups.qualityPanel.failoverCandidateHint'
+      ? `${activePrimaryItem.value.account_name} 当前正在临时接管请求。如果在冷却窗口内持续稳定，它会自动转为正式主账号。`
+      : message
+  }
   return t('admin.groups.qualityPanel.failoverTakeoverHint', {
     account: activePrimaryItem.value.account_name
   })
@@ -653,6 +671,10 @@ const mainStateClass = (item: GroupAccountQualityItem) => {
 }
 
 const rowActivePrimaryLabel = (item: GroupAccountQualityItem) => {
+  if (item.account_id === primaryMeta.value?.active_primary_account_id && isFailoverCandidate.value) {
+    const label = t('admin.groups.qualityPanel.primaryLabels.failoverCandidate')
+    return label === 'admin.groups.qualityPanel.primaryLabels.failoverCandidate' ? '接管候选主账号' : label
+  }
   if (item.account_id === primaryMeta.value?.active_primary_account_id && isFailoverPromoted.value) {
     return t('admin.groups.qualityPanel.primaryLabels.failoverPrimary')
   }

@@ -1047,8 +1047,8 @@ func TestPersistGroupPrimarySelection_ManualFailoverPromotionTakesOverControl(t 
 		repo,
 		group,
 		202,
-		"failover_promoted",
-		"same_account_retry_exhausted",
+		groupPrimarySourceFailoverPromoted,
+		groupPrimaryReasonFailoverStabilized,
 	)
 
 	require.NotNil(t, repo.updated)
@@ -1056,7 +1056,7 @@ func TestPersistGroupPrimarySelection_ManualFailoverPromotionTakesOverControl(t 
 	require.Nil(t, repo.updated.ManualPrimaryAccountID)
 	require.NotNil(t, repo.updated.ActivePrimaryAccountID)
 	require.Equal(t, int64(202), *repo.updated.ActivePrimaryAccountID)
-	require.Equal(t, "failover_promoted", repo.updated.ActivePrimarySource)
-	require.Equal(t, "same_account_retry_exhausted", repo.updated.ActivePrimaryReason)
+	require.Equal(t, groupPrimarySourceFailoverPromoted, repo.updated.ActivePrimarySource)
+	require.Equal(t, groupPrimaryReasonFailoverStabilized, repo.updated.ActivePrimaryReason)
 	require.NotNil(t, repo.updated.ActivePrimarySwitchedAt)
 }

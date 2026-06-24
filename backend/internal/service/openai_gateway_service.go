@@ -420,6 +420,7 @@ func (s *OpenAIGatewayService) tryPrimaryAccountHit(
 	if sessionHash != "" {
 		_ = s.refreshStickySessionTTL(ctx, groupID, sessionHash, openaiStickySessionTTL)
 	}
+	s.promotePrimaryCandidateIfReady(ctx, group, account.ID)
 	return account
 }
 
@@ -435,7 +436,49 @@ func (s *OpenAIGatewayService) persistPrimaryPromotionFromSelection(
 	if !group.shouldPersistPrimaryPromotion(selectedAccountID) {
 		return
 	}
-	persistGroupPrimarySelection(ctx, s.groupRepo, group, selectedAccountID, "failover_promoted", "same_account_retry_exhausted")
+	now := time.Now()
+	activeID := int64(0)
+	if group.ActivePrimaryAccountID != nil {
+		activeID = *group.ActivePrimaryAccountID
+	}
+	activeSource := strings.TrimSpace(group.ActivePrimarySource)
+	if activeID == selectedAccountID && activeSource == groupPrimarySourceFailoverCandidate {
+		if group.ActivePrimarySwitchedAt != nil && group.shouldBypassPrimaryCooldown(*group.ActivePrimarySwitchedAt) {
+			return
+		}
+		persistGroupPrimarySelection(
+			ctx,
+			s.groupRepo,
+			group,
+			selectedAccountID,
+			groupPrimarySourceFailoverPromoted,
+			groupPrimaryReasonFailoverStabilized,
+		)
+		return
+	}
+	if activeID == selectedAccountID && activeSource == groupPrimarySourceFailoverPromoted {
+		return
+	}
+	group.ActivePrimaryAccountID = &selectedAccountID
+	group.ActivePrimarySource = groupPrimarySourceFailoverCandidate
+	group.ActivePrimaryReason = groupPrimaryReasonRetryExhausted
+	group.ActivePrimarySwitchedAt = &now
+	if err := s.groupRepo.Update(ctx, group); err != nil {
+		slog.Warn("group primary candidate update failed",
+			"group_id", group.ID,
+			"account_id", selectedAccountID,
+			"source", groupPrimarySourceFailoverCandidate,
+			"reason", groupPrimaryReasonRetryExhausted,
+			"error", err,
+		)
+	}
+}
+
+func (s *OpenAIGatewayService) promotePrimaryCandidateIfReady(ctx context.Context, group *Group, accountID int64) {
+	if s == nil || group == nil || accountID <= 0 {
+		return
+	}
+	maybePromoteGroupPrimaryCandidate(ctx, s.groupRepo, group, accountID)
 }
 
 // NewOpenAIGatewayService creates a new OpenAIGatewayService

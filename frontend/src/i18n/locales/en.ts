@@ -2242,13 +2242,16 @@ export default {
         primaryLabels: {
           activePrimary: 'Current primary:',
           manualPrimary: 'Manual primary:',
+          failoverCandidate: 'Failover candidate:',
           failoverPrimary: 'Failover primary:'
         },
         primaryMeta: {
           manualSet: 'Manual primary is active',
+          failoverCandidate: 'Failover takeover is in cooldown confirmation',
           failoverPromoted: 'Primary control was handed over after local failover',
           withTime: '{status} | switched at {time}'
         },
+        failoverCandidateHint: '{account} is temporarily taking over requests. It will become the formal primary after the cooldown window if it remains stable.',
         failoverTakeoverHint: 'The previous manual primary has been taken over by failover. {account} is now the active primary in auto mode.',
         recentScheduleTitle: 'Latest scheduling result',
         recentScheduleSummary: '{reason}. Selected account: {account}. Time: {time}',

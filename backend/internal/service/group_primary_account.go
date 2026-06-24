@@ -7,6 +7,16 @@ import (
 	"time"
 )
 
+const (
+	groupPrimarySourceManualSet         = "manual_override"
+	groupPrimarySourceFailoverCandidate = "failover_candidate"
+	groupPrimarySourceFailoverPromoted  = "failover_promoted"
+
+	groupPrimaryReasonManualSet          = "manual_set"
+	groupPrimaryReasonRetryExhausted     = "same_account_retry_exhausted"
+	groupPrimaryReasonFailoverStabilized = "failover_stabilized"
+)
+
 type groupPrimaryCandidate struct {
 	Account *Account
 }
@@ -45,7 +55,8 @@ func (g *Group) currentPreferredPrimaryAccountID() int64 {
 	case GroupPrimaryAccountModeManual:
 		if g.PrimaryAllowManualAutoReplace &&
 			g.ActivePrimaryAccountID != nil && *g.ActivePrimaryAccountID > 0 &&
-			strings.TrimSpace(g.ActivePrimarySource) == "failover_promoted" {
+			(strings.TrimSpace(g.ActivePrimarySource) == groupPrimarySourceFailoverPromoted ||
+				strings.TrimSpace(g.ActivePrimarySource) == groupPrimarySourceFailoverCandidate) {
 			return *g.ActivePrimaryAccountID
 		}
 		if g.ManualPrimaryAccountID != nil && *g.ManualPrimaryAccountID > 0 {
@@ -92,6 +103,47 @@ func (g *Group) shouldBypassPrimaryCooldown(lastSwitchedAt time.Time) bool {
 	return time.Since(lastSwitchedAt) < time.Duration(g.PrimaryFailoverCooldownSeconds)*time.Second
 }
 
+func (g *Group) isFailoverCandidateCoolingDown(now time.Time) bool {
+	if g == nil || g.ActivePrimaryAccountID == nil || *g.ActivePrimaryAccountID <= 0 {
+		return false
+	}
+	if strings.TrimSpace(g.ActivePrimarySource) != groupPrimarySourceFailoverCandidate {
+		return false
+	}
+	if g.ActivePrimarySwitchedAt == nil {
+		return false
+	}
+	return g.shouldBypassPrimaryCooldown(*g.ActivePrimarySwitchedAt)
+}
+
+func maybePromoteGroupPrimaryCandidate(
+	ctx context.Context,
+	repo GroupRepository,
+	group *Group,
+	accountID int64,
+) {
+	if repo == nil || group == nil || accountID <= 0 {
+		return
+	}
+	if group.ActivePrimaryAccountID == nil || *group.ActivePrimaryAccountID != accountID {
+		return
+	}
+	if strings.TrimSpace(group.ActivePrimarySource) != groupPrimarySourceFailoverCandidate {
+		return
+	}
+	if group.ActivePrimarySwitchedAt != nil && group.shouldBypassPrimaryCooldown(*group.ActivePrimarySwitchedAt) {
+		return
+	}
+	persistGroupPrimarySelection(
+		ctx,
+		repo,
+		group,
+		accountID,
+		groupPrimarySourceFailoverPromoted,
+		groupPrimaryReasonFailoverStabilized,
+	)
+}
+
 func persistGroupPrimarySelection(
 	ctx context.Context,
 	repo GroupRepository,
@@ -105,7 +157,7 @@ func persistGroupPrimarySelection(
 	}
 	shouldTakeOverManual := group.EffectivePrimaryAccountMode() == GroupPrimaryAccountModeManual &&
 		group.PrimaryAllowManualAutoReplace &&
-		source == "failover_promoted"
+		source == groupPrimarySourceFailoverPromoted
 	currentID := int64(0)
 	if group.ActivePrimaryAccountID != nil {
 		currentID = *group.ActivePrimaryAccountID
@@ -157,5 +209,47 @@ func (s *GatewayService) persistPrimaryPromotionFromSelection(
 	if !group.shouldPersistPrimaryPromotion(selectedAccountID) {
 		return
 	}
-	persistGroupPrimarySelection(ctx, s.groupRepo, group, selectedAccountID, "failover_promoted", "same_account_retry_exhausted")
+	now := time.Now()
+	activeID := int64(0)
+	if group.ActivePrimaryAccountID != nil {
+		activeID = *group.ActivePrimaryAccountID
+	}
+	activeSource := strings.TrimSpace(group.ActivePrimarySource)
+	if activeID == selectedAccountID && activeSource == groupPrimarySourceFailoverCandidate {
+		if group.ActivePrimarySwitchedAt != nil && group.shouldBypassPrimaryCooldown(*group.ActivePrimarySwitchedAt) {
+			return
+		}
+		persistGroupPrimarySelection(
+			ctx,
+			s.groupRepo,
+			group,
+			selectedAccountID,
+			groupPrimarySourceFailoverPromoted,
+			groupPrimaryReasonFailoverStabilized,
+		)
+		return
+	}
+	if activeID == selectedAccountID && activeSource == groupPrimarySourceFailoverPromoted {
+		return
+	}
+	group.ActivePrimaryAccountID = &selectedAccountID
+	group.ActivePrimarySource = groupPrimarySourceFailoverCandidate
+	group.ActivePrimaryReason = groupPrimaryReasonRetryExhausted
+	group.ActivePrimarySwitchedAt = &now
+	if err := s.groupRepo.Update(ctx, group); err != nil {
+		slog.Warn("group primary candidate update failed",
+			"group_id", group.ID,
+			"account_id", selectedAccountID,
+			"source", groupPrimarySourceFailoverCandidate,
+			"reason", groupPrimaryReasonRetryExhausted,
+			"error", err,
+		)
+	}
+}
+
+func (s *GatewayService) promotePrimaryCandidateIfReady(ctx context.Context, group *Group, accountID int64) {
+	if s == nil || group == nil || accountID <= 0 {
+		return
+	}
+	maybePromoteGroupPrimaryCandidate(ctx, s.groupRepo, group, accountID)
 }
