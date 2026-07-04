@@ -484,6 +484,73 @@ describe('EditAccountModal', () => {
     expect(updateAccountMock.mock.calls[0]?.[1]?.credentials).not.toHaveProperty('api_key')
   })
 
+  it('preserves blank upstream monitor secret without changing OpenAI inference credentials', async () => {
+    const account = buildAccount()
+    account.credentials = {
+      base_url: 'https://api.openai.com',
+      upstream_monitor: {
+        enabled: true,
+        provider: 'newapi',
+        site_url: 'https://newapi.example.com',
+        credential_mode: 'token',
+        newapi_user_id: '42'
+      }
+    }
+    account.credentials_status = {
+      has_api_key: true,
+      has_upstream_monitor_newapi_cookie: true
+    }
+    updateAccountMock.mockReset()
+    checkMixedChannelRiskMock.mockReset()
+    checkMixedChannelRiskMock.mockResolvedValue({ has_risk: false })
+    updateAccountMock.mockResolvedValue(account)
+
+    const wrapper = mountModal(account)
+
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    const credentials = updateAccountMock.mock.calls[0]?.[1]?.credentials
+    expect(credentials?.base_url).toBe('https://api.openai.com')
+    expect(credentials).not.toHaveProperty('api_key')
+    expect(credentials?.upstream_monitor).toEqual({
+      enabled: true,
+      provider: 'newapi',
+      site_url: 'https://newapi.example.com',
+      credential_mode: 'token',
+      newapi_user_id: '42'
+    })
+  })
+
+  it('submits monitor-only NewAPI credentials separately from OpenAI API key credentials', async () => {
+    const account = buildAccount()
+    updateAccountMock.mockReset()
+    checkMixedChannelRiskMock.mockReset()
+    checkMixedChannelRiskMock.mockResolvedValue({ has_risk: false })
+    updateAccountMock.mockResolvedValue(account)
+
+    const wrapper = mountModal(account)
+
+    await wrapper.get('[data-testid="upstream-monitor-enabled"]').setValue(true)
+    await wrapper.get('[data-testid="upstream-monitor-site-url"]').setValue('https://newapi.example.com')
+    await wrapper.get('[data-testid="upstream-monitor-newapi-user-id"]').setValue('42')
+    await wrapper.get('[data-testid="upstream-monitor-newapi-cookie"]').setValue('session=abc')
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    const credentials = updateAccountMock.mock.calls[0]?.[1]?.credentials
+    expect(credentials?.base_url).toBe('https://api.openai.com')
+    expect(credentials?.api_key).toBe('sk-test')
+    expect(credentials?.upstream_monitor).toEqual({
+      enabled: true,
+      provider: 'newapi',
+      site_url: 'https://newapi.example.com',
+      credential_mode: 'token',
+      newapi_user_id: '42',
+      newapi_cookie: 'session=abc'
+    })
+  })
+
   it('allows saving apikey account against legacy backend without credentials_status', async () => {
     // 新前端 + 旧后端：credentials_status 缺失，但 credentials.api_key 仍是明文，应允许保存
     const account = buildAccount()

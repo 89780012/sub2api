@@ -419,6 +419,94 @@
 
       </div>
 
+      <!-- Upstream monitor configuration -->
+      <div v-if="supportsUpstreamMonitorConfig" class="border-t border-gray-200 pt-4 dark:border-dark-600">
+        <div class="mb-3 flex items-center justify-between gap-4">
+          <div>
+            <label class="input-label mb-0">{{ t('admin.accounts.upstreamMonitorConfig.title') }}</label>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ t('admin.accounts.upstreamMonitorConfig.hint') }}
+            </p>
+          </div>
+          <label class="inline-flex flex-shrink-0 items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+            <input
+              v-model="upstreamMonitorEnabled"
+              type="checkbox"
+              class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              data-testid="upstream-monitor-enabled"
+            />
+            {{ t('admin.accounts.upstreamMonitorConfig.enabled') }}
+          </label>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label class="input-label">{{ t('admin.accounts.upstreamMonitorConfig.provider') }}</label>
+            <Select
+              v-model="upstreamMonitorProvider"
+              :options="upstreamMonitorProviderOptions"
+              :searchable="false"
+              data-testid="upstream-monitor-provider"
+            />
+          </div>
+          <div>
+            <label class="input-label">{{ t('admin.accounts.upstreamMonitorConfig.siteUrl') }}</label>
+            <input
+              v-model="upstreamMonitorSiteUrl"
+              type="url"
+              class="input"
+              placeholder="https://newapi.example.com"
+              data-testid="upstream-monitor-site-url"
+            />
+          </div>
+        </div>
+        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          {{ t('admin.accounts.upstreamMonitorConfig.siteUrlHint') }}
+        </p>
+
+        <div v-if="upstreamMonitorProvider === 'newapi'" class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label class="input-label">{{ t('admin.accounts.upstreamMonitorConfig.newapiUserId') }}</label>
+            <input
+              v-model="upstreamMonitorNewAPIUserID"
+              type="text"
+              class="input"
+              placeholder="123"
+              data-testid="upstream-monitor-newapi-user-id"
+            />
+          </div>
+          <div>
+            <label class="input-label">{{ t('admin.accounts.upstreamMonitorConfig.newapiCookie') }}</label>
+            <textarea
+              v-model="upstreamMonitorNewAPICookie"
+              rows="2"
+              class="input font-mono"
+              autocomplete="new-password"
+              data-1p-ignore
+              data-lpignore="true"
+              data-bwignore="true"
+              data-testid="upstream-monitor-newapi-cookie"
+            ></textarea>
+            <p class="input-hint">{{ t('admin.accounts.leaveEmptyToKeep') }}</p>
+          </div>
+        </div>
+
+        <div v-else class="mt-3">
+          <label class="input-label">{{ t('admin.accounts.upstreamMonitorConfig.sub2apiAccessToken') }}</label>
+          <textarea
+            v-model="upstreamMonitorSub2APIToken"
+            rows="2"
+            class="input font-mono"
+            autocomplete="new-password"
+            data-1p-ignore
+            data-lpignore="true"
+            data-bwignore="true"
+            data-testid="upstream-monitor-sub2api-token"
+          ></textarea>
+          <p class="input-hint">{{ t('admin.accounts.leaveEmptyToKeep') }}</p>
+        </div>
+      </div>
+
       <!-- OpenAI OAuth Model Mapping (OAuth 类型没有 apikey 容器，需要独立的模型映射区域) -->
       <div
         v-if="account.platform === 'openai' && account.type === 'oauth'"
@@ -2387,7 +2475,8 @@ import type {
   CheckMixedChannelResponse,
   OpenAICompactMode,
   OpenAIResponsesMode,
-  OpenAIEndpointCapability
+  OpenAIEndpointCapability,
+  AccountUpstreamMonitorConfig
 } from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
@@ -2464,6 +2553,12 @@ interface TempUnschedRuleForm {
 const submitting = ref(false)
 const editBaseUrl = ref('https://api.anthropic.com')
 const editApiKey = ref('')
+const upstreamMonitorEnabled = ref(false)
+const upstreamMonitorProvider = ref<'newapi' | 'sub2api'>('newapi')
+const upstreamMonitorSiteUrl = ref('')
+const upstreamMonitorNewAPICookie = ref('')
+const upstreamMonitorNewAPIUserID = ref('')
+const upstreamMonitorSub2APIToken = ref('')
 // Bedrock credentials
 const editBedrockAccessKeyId = ref('')
 const editBedrockSecretAccessKey = ref('')
@@ -2845,6 +2940,15 @@ const defaultBaseUrl = computed(() => {
   return 'https://api.anthropic.com'
 })
 
+const supportsUpstreamMonitorConfig = computed(() =>
+  Boolean(props.account && props.account.type !== 'bedrock' && props.account.type !== 'service_account')
+)
+
+const upstreamMonitorProviderOptions = computed(() => [
+  { value: 'newapi', label: 'NewAPI' },
+  { value: 'sub2api', label: 'Sub2API' }
+])
+
 const mixedChannelWarningMessageText = computed(() => {
   if (mixedChannelWarningDetails.value) {
     return t('admin.accounts.mixedChannelWarning', mixedChannelWarningDetails.value)
@@ -2911,6 +3015,91 @@ const loadModelRestrictionFromMapping = (rawMapping?: Record<string, unknown>) =
 const buildModelRestrictionMapping = () =>
   buildModelMappingObject('combined', allowedModels.value, modelMappings.value)
 
+const readUpstreamMonitorConfig = (credentials?: Record<string, unknown>): AccountUpstreamMonitorConfig => {
+  const raw = credentials?.upstream_monitor
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {}
+  }
+  return raw as AccountUpstreamMonitorConfig
+}
+
+const loadUpstreamMonitorConfig = (credentials?: Record<string, unknown>) => {
+  const config = readUpstreamMonitorConfig(credentials)
+  upstreamMonitorEnabled.value = config.enabled === true
+  upstreamMonitorProvider.value = config.provider === 'sub2api' ? 'sub2api' : 'newapi'
+  upstreamMonitorSiteUrl.value = config.site_url || ''
+  upstreamMonitorNewAPIUserID.value = config.newapi_user_id || ''
+  upstreamMonitorNewAPICookie.value = ''
+  upstreamMonitorSub2APIToken.value = ''
+}
+
+const applyUpstreamMonitorConfig = (credentials: Record<string, unknown>): boolean => {
+  if (!supportsUpstreamMonitorConfig.value) {
+    return true
+  }
+
+  const existing = readUpstreamMonitorConfig(credentials)
+  const hasExistingConfig = Object.keys(existing).length > 0
+  const hasDraftConfig = Boolean(
+    upstreamMonitorSiteUrl.value.trim() ||
+    upstreamMonitorNewAPIUserID.value.trim() ||
+    upstreamMonitorNewAPICookie.value.trim() ||
+    upstreamMonitorSub2APIToken.value.trim()
+  )
+  if (!upstreamMonitorEnabled.value && !hasExistingConfig && !hasDraftConfig) {
+    delete credentials.upstream_monitor
+    return true
+  }
+
+  const next: AccountUpstreamMonitorConfig = {
+    ...existing,
+    enabled: upstreamMonitorEnabled.value,
+    provider: upstreamMonitorProvider.value,
+    site_url: upstreamMonitorSiteUrl.value.trim(),
+    credential_mode: 'token'
+  }
+
+  if (upstreamMonitorProvider.value === 'newapi') {
+    next.newapi_user_id = upstreamMonitorNewAPIUserID.value.trim()
+    if (upstreamMonitorNewAPICookie.value.trim()) {
+      next.newapi_cookie = upstreamMonitorNewAPICookie.value.trim()
+    } else {
+      delete next.newapi_cookie
+    }
+  } else if (upstreamMonitorSub2APIToken.value.trim()) {
+    next.sub2api_access_token = upstreamMonitorSub2APIToken.value.trim()
+  } else {
+    delete next.sub2api_access_token
+  }
+
+  if (upstreamMonitorEnabled.value) {
+    if (!next.site_url) {
+      appStore.showError(t('admin.accounts.upstreamMonitorConfig.siteUrlRequired'))
+      return false
+    }
+    if (upstreamMonitorProvider.value === 'newapi') {
+      const hasExistingCookie = props.account?.credentials_status?.has_upstream_monitor_newapi_cookie === true
+      if (!next.newapi_user_id) {
+        appStore.showError(t('admin.accounts.upstreamMonitorConfig.newapiUserRequired'))
+        return false
+      }
+      if (!upstreamMonitorNewAPICookie.value.trim() && !hasExistingCookie) {
+        appStore.showError(t('admin.accounts.upstreamMonitorConfig.newapiCookieRequired'))
+        return false
+      }
+    } else {
+      const hasExistingToken = props.account?.credentials_status?.has_upstream_monitor_sub2api_access_token === true
+      if (!upstreamMonitorSub2APIToken.value.trim() && !hasExistingToken) {
+        appStore.showError(t('admin.accounts.upstreamMonitorConfig.sub2apiTokenRequired'))
+        return false
+      }
+    }
+  }
+
+  credentials.upstream_monitor = next
+  return true
+}
+
 const syncFormFromAccount = (newAccount: Account | null) => {
   if (!newAccount) {
     return
@@ -2935,6 +3124,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
 
   // Load intercept warmup requests setting (applies to all account types)
   const credentials = newAccount.credentials as Record<string, unknown> | undefined
+  loadUpstreamMonitorConfig(credentials)
   interceptWarmupRequests.value = credentials?.intercept_warmup_requests === true
   autoPauseOnExpired.value = newAccount.auto_pause_on_expired === true
   editVertexProjectId.value = ''
@@ -4205,6 +4395,14 @@ const handleSubmit = async () => {
       writeQuotaNotifyToExtra(newExtra, 'update')
       updatePayload.extra = newExtra
     }
+
+    const currentCredentials = (updatePayload.credentials as Record<string, unknown>) ||
+      ((props.account.credentials as Record<string, unknown>) || {})
+    const finalCredentials: Record<string, unknown> = { ...currentCredentials }
+    if (!applyUpstreamMonitorConfig(finalCredentials)) {
+      return
+    }
+    updatePayload.credentials = finalCredentials
 
     const canContinue = await ensureAntigravityMixedChannelConfirmed(async () => {
       await submitUpdateAccount(accountID, updatePayload)

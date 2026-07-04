@@ -21,21 +21,25 @@ import (
 )
 
 const (
-	AccountUpstreamMonitorProviderSub2API      = "sub2api"
-	AccountUpstreamMonitorProviderNewAPI       = "newapi"
-	AccountUpstreamMonitorProviderUnsupported  = "unsupported"
-	AccountUpstreamMonitorProviderUnknown      = "unknown"
-	AccountUpstreamMonitorStatusUnknown        = "unknown"
-	AccountUpstreamMonitorStatusUnsupported    = "unsupported"
-	AccountUpstreamMonitorStatusSuccess        = "success"
-	AccountUpstreamMonitorStatusFailed         = "failed"
-	AccountUpstreamMonitorDefaultIntervalMins  = 60
-	AccountUpstreamMonitorMinIntervalMins      = 15
-	AccountUpstreamMonitorMaxIntervalMins      = 1440
-	accountUpstreamMonitorDefaultMaxWorkers    = 5
-	accountUpstreamMonitorDefaultHTTPTimeout   = 15 * time.Second
-	accountUpstreamMonitorRunnerTimeout        = 5 * time.Minute
-	accountUpstreamMonitorBodyLimit      int64 = 4 << 20
+	AccountUpstreamMonitorProviderSub2API           = "sub2api"
+	AccountUpstreamMonitorProviderNewAPI            = "newapi"
+	AccountUpstreamMonitorProviderUnsupported       = "unsupported"
+	AccountUpstreamMonitorProviderUnknown           = "unknown"
+	AccountUpstreamMonitorStatusUnknown             = "unknown"
+	AccountUpstreamMonitorStatusUnsupported         = "unsupported"
+	AccountUpstreamMonitorStatusSuccess             = "success"
+	AccountUpstreamMonitorStatusFailed              = "failed"
+	AccountUpstreamMonitorDefaultIntervalMins       = 60
+	AccountUpstreamMonitorMinIntervalMins           = 15
+	AccountUpstreamMonitorMaxIntervalMins           = 1440
+	accountUpstreamMonitorDefaultMaxWorkers         = 5
+	accountUpstreamMonitorDefaultHTTPTimeout        = 15 * time.Second
+	accountUpstreamMonitorRunnerTimeout             = 5 * time.Minute
+	accountUpstreamMonitorBodyLimit           int64 = 4 << 20
+	accountUpstreamMonitorCredentialsKey            = "upstream_monitor"
+	accountUpstreamMonitorCredentialModeToken       = "token"
+	accountUpstreamMonitorNotConfigured             = "upstream monitor not configured"
+	accountUpstreamMonitorDisabled                  = "upstream monitor disabled"
 )
 
 var (
@@ -53,28 +57,44 @@ type AccountUpstreamMonitorRate struct {
 }
 
 type AccountUpstreamMonitorSnapshot struct {
-	AccountID     int64                         `json:"account_id"`
-	Provider      string                        `json:"provider"`
-	Status        string                        `json:"status"`
-	SiteURL       *string                       `json:"site_url,omitempty"`
-	Balance       *float64                      `json:"balance,omitempty"`
-	BalanceUnit   *string                       `json:"balance_unit,omitempty"`
-	Quota         *float64                      `json:"quota,omitempty"`
-	QuotaUsed     *float64                      `json:"quota_used,omitempty"`
-	TodayCost     *float64                      `json:"today_cost,omitempty"`
-	TotalCost     *float64                      `json:"total_cost,omitempty"`
-	LastCheckedAt *time.Time                    `json:"last_checked_at,omitempty"`
-	LastSuccessAt *time.Time                    `json:"last_success_at,omitempty"`
-	LastError     *string                       `json:"last_error,omitempty"`
-	RawMeta       map[string]any                `json:"raw_meta,omitempty"`
-	Rates         []AccountUpstreamMonitorRate  `json:"rates"`
-	CreatedAt     time.Time                     `json:"created_at,omitempty"`
-	UpdatedAt     time.Time                     `json:"updated_at,omitempty"`
+	AccountID     int64                        `json:"account_id"`
+	Provider      string                       `json:"provider"`
+	Status        string                       `json:"status"`
+	SiteURL       *string                      `json:"site_url,omitempty"`
+	Balance       *float64                     `json:"balance,omitempty"`
+	BalanceUnit   *string                      `json:"balance_unit,omitempty"`
+	Quota         *float64                     `json:"quota,omitempty"`
+	QuotaUsed     *float64                     `json:"quota_used,omitempty"`
+	TodayCost     *float64                     `json:"today_cost,omitempty"`
+	TotalCost     *float64                     `json:"total_cost,omitempty"`
+	LastCheckedAt *time.Time                   `json:"last_checked_at,omitempty"`
+	LastSuccessAt *time.Time                   `json:"last_success_at,omitempty"`
+	LastError     *string                      `json:"last_error,omitempty"`
+	RawMeta       map[string]any               `json:"raw_meta,omitempty"`
+	Rates         []AccountUpstreamMonitorRate `json:"rates"`
+	CreatedAt     time.Time                    `json:"created_at,omitempty"`
+	UpdatedAt     time.Time                    `json:"updated_at,omitempty"`
 }
 
 type AccountUpstreamMonitorRefreshResult struct {
 	Snapshot *AccountUpstreamMonitorSnapshot
 	Rates    []AccountUpstreamMonitorRate
+}
+
+type accountUpstreamMonitorCredentials struct {
+	Enabled            bool
+	Provider           string
+	SiteURL            string
+	CredentialMode     string
+	NewAPICookie       string
+	NewAPIUserID       string
+	Sub2APIAccessToken string
+}
+
+type upstreamMonitorRequestAuth struct {
+	BearerToken  string
+	Cookie       string
+	NewAPIUserID string
 }
 
 type AccountUpstreamMonitorRepository interface {
@@ -201,7 +221,7 @@ func (s *AccountUpstreamMonitorService) collect(ctx context.Context, account *Ac
 	}
 	snapshot.AccountID = account.ID
 
-	siteURL, token, unsupportedReason, err := s.resolveAccountMonitorCredentials(account)
+	monitorCreds, unsupportedReason, err := s.resolveAccountMonitorCredentials(account)
 	if err != nil {
 		snapshot.Provider = AccountUpstreamMonitorProviderUnsupported
 		snapshot.Status = AccountUpstreamMonitorStatusUnsupported
@@ -209,75 +229,118 @@ func (s *AccountUpstreamMonitorService) collect(ctx context.Context, account *Ac
 		return snapshot, nil
 	}
 	if unsupportedReason != "" {
-		snapshot.Provider = AccountUpstreamMonitorProviderUnsupported
+		snapshot.Provider = AccountUpstreamMonitorProviderUnknown
+		if unsupportedReason != accountUpstreamMonitorNotConfigured && unsupportedReason != accountUpstreamMonitorDisabled {
+			snapshot.Provider = AccountUpstreamMonitorProviderUnsupported
+		}
 		snapshot.Status = AccountUpstreamMonitorStatusUnsupported
-		snapshot.SiteURL = stringPtr(siteURL)
+		if monitorCreds != nil && monitorCreds.SiteURL != "" {
+			snapshot.SiteURL = stringPtr(monitorCreds.SiteURL)
+		}
 		snapshot.LastError = stringPtr(unsupportedReason)
 		return snapshot, nil
 	}
+	siteURL := monitorCreds.SiteURL
 	snapshot.SiteURL = &siteURL
 
-	sub2Snapshot, sub2Rates, sub2Err := s.collectSub2API(ctx, account, siteURL, token, now)
-	if sub2Err == nil {
-		sub2Snapshot.AccountID = account.ID
-		sub2Snapshot.SiteURL = &siteURL
-		return sub2Snapshot, sub2Rates
-	}
-	if !shouldTryNextUpstreamMonitorProvider(sub2Err) {
+	switch monitorCreds.Provider {
+	case AccountUpstreamMonitorProviderSub2API:
+		sub2Snapshot, sub2Rates, err := s.collectSub2API(ctx, account, monitorCreds, now)
+		if err == nil {
+			sub2Snapshot.AccountID = account.ID
+			sub2Snapshot.SiteURL = &siteURL
+			return sub2Snapshot, sub2Rates
+		}
 		snapshot.Provider = AccountUpstreamMonitorProviderSub2API
 		snapshot.Status = AccountUpstreamMonitorStatusFailed
-		snapshot.LastError = stringPtr(safeUpstreamMonitorError(sub2Err))
+		if !isUpstreamMonitorFailure(err) {
+			snapshot.Status = AccountUpstreamMonitorStatusUnsupported
+		}
+		snapshot.LastError = stringPtr(safeUpstreamMonitorError(err))
+		return snapshot, nil
+	case AccountUpstreamMonitorProviderNewAPI:
+		newSnapshot, newRates, err := s.collectNewAPI(ctx, account, monitorCreds, now)
+		if err == nil {
+			newSnapshot.AccountID = account.ID
+			newSnapshot.SiteURL = &siteURL
+			return newSnapshot, newRates
+		}
+		snapshot.Provider = AccountUpstreamMonitorProviderNewAPI
+		snapshot.Status = AccountUpstreamMonitorStatusFailed
+		if !isUpstreamMonitorFailure(err) {
+			snapshot.Status = AccountUpstreamMonitorStatusUnsupported
+		}
+		snapshot.LastError = stringPtr(safeUpstreamMonitorError(err))
+		return snapshot, nil
+	default:
+		snapshot.Provider = AccountUpstreamMonitorProviderUnsupported
+		snapshot.Status = AccountUpstreamMonitorStatusUnsupported
+		snapshot.LastError = stringPtr("unsupported upstream monitor provider")
 		return snapshot, nil
 	}
-
-	newSnapshot, newRates, newErr := s.collectNewAPI(ctx, account, siteURL, token, now)
-	if newErr == nil {
-		newSnapshot.AccountID = account.ID
-		newSnapshot.SiteURL = &siteURL
-		return newSnapshot, newRates
-	}
-
-	providerErr := newErr
-	if providerErr == nil {
-		providerErr = sub2Err
-	}
-	snapshot.Provider = AccountUpstreamMonitorProviderUnsupported
-	snapshot.Status = AccountUpstreamMonitorStatusUnsupported
-	if isUpstreamMonitorFailure(providerErr) {
-		snapshot.Status = AccountUpstreamMonitorStatusFailed
-		snapshot.Provider = AccountUpstreamMonitorProviderUnknown
-	}
-	snapshot.LastError = stringPtr(safeUpstreamMonitorError(providerErr))
-	return snapshot, nil
 }
 
-func (s *AccountUpstreamMonitorService) resolveAccountMonitorCredentials(account *Account) (siteURL string, token string, unsupportedReason string, err error) {
+func (s *AccountUpstreamMonitorService) resolveAccountMonitorCredentials(account *Account) (*accountUpstreamMonitorCredentials, string, error) {
 	if account == nil {
-		return "", "", "", errors.New("account is required")
+		return nil, "", errors.New("account is required")
 	}
 	if account.Type == AccountTypeBedrock || account.Type == AccountTypeServiceAccount {
-		return "", "", "unsupported account type", nil
+		return nil, "unsupported account type", nil
 	}
 
-	baseURL := strings.TrimSpace(account.GetCredential("base_url"))
-	if baseURL == "" {
-		return "", "", "missing upstream base URL", nil
+	rawMonitor, ok := account.Credentials[accountUpstreamMonitorCredentialsKey]
+	if account.Credentials == nil || !ok || rawMonitor == nil {
+		return nil, accountUpstreamMonitorNotConfigured, nil
 	}
-	siteURL = normalizeUpstreamMonitorSiteURL(baseURL)
+	monitorMap, ok := accountMonitorMapStringAnyFromAny(rawMonitor)
+	if !ok || len(monitorMap) == 0 {
+		return nil, accountUpstreamMonitorNotConfigured, nil
+	}
+
+	creds := &accountUpstreamMonitorCredentials{
+		Enabled:            accountMonitorBoolFromAny(monitorMap["enabled"]),
+		Provider:           strings.ToLower(strings.TrimSpace(accountMonitorStringFromAny(monitorMap["provider"]))),
+		SiteURL:            strings.TrimSpace(accountMonitorStringFromAny(monitorMap["site_url"])),
+		CredentialMode:     strings.ToLower(strings.TrimSpace(accountMonitorStringFromAny(monitorMap["credential_mode"]))),
+		NewAPICookie:       strings.TrimSpace(accountMonitorStringFromAny(monitorMap["newapi_cookie"])),
+		NewAPIUserID:       strings.TrimSpace(accountMonitorStringFromAny(monitorMap["newapi_user_id"])),
+		Sub2APIAccessToken: strings.TrimSpace(accountMonitorStringFromAny(monitorMap["sub2api_access_token"])),
+	}
+	if !creds.Enabled {
+		return creds, accountUpstreamMonitorDisabled, nil
+	}
+	if creds.CredentialMode == "" {
+		creds.CredentialMode = accountUpstreamMonitorCredentialModeToken
+	}
+	if creds.CredentialMode != accountUpstreamMonitorCredentialModeToken {
+		return creds, "unsupported upstream monitor credential mode", nil
+	}
+	switch creds.Provider {
+	case AccountUpstreamMonitorProviderNewAPI:
+		if creds.NewAPICookie == "" || creds.NewAPIUserID == "" {
+			return creds, "missing NewAPI monitor cookie or user ID", nil
+		}
+	case AccountUpstreamMonitorProviderSub2API:
+		if creds.Sub2APIAccessToken == "" {
+			return creds, "missing Sub2API monitor access token", nil
+		}
+	default:
+		return creds, "unsupported upstream monitor provider", nil
+	}
+	if creds.SiteURL == "" {
+		return creds, "missing upstream monitor site URL", nil
+	}
+
+	siteURL := normalizeUpstreamMonitorSiteURL(creds.SiteURL)
 	if siteURL == "" {
-		return "", "", "", errors.New("invalid upstream base URL")
+		return creds, "", errors.New("invalid upstream monitor site URL")
 	}
 	validated, err := s.validateMonitorSiteURL(siteURL)
 	if err != nil {
-		return "", "", "", fmt.Errorf("invalid upstream base URL: %w", err)
+		return creds, "", fmt.Errorf("invalid upstream monitor site URL: %w", err)
 	}
-
-	for _, key := range []string{"access_token", "token", "api_key"} {
-		if value := strings.TrimSpace(account.GetCredential(key)); value != "" {
-			return strings.TrimRight(validated, "/"), value, "", nil
-		}
-	}
-	return strings.TrimRight(validated, "/"), "", "missing upstream monitor token", nil
+	creds.SiteURL = strings.TrimRight(validated, "/")
+	return creds, "", nil
 }
 
 func normalizeUpstreamMonitorSiteURL(raw string) string {
@@ -326,8 +389,9 @@ func (s *AccountUpstreamMonitorService) validateMonitorSiteURL(raw string) (stri
 	})
 }
 
-func (s *AccountUpstreamMonitorService) collectSub2API(ctx context.Context, account *Account, siteURL, token string, now time.Time) (*AccountUpstreamMonitorSnapshot, []AccountUpstreamMonitorRate, error) {
-	meBody, err := s.getUpstreamMonitorJSON(ctx, account, siteURL+"/api/v1/auth/me", token)
+func (s *AccountUpstreamMonitorService) collectSub2API(ctx context.Context, account *Account, creds *accountUpstreamMonitorCredentials, now time.Time) (*AccountUpstreamMonitorSnapshot, []AccountUpstreamMonitorRate, error) {
+	auth := upstreamMonitorRequestAuth{BearerToken: creds.Sub2APIAccessToken}
+	meBody, err := s.getUpstreamMonitorJSON(ctx, account, creds.SiteURL+"/api/v1/auth/me", auth)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -349,7 +413,7 @@ func (s *AccountUpstreamMonitorService) collectSub2API(ctx context.Context, acco
 		RawMeta:       map[string]any{},
 	}
 
-	if statsBody, statsErr := s.getUpstreamMonitorJSON(ctx, account, siteURL+"/api/v1/usage/dashboard/stats", token); statsErr == nil {
+	if statsBody, statsErr := s.getUpstreamMonitorJSON(ctx, account, creds.SiteURL+"/api/v1/usage/dashboard/stats", auth); statsErr == nil {
 		var stats struct {
 			TodayActualCost float64 `json:"today_actual_cost"`
 			TotalActualCost float64 `json:"total_actual_cost"`
@@ -360,7 +424,7 @@ func (s *AccountUpstreamMonitorService) collectSub2API(ctx context.Context, acco
 		}
 	}
 
-	groupsBody, err := s.getUpstreamMonitorJSON(ctx, account, siteURL+"/api/v1/groups/available", token)
+	groupsBody, err := s.getUpstreamMonitorJSON(ctx, account, creds.SiteURL+"/api/v1/groups/available", auth)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -374,7 +438,7 @@ func (s *AccountUpstreamMonitorService) collectSub2API(ctx context.Context, acco
 		return nil, nil, newUpstreamMonitorUnsupportedError("upstream monitor endpoint not supported", err)
 	}
 	overrides := map[string]float64{}
-	if ratesBody, ratesErr := s.getUpstreamMonitorJSON(ctx, account, siteURL+"/api/v1/groups/rates", token); ratesErr == nil {
+	if ratesBody, ratesErr := s.getUpstreamMonitorJSON(ctx, account, creds.SiteURL+"/api/v1/groups/rates", auth); ratesErr == nil {
 		_ = json.Unmarshal(ratesBody, &overrides)
 	}
 	rates := make([]AccountUpstreamMonitorRate, 0, len(groups))
@@ -399,9 +463,9 @@ func (s *AccountUpstreamMonitorService) collectSub2API(ctx context.Context, acco
 	return snapshot, rates, nil
 }
 
-func (s *AccountUpstreamMonitorService) collectNewAPI(ctx context.Context, account *Account, siteURL, token string, now time.Time) (*AccountUpstreamMonitorSnapshot, []AccountUpstreamMonitorRate, error) {
+func (s *AccountUpstreamMonitorService) collectNewAPI(ctx context.Context, account *Account, creds *accountUpstreamMonitorCredentials, now time.Time) (*AccountUpstreamMonitorSnapshot, []AccountUpstreamMonitorRate, error) {
 	quotaPerUnit := 500000.0
-	if statusBody, err := s.getUpstreamMonitorJSON(ctx, account, siteURL+"/api/status", ""); err == nil {
+	if statusBody, err := s.getUpstreamMonitorJSON(ctx, account, creds.SiteURL+"/api/status", upstreamMonitorRequestAuth{}); err == nil {
 		var status struct {
 			QuotaPerUnit float64 `json:"quota_per_unit"`
 		}
@@ -410,7 +474,8 @@ func (s *AccountUpstreamMonitorService) collectNewAPI(ctx context.Context, accou
 		}
 	}
 
-	selfBody, err := s.getUpstreamMonitorJSON(ctx, account, siteURL+"/api/user/self", token)
+	auth := upstreamMonitorRequestAuth{Cookie: creds.NewAPICookie, NewAPIUserID: creds.NewAPIUserID}
+	selfBody, err := s.getUpstreamMonitorJSON(ctx, account, creds.SiteURL+"/api/user/self", auth)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -439,7 +504,7 @@ func (s *AccountUpstreamMonitorService) collectNewAPI(ctx context.Context, accou
 		},
 	}
 
-	groupsBody, err := s.getUpstreamMonitorJSON(ctx, account, siteURL+"/api/user/self/groups", token)
+	groupsBody, err := s.getUpstreamMonitorJSON(ctx, account, creds.SiteURL+"/api/user/self/groups", auth)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -472,14 +537,20 @@ func (s *AccountUpstreamMonitorService) collectNewAPI(ctx context.Context, accou
 	return snapshot, rates, nil
 }
 
-func (s *AccountUpstreamMonitorService) getUpstreamMonitorJSON(ctx context.Context, account *Account, endpoint, token string) ([]byte, error) {
+func (s *AccountUpstreamMonitorService) getUpstreamMonitorJSON(ctx context.Context, account *Account, endpoint string, auth upstreamMonitorRequestAuth) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, newUpstreamMonitorUnsupportedError("invalid upstream monitor URL", err)
 	}
 	req.Header.Set("Accept", "application/json")
-	if strings.TrimSpace(token) != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+	if strings.TrimSpace(auth.BearerToken) != "" {
+		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(auth.BearerToken))
+	}
+	if strings.TrimSpace(auth.Cookie) != "" {
+		req.Header.Set("Cookie", strings.TrimSpace(auth.Cookie))
+	}
+	if strings.TrimSpace(auth.NewAPIUserID) != "" {
+		req.Header.Set("New-Api-User", strings.TrimSpace(auth.NewAPIUserID))
 	}
 
 	resp, err := s.doMonitorRequest(req, account)
@@ -588,6 +659,59 @@ func safeUpstreamMonitorError(err error) string {
 		return "upstream authentication failed"
 	default:
 		return "upstream monitor request failed"
+	}
+}
+
+func accountMonitorMapStringAnyFromAny(value any) (map[string]any, bool) {
+	switch typed := value.(type) {
+	case map[string]any:
+		return typed, true
+	default:
+		return nil, false
+	}
+}
+
+func accountMonitorStringFromAny(value any) string {
+	switch typed := value.(type) {
+	case string:
+		return typed
+	case json.Number:
+		return typed.String()
+	case int:
+		return strconv.Itoa(typed)
+	case int64:
+		return strconv.FormatInt(typed, 10)
+	case float64:
+		if typed == float64(int64(typed)) {
+			return strconv.FormatInt(int64(typed), 10)
+		}
+		return strconv.FormatFloat(typed, 'f', -1, 64)
+	default:
+		return ""
+	}
+}
+
+func accountMonitorBoolFromAny(value any) bool {
+	switch typed := value.(type) {
+	case bool:
+		return typed
+	case string:
+		switch strings.ToLower(strings.TrimSpace(typed)) {
+		case "true", "1", "yes", "on":
+			return true
+		default:
+			return false
+		}
+	case json.Number:
+		return typed.String() == "1"
+	case int:
+		return typed == 1
+	case int64:
+		return typed == 1
+	case float64:
+		return typed == 1
+	default:
+		return false
 	}
 }
 

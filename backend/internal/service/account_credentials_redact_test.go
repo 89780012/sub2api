@@ -83,8 +83,42 @@ func TestMergePreservingSensitiveCreds_NonSensitiveDeletionAllowed(t *testing.T)
 func TestIsSensitiveCredentialKey(t *testing.T) {
 	require.True(t, IsSensitiveCredentialKey("refresh_token"))
 	require.True(t, IsSensitiveCredentialKey("api_key"))
+	require.True(t, IsSensitiveCredentialKey("newapi_cookie"))
+	require.True(t, IsSensitiveCredentialKey("sub2api_access_token"))
 	require.True(t, IsSensitiveCredentialKey("private_key"))
 	require.False(t, IsSensitiveCredentialKey("base_url"))
 	require.False(t, IsSensitiveCredentialKey(""))
 	require.False(t, IsSensitiveCredentialKey("model_mapping"))
+}
+
+func TestMergePreservingSensitiveCreds_PreservesNestedUpstreamMonitorSecrets(t *testing.T) {
+	existing := map[string]any{
+		"api_key": "sk-inference",
+		"upstream_monitor": map[string]any{
+			"enabled":              true,
+			"provider":             "newapi",
+			"site_url":             "https://old-monitor.example.com",
+			"newapi_cookie":        "session=old",
+			"sub2api_access_token": "sub2-old",
+		},
+	}
+	incoming := map[string]any{
+		"base_url": "https://api.openai.com/v1",
+		"upstream_monitor": map[string]any{
+			"enabled":        true,
+			"provider":       "newapi",
+			"site_url":       "https://new-monitor.example.com",
+			"newapi_user_id": "123",
+		},
+	}
+
+	out := MergePreservingSensitiveCreds(existing, incoming)
+
+	require.Equal(t, "sk-inference", out["api_key"])
+	monitor, ok := out["upstream_monitor"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "https://new-monitor.example.com", monitor["site_url"])
+	require.Equal(t, "session=old", monitor["newapi_cookie"])
+	require.Equal(t, "sub2-old", monitor["sub2api_access_token"])
+	require.Equal(t, "123", monitor["newapi_user_id"])
 }

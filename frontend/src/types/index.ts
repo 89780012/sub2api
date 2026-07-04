@@ -956,6 +956,16 @@ export interface AccountUpstreamMonitorSnapshot {
   rates: AccountUpstreamMonitorRate[]
 }
 
+export interface AccountUpstreamMonitorConfig {
+  enabled?: boolean
+  provider?: 'newapi' | 'sub2api'
+  site_url?: string
+  credential_mode?: 'token'
+  newapi_user_id?: string
+  newapi_cookie?: string
+  sub2api_access_token?: string
+}
+
 export interface Account {
   id: number
   name: string

@@ -5,6 +5,7 @@ package service
 var SensitiveCredentialKeys = []string{
 	// OAuth
 	"access_token", "refresh_token", "id_token",
+	"newapi_cookie", "sub2api_access_token",
 	// API Key 类
 	"api_key", "session_key", "cookie",
 	// 云服务凭据
@@ -34,8 +35,18 @@ func IsSensitiveCredentialKey(key string) bool {
 //   - 非敏感键：完全由 incoming 决定（用户可以编辑、删除非敏感字段）。
 //   - 敏感键：incoming 显式提供则覆盖（用户主动旋转 token），否则保留 existing。
 func MergePreservingSensitiveCreds(existing, incoming map[string]any) map[string]any {
+	return mergePreservingSensitiveCreds(existing, incoming)
+}
+
+func mergePreservingSensitiveCreds(existing, incoming map[string]any) map[string]any {
 	out := make(map[string]any, len(incoming)+len(SensitiveCredentialKeys))
 	for k, v := range incoming {
+		if incomingNested, ok := accountMonitorMapStringAnyFromAny(v); ok {
+			if existingNested, existingOK := accountMonitorMapStringAnyFromAny(existing[k]); existingOK {
+				out[k] = mergePreservingSensitiveCreds(existingNested, incomingNested)
+				continue
+			}
+		}
 		out[k] = v
 	}
 	for _, key := range SensitiveCredentialKeys {

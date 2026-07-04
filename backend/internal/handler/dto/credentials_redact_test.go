@@ -95,3 +95,30 @@ func TestRedactCredentials_AllKnownSensitiveKeys(t *testing.T) {
 		require.True(t, status["has_"+k], "key %s 应在 status 中标记为已配置", k)
 	}
 }
+
+func TestRedactCredentials_RedactsNestedUpstreamMonitorSecrets(t *testing.T) {
+	in := map[string]any{
+		"base_url": "https://api.openai.com/v1",
+		"upstream_monitor": map[string]any{
+			"enabled":              true,
+			"provider":             "newapi",
+			"site_url":             "https://monitor.example.com",
+			"newapi_cookie":        "session=secret",
+			"newapi_user_id":       "123",
+			"sub2api_access_token": "sub2-secret",
+		},
+	}
+
+	out, status := RedactCredentials(in)
+
+	monitor, ok := out["upstream_monitor"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, true, monitor["enabled"])
+	require.Equal(t, "newapi", monitor["provider"])
+	require.Equal(t, "https://monitor.example.com", monitor["site_url"])
+	require.Equal(t, "123", monitor["newapi_user_id"])
+	require.NotContains(t, monitor, "newapi_cookie")
+	require.NotContains(t, monitor, "sub2api_access_token")
+	require.True(t, status["has_upstream_monitor_newapi_cookie"])
+	require.True(t, status["has_upstream_monitor_sub2api_access_token"])
+}

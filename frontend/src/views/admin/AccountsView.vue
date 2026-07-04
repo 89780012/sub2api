@@ -1259,6 +1259,12 @@ function getUpstreamMonitorSnapshot(row: Account): AccountUpstreamMonitorSnapsho
 function getUpstreamMonitorStatusLabel(snapshot: AccountUpstreamMonitorSnapshot | null): string {
   if (upstreamMonitorError.value) return t('admin.accounts.upstreamMonitor.loadFailed')
   if (!snapshot) return t('admin.accounts.upstreamMonitor.notCollected')
+  if (snapshot.last_error === 'upstream monitor not configured') {
+    return t('admin.accounts.upstreamMonitor.notConfigured')
+  }
+  if (snapshot.last_error === 'upstream monitor disabled') {
+    return t('admin.accounts.upstreamMonitor.disabled')
+  }
   switch (snapshot.status) {
     case 'success': return t('admin.accounts.upstreamMonitor.success')
     case 'failed': return t('admin.accounts.upstreamMonitor.failed')
@@ -1270,6 +1276,12 @@ function getUpstreamMonitorStatusLabel(snapshot: AccountUpstreamMonitorSnapshot 
 function getUpstreamMonitorStatusClass(snapshot: AccountUpstreamMonitorSnapshot | null): string {
   if (upstreamMonitorError.value) return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
   if (!snapshot) return 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+  if (snapshot.last_error === 'upstream monitor not configured') {
+    return 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+  }
+  if (snapshot.last_error === 'upstream monitor disabled') {
+    return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+  }
   switch (snapshot.status) {
     case 'success': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
     case 'failed': return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'

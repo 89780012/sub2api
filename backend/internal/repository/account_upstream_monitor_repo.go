@@ -178,11 +178,20 @@ func (r *accountUpstreamMonitorRepository) ListDueAccountIDs(ctx context.Context
 		LEFT JOIN account_upstream_monitor_snapshots s ON s.account_id = a.id
 		WHERE a.deleted_at IS NULL
 			AND a.type NOT IN ('bedrock', 'service_account')
-			AND COALESCE(a.credentials->>'base_url', '') <> ''
+			AND LOWER(COALESCE(a.credentials->'upstream_monitor'->>'enabled', 'false')) IN ('true', '1')
+			AND LOWER(COALESCE(a.credentials->'upstream_monitor'->>'credential_mode', 'token')) = 'token'
+			AND LOWER(COALESCE(a.credentials->'upstream_monitor'->>'provider', '')) IN ('newapi', 'sub2api')
+			AND COALESCE(a.credentials->'upstream_monitor'->>'site_url', '') <> ''
 			AND (
-				COALESCE(a.credentials->>'api_key', '') <> ''
-				OR COALESCE(a.credentials->>'token', '') <> ''
-				OR COALESCE(a.credentials->>'access_token', '') <> ''
+				(
+					LOWER(COALESCE(a.credentials->'upstream_monitor'->>'provider', '')) = 'newapi'
+					AND COALESCE(a.credentials->'upstream_monitor'->>'newapi_cookie', '') <> ''
+					AND COALESCE(a.credentials->'upstream_monitor'->>'newapi_user_id', '') <> ''
+				)
+				OR (
+					LOWER(COALESCE(a.credentials->'upstream_monitor'->>'provider', '')) = 'sub2api'
+					AND COALESCE(a.credentials->'upstream_monitor'->>'sub2api_access_token', '') <> ''
+				)
 			)
 			AND (s.account_id IS NULL OR s.last_checked_at IS NULL OR s.last_checked_at < $1)
 		ORDER BY s.last_checked_at NULLS FIRST, a.id ASC
