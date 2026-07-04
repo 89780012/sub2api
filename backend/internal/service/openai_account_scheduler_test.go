@@ -337,6 +337,8 @@ func TestOpenAIGatewayService_SelectAccountWithScheduler_DefaultDisabledUsesLega
 	require.Equal(t, int64(36002), selection.Account.ID)
 	require.Equal(t, openAIAccountScheduleLayerLoadBalance, decision.Layer)
 	require.False(t, decision.StickyPreviousHit)
+	require.NotNil(t, selection.ScheduleTrace)
+	require.Equal(t, openAIAccountScheduleLayerLoadBalance, selection.ScheduleTrace.Layer)
 }
 
 func TestOpenAIGatewayService_SelectAccountWithScheduler_DefaultDisabledPreservesLegacyTrace(t *testing.T) {
@@ -402,6 +404,7 @@ func TestOpenAIGatewayService_SelectAccountWithScheduler_DefaultDisabledPreserve
 	require.Equal(t, secondaryID, selection.Account.ID)
 	require.Equal(t, openAIAccountScheduleLayerLoadBalance, decision.Layer)
 	require.NotNil(t, selection.ScheduleTrace)
+	require.Equal(t, openAIAccountScheduleLayerLoadBalance, selection.ScheduleTrace.Layer)
 	require.Equal(t, manualPrimaryID, selection.ScheduleTrace.PrimaryCandidateID)
 	require.Equal(t, groupPrimaryBypassReasonExcludedAfterFailover, selection.ScheduleTrace.PrimaryBypassReason)
 	if selection.ReleaseFunc != nil {

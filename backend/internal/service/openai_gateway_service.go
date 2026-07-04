@@ -457,6 +457,57 @@ func (s *OpenAIGatewayService) inspectPrimaryAccountHit(
 	return account, ""
 }
 
+func (s *OpenAIGatewayService) applyLegacyOpenAISimpleTrace(
+	ctx context.Context,
+	selection *AccountSelectionResult,
+	group *Group,
+	groupID *int64,
+	requestedModel string,
+	excludedIDs map[int64]struct{},
+	requireCompact bool,
+	requiredCapability OpenAIEndpointCapability,
+	stickyAccountID int64,
+	defaultLayer string,
+) {
+	if selection == nil || selection.Account == nil {
+		return
+	}
+	if selection.ScheduleTrace == nil {
+		selection.ScheduleTrace = newUsageScheduleTrace(defaultLayer, selection.Account)
+	} else {
+		selection.ScheduleTrace.Layer = defaultLayer
+	}
+	selection.ScheduleTrace.WaitPlan = selection.WaitPlan != nil
+
+	if group != nil {
+		primaryAccountID := group.currentPreferredPrimaryAccountID()
+		if primaryAccountID > 0 {
+			if primaryAccountID == selection.Account.ID {
+				selection.ScheduleTrace.Layer = openAIAccountScheduleLayerGroupPrimary
+				attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
+				return
+			}
+			bypassReason := strings.TrimSpace(selection.ScheduleTrace.PrimaryBypassReason)
+			if bypassReason == "" {
+				if primaryAccount, reason := s.inspectPrimaryAccountHit(ctx, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability); primaryAccount == nil {
+					bypassReason = reason
+				} else if primaryAccount.ID != selection.Account.ID {
+					bypassReason = groupPrimaryBypassReasonSlotBusy
+				}
+			}
+			if bypassReason == "" {
+				bypassReason = groupPrimaryBypassReasonUnavailable
+			}
+			attachPrimaryTrace(selection.ScheduleTrace, group, false, bypassReason)
+		}
+	}
+
+	if stickyAccountID > 0 && stickyAccountID == selection.Account.ID {
+		selection.ScheduleTrace.Layer = openAIAccountScheduleLayerSessionSticky
+		selection.ScheduleTrace.StickyHit = true
+	}
+}
+
 func (s *OpenAIGatewayService) persistPrimaryPromotionFromSelection(
 	ctx context.Context,
 	group *Group,
@@ -2035,25 +2086,40 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 		}
 		result, err := s.tryAcquireAccountSlot(ctx, account.ID, account.Concurrency)
 		if err == nil && result != nil && result.Acquired {
-			return s.newAcquiredSelectionResult(ctx, account, result.ReleaseFunc)
+			selection, selectErr := s.newAcquiredSelectionResult(ctx, account, result.ReleaseFunc)
+			if selectErr != nil {
+				return nil, selectErr
+			}
+			s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerLoadBalance)
+			return selection, nil
 		}
 		if stickyAccountID > 0 && stickyAccountID == account.ID && s.concurrencyService != nil {
 			waitingCount, _ := s.concurrencyService.GetAccountWaitingCount(ctx, account.ID)
 			if waitingCount < cfg.StickySessionMaxWaiting {
-				return s.newSelectionResult(ctx, account, false, nil, &AccountWaitPlan{
+				selection, selectErr := s.newSelectionResult(ctx, account, false, nil, &AccountWaitPlan{
 					AccountID:      account.ID,
 					MaxConcurrency: account.Concurrency,
 					Timeout:        cfg.StickySessionWaitTimeout,
 					MaxWaiting:     cfg.StickySessionMaxWaiting,
 				})
+				if selectErr != nil {
+					return nil, selectErr
+				}
+				s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerSessionSticky)
+				return selection, nil
 			}
 		}
-		return s.newSelectionResult(ctx, account, false, nil, &AccountWaitPlan{
+		selection, selectErr := s.newSelectionResult(ctx, account, false, nil, &AccountWaitPlan{
 			AccountID:      account.ID,
 			MaxConcurrency: account.Concurrency,
 			Timeout:        cfg.FallbackWaitTimeout,
 			MaxWaiting:     cfg.FallbackMaxWaiting,
 		})
+		if selectErr != nil {
+			return nil, selectErr
+		}
+		s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, stickyAccountID, "fallback_wait")
+		return selection, nil
 	}
 
 	accounts, err := s.listSchedulableAccounts(ctx, groupID)
