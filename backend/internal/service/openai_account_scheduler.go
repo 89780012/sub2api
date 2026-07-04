@@ -1531,7 +1531,7 @@ func (s *OpenAIGatewayService) selectAccountWithScheduler(
 				if accountSupportsOpenAICapabilities(selection.Account, requiredCapability, requiredImageCapability) {
 					decision.SelectedAccountID = selection.Account.ID
 					decision.SelectedAccountType = selection.Account.Type
-					selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
+					s.ensureLegacyOpenAIScheduleTrace(ctx, groupID, selection, decision, effectiveExcludedIDs, requestedModel, requireCompact, requiredCapability, requiredImageCapability)
 					return selection, decision, nil
 				}
 				if selection.ReleaseFunc != nil {
@@ -1560,7 +1560,7 @@ func (s *OpenAIGatewayService) selectAccountWithScheduler(
 				accountSupportsOpenAICapabilities(selection.Account, requiredCapability, requiredImageCapability) {
 				decision.SelectedAccountID = selection.Account.ID
 				decision.SelectedAccountType = selection.Account.Type
-				selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
+				s.ensureLegacyOpenAIScheduleTrace(ctx, groupID, selection, decision, effectiveExcludedIDs, requestedModel, requireCompact, requiredCapability, requiredImageCapability)
 				return selection, decision, nil
 			}
 			if selection.ReleaseFunc != nil {
@@ -1610,6 +1610,52 @@ func accountSupportsOpenAICapabilities(account *Account, requiredCapability Open
 	}
 	return account.SupportsOpenAIEndpointCapability(requiredCapability) &&
 		account.SupportsOpenAIImageCapability(requiredImageCapability)
+}
+
+func (s *OpenAIGatewayService) ensureLegacyOpenAIScheduleTrace(
+	ctx context.Context,
+	groupID *int64,
+	selection *AccountSelectionResult,
+	decision OpenAIAccountScheduleDecision,
+	excludedIDs map[int64]struct{},
+	requestedModel string,
+	requireCompact bool,
+	requiredCapability OpenAIEndpointCapability,
+	requiredImageCapability OpenAIImagesCapability,
+) {
+	if selection == nil || selection.Account == nil {
+		return
+	}
+	if selection.ScheduleTrace == nil {
+		selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
+	}
+	group := s.getGroupPrimaryConfig(ctx, groupID)
+	if group == nil || selection.ScheduleTrace == nil {
+		return
+	}
+	primaryAccountID := group.currentPreferredPrimaryAccountID()
+	if primaryAccountID <= 0 || selection.ScheduleTrace.PrimaryCandidateID > 0 || selection.ScheduleTrace.PrimaryHit {
+		return
+	}
+	if primaryAccountID == selection.Account.ID {
+		attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
+		return
+	}
+
+	bypassReason := strings.TrimSpace(selection.ScheduleTrace.PrimaryBypassReason)
+	if bypassReason == "" {
+		if primaryAccount, reason := s.inspectPrimaryAccountHit(ctx, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability); primaryAccount == nil {
+			bypassReason = reason
+		} else if !accountSupportsOpenAICapabilities(primaryAccount, requiredCapability, requiredImageCapability) {
+			bypassReason = groupPrimaryBypassReasonModelOrCapabilityMismatch
+		} else if primaryAccount.ID != selection.Account.ID {
+			bypassReason = groupPrimaryBypassReasonSlotBusy
+		}
+	}
+	if bypassReason == "" {
+		bypassReason = groupPrimaryBypassReasonUnavailable
+	}
+	attachPrimaryTrace(selection.ScheduleTrace, group, false, bypassReason)
 }
 
 func cloneExcludedAccountIDs(excludedIDs map[int64]struct{}) map[int64]struct{} {

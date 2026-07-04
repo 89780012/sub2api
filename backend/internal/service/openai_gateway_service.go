@@ -403,6 +403,26 @@ func (s *OpenAIGatewayService) tryPrimaryAccountHitWithReason(
 	requireCompact bool,
 	requiredCapability OpenAIEndpointCapability,
 ) (*Account, string) {
+	account, reason := s.inspectPrimaryAccountHit(ctx, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability)
+	if account == nil {
+		return nil, reason
+	}
+	if sessionHash != "" {
+		_ = s.refreshStickySessionTTL(ctx, groupID, sessionHash, openaiStickySessionTTL)
+	}
+	s.promotePrimaryCandidateIfReady(ctx, group, account.ID)
+	return account, ""
+}
+
+func (s *OpenAIGatewayService) inspectPrimaryAccountHit(
+	ctx context.Context,
+	group *Group,
+	groupID *int64,
+	requestedModel string,
+	excludedIDs map[int64]struct{},
+	requireCompact bool,
+	requiredCapability OpenAIEndpointCapability,
+) (*Account, string) {
 	if s == nil || group == nil {
 		return nil, groupPrimaryBypassReasonNotConfigured
 	}
@@ -434,10 +454,6 @@ func (s *OpenAIGatewayService) tryPrimaryAccountHitWithReason(
 		s.isUpstreamModelRestrictedByChannel(ctx, *groupID, account, requestedModel, requireCompact) {
 		return nil, groupPrimaryBypassReasonChannelRestricted
 	}
-	if sessionHash != "" {
-		_ = s.refreshStickySessionTTL(ctx, groupID, sessionHash, openaiStickySessionTTL)
-	}
-	s.promotePrimaryCandidateIfReady(ctx, group, account.ID)
 	return account, ""
 }
 
