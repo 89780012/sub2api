@@ -293,6 +293,8 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 
 		ChannelMonitorEnabled:                settings.ChannelMonitorEnabled,
 		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
+		AccountUpstreamMonitorEnabled:         settings.AccountUpstreamMonitorEnabled,
+		AccountUpstreamMonitorIntervalMinutes: settings.AccountUpstreamMonitorIntervalMinutes,
 
 		AvailableChannelsEnabled: settings.AvailableChannelsEnabled,
 
@@ -636,6 +638,10 @@ type UpdateSettingsRequest struct {
 	// Channel Monitor feature switch
 	ChannelMonitorEnabled                *bool `json:"channel_monitor_enabled"`
 	ChannelMonitorDefaultIntervalSeconds *int  `json:"channel_monitor_default_interval_seconds"`
+
+	// Account upstream monitor feature switch
+	AccountUpstreamMonitorEnabled         *bool `json:"account_upstream_monitor_enabled"`
+	AccountUpstreamMonitorIntervalMinutes *int  `json:"account_upstream_monitor_interval_minutes"`
 
 	// Available Channels feature switch (user-facing)
 	AvailableChannelsEnabled *bool `json:"available_channels_enabled"`
@@ -1751,6 +1757,18 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 			return previousSettings.ChannelMonitorDefaultIntervalSeconds
 		}(),
+		AccountUpstreamMonitorEnabled: func() bool {
+			if req.AccountUpstreamMonitorEnabled != nil {
+				return *req.AccountUpstreamMonitorEnabled
+			}
+			return previousSettings.AccountUpstreamMonitorEnabled
+		}(),
+		AccountUpstreamMonitorIntervalMinutes: func() int {
+			if req.AccountUpstreamMonitorIntervalMinutes != nil {
+				return *req.AccountUpstreamMonitorIntervalMinutes
+			}
+			return previousSettings.AccountUpstreamMonitorIntervalMinutes
+		}(),
 		AvailableChannelsEnabled: func() bool {
 			if req.AvailableChannelsEnabled != nil {
 				return *req.AvailableChannelsEnabled
@@ -2085,6 +2103,8 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 
 		ChannelMonitorEnabled:                updatedSettings.ChannelMonitorEnabled,
 		ChannelMonitorDefaultIntervalSeconds: updatedSettings.ChannelMonitorDefaultIntervalSeconds,
+		AccountUpstreamMonitorEnabled:         updatedSettings.AccountUpstreamMonitorEnabled,
+		AccountUpstreamMonitorIntervalMinutes: updatedSettings.AccountUpstreamMonitorIntervalMinutes,
 
 		AvailableChannelsEnabled: updatedSettings.AvailableChannelsEnabled,
 
@@ -2562,6 +2582,12 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 	}
 	if before.ChannelMonitorDefaultIntervalSeconds != after.ChannelMonitorDefaultIntervalSeconds {
 		changed = append(changed, "channel_monitor_default_interval_seconds")
+	}
+	if before.AccountUpstreamMonitorEnabled != after.AccountUpstreamMonitorEnabled {
+		changed = append(changed, "account_upstream_monitor_enabled")
+	}
+	if before.AccountUpstreamMonitorIntervalMinutes != after.AccountUpstreamMonitorIntervalMinutes {
+		changed = append(changed, "account_upstream_monitor_interval_minutes")
 	}
 	if before.AvailableChannelsEnabled != after.AvailableChannelsEnabled {
 		changed = append(changed, "available_channels_enabled")

@@ -1534,6 +1534,21 @@ export default {
         startedAt: 'Started At',
         actions: 'Actions'
       },
+      upstreamMonitor: {
+        success: 'Collected',
+        failed: 'Failed',
+        unsupported: 'Unsupported',
+        unknown: 'Unknown',
+        notCollected: 'Not collected',
+        loadFailed: 'Load failed',
+        balance: 'Balance',
+        noBalance: 'No balance',
+        checkedAt: 'Checked',
+        noTime: 'No time',
+        refresh: 'Refresh upstream monitor',
+        refreshSuccess: 'Upstream monitor refreshed',
+        refreshFailed: 'Failed to refresh upstream monitor'
+      },
       status: {
         pending: 'Pending',
         running: 'Running',
@@ -3313,6 +3328,7 @@ export default {
         status: 'Status',
         schedulable: 'Schedulable',
         todayStats: 'Today Stats',
+        upstreamMonitor: 'Upstream Monitor',
         groups: 'Groups',
         usageWindows: 'Usage Windows',
         proxy: 'Proxy',

@@ -19,7 +19,8 @@ import type {
   CodexSessionImportRequest,
   CodexSessionImportResult,
   CheckMixedChannelRequest,
-  CheckMixedChannelResponse
+  CheckMixedChannelResponse,
+  AccountUpstreamMonitorSnapshot
 } from '@/types'
 
 /**
@@ -201,6 +202,27 @@ export async function testAccount(id: number): Promise<{
  */
 export async function refreshCredentials(id: number): Promise<Account> {
   const { data } = await apiClient.post<Account>(`/admin/accounts/${id}/refresh`)
+  return data
+}
+
+export interface AccountUpstreamMonitorBatchResponse {
+  items: Record<string, AccountUpstreamMonitorSnapshot>
+}
+
+export async function getUpstreamMonitorBatch(accountIds: number[]): Promise<AccountUpstreamMonitorBatchResponse> {
+  const { data } = await apiClient.post<AccountUpstreamMonitorBatchResponse>('/admin/accounts/upstream-monitor/batch', {
+    ids: accountIds
+  })
+  return data
+}
+
+export async function getUpstreamMonitor(id: number): Promise<AccountUpstreamMonitorSnapshot> {
+  const { data } = await apiClient.get<AccountUpstreamMonitorSnapshot>(`/admin/accounts/${id}/upstream-monitor`)
+  return data
+}
+
+export async function refreshUpstreamMonitor(id: number): Promise<AccountUpstreamMonitorSnapshot> {
+  const { data } = await apiClient.post<AccountUpstreamMonitorSnapshot>(`/admin/accounts/${id}/upstream-monitor/refresh`)
   return data
 }
 
@@ -716,6 +738,9 @@ export const accountsAPI = {
   toggleStatus,
   testAccount,
   refreshCredentials,
+  getUpstreamMonitorBatch,
+  getUpstreamMonitor,
+  refreshUpstreamMonitor,
   applyOAuthCredentials,
   getStats,
   clearError,

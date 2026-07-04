@@ -356,6 +356,14 @@ const (
 	// pre-filled when creating a new channel monitor from the admin UI. Range: [15, 3600].
 	SettingKeyChannelMonitorDefaultIntervalSeconds = "channel_monitor_default_interval_seconds"
 
+	// SettingKeyAccountUpstreamMonitorEnabled controls read-only account upstream
+	// monitor snapshot refresh and admin display.
+	SettingKeyAccountUpstreamMonitorEnabled = "account_upstream_monitor_enabled"
+
+	// SettingKeyAccountUpstreamMonitorIntervalMinutes controls automatic account
+	// upstream monitor refresh cadence. Range: [15, 1440].
+	SettingKeyAccountUpstreamMonitorIntervalMinutes = "account_upstream_monitor_interval_minutes"
+
 	// SettingKeyAvailableChannelsEnabled is a DB-backed soft switch for the "Available Channels"
 	// user-facing aggregate view. When false: user endpoint returns an empty list and the
 	// sidebar entry is hidden. Defaults to false (opt-in feature).

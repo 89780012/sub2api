@@ -45,6 +45,30 @@ func (f AccountGroupFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AccountGroupMutation", m)
 }
 
+// The AccountUpstreamMonitorRateFunc type is an adapter to allow the use of ordinary
+// function as AccountUpstreamMonitorRate mutator.
+type AccountUpstreamMonitorRateFunc func(context.Context, *ent.AccountUpstreamMonitorRateMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AccountUpstreamMonitorRateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AccountUpstreamMonitorRateMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AccountUpstreamMonitorRateMutation", m)
+}
+
+// The AccountUpstreamMonitorSnapshotFunc type is an adapter to allow the use of ordinary
+// function as AccountUpstreamMonitorSnapshot mutator.
+type AccountUpstreamMonitorSnapshotFunc func(context.Context, *ent.AccountUpstreamMonitorSnapshotMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AccountUpstreamMonitorSnapshotFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AccountUpstreamMonitorSnapshotMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AccountUpstreamMonitorSnapshotMutation", m)
+}
+
 // The AnnouncementFunc type is an adapter to allow the use of ordinary
 // function as Announcement mutator.
 type AnnouncementFunc func(context.Context, *ent.AnnouncementMutation) (ent.Value, error)

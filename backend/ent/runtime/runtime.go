@@ -7,6 +7,8 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/ent/account"
 	"github.com/Wei-Shaw/sub2api/ent/accountgroup"
+	"github.com/Wei-Shaw/sub2api/ent/accountupstreammonitorrate"
+	"github.com/Wei-Shaw/sub2api/ent/accountupstreammonitorsnapshot"
 	"github.com/Wei-Shaw/sub2api/ent/announcement"
 	"github.com/Wei-Shaw/sub2api/ent/announcementread"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
@@ -262,6 +264,88 @@ func init() {
 	accountgroupDescCreatedAt := accountgroupFields[3].Descriptor()
 	// accountgroup.DefaultCreatedAt holds the default value on creation for the created_at field.
 	accountgroup.DefaultCreatedAt = accountgroupDescCreatedAt.Default.(func() time.Time)
+	accountupstreammonitorrateMixin := schema.AccountUpstreamMonitorRate{}.Mixin()
+	accountupstreammonitorrateMixinFields0 := accountupstreammonitorrateMixin[0].Fields()
+	_ = accountupstreammonitorrateMixinFields0
+	accountupstreammonitorrateFields := schema.AccountUpstreamMonitorRate{}.Fields()
+	_ = accountupstreammonitorrateFields
+	// accountupstreammonitorrateDescCreatedAt is the schema descriptor for created_at field.
+	accountupstreammonitorrateDescCreatedAt := accountupstreammonitorrateMixinFields0[0].Descriptor()
+	// accountupstreammonitorrate.DefaultCreatedAt holds the default value on creation for the created_at field.
+	accountupstreammonitorrate.DefaultCreatedAt = accountupstreammonitorrateDescCreatedAt.Default.(func() time.Time)
+	// accountupstreammonitorrateDescUpdatedAt is the schema descriptor for updated_at field.
+	accountupstreammonitorrateDescUpdatedAt := accountupstreammonitorrateMixinFields0[1].Descriptor()
+	// accountupstreammonitorrate.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	accountupstreammonitorrate.DefaultUpdatedAt = accountupstreammonitorrateDescUpdatedAt.Default.(func() time.Time)
+	// accountupstreammonitorrate.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	accountupstreammonitorrate.UpdateDefaultUpdatedAt = accountupstreammonitorrateDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// accountupstreammonitorrateDescRateKey is the schema descriptor for rate_key field.
+	accountupstreammonitorrateDescRateKey := accountupstreammonitorrateFields[2].Descriptor()
+	// accountupstreammonitorrate.RateKeyValidator is a validator for the "rate_key" field. It is called by the builders before save.
+	accountupstreammonitorrate.RateKeyValidator = func() func(string) error {
+		validators := accountupstreammonitorrateDescRateKey.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(rate_key string) error {
+			for _, fn := range fns {
+				if err := fn(rate_key); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// accountupstreammonitorrateDescDisplayName is the schema descriptor for display_name field.
+	accountupstreammonitorrateDescDisplayName := accountupstreammonitorrateFields[3].Descriptor()
+	// accountupstreammonitorrate.DisplayNameValidator is a validator for the "display_name" field. It is called by the builders before save.
+	accountupstreammonitorrate.DisplayNameValidator = func() func(string) error {
+		validators := accountupstreammonitorrateDescDisplayName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(display_name string) error {
+			for _, fn := range fns {
+				if err := fn(display_name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// accountupstreammonitorrateDescDescription is the schema descriptor for description field.
+	accountupstreammonitorrateDescDescription := accountupstreammonitorrateFields[4].Descriptor()
+	// accountupstreammonitorrate.DescriptionValidator is a validator for the "description" field. It is called by the builders before save.
+	accountupstreammonitorrate.DescriptionValidator = accountupstreammonitorrateDescDescription.Validators[0].(func(string) error)
+	accountupstreammonitorsnapshotMixin := schema.AccountUpstreamMonitorSnapshot{}.Mixin()
+	accountupstreammonitorsnapshotMixinFields0 := accountupstreammonitorsnapshotMixin[0].Fields()
+	_ = accountupstreammonitorsnapshotMixinFields0
+	accountupstreammonitorsnapshotFields := schema.AccountUpstreamMonitorSnapshot{}.Fields()
+	_ = accountupstreammonitorsnapshotFields
+	// accountupstreammonitorsnapshotDescCreatedAt is the schema descriptor for created_at field.
+	accountupstreammonitorsnapshotDescCreatedAt := accountupstreammonitorsnapshotMixinFields0[0].Descriptor()
+	// accountupstreammonitorsnapshot.DefaultCreatedAt holds the default value on creation for the created_at field.
+	accountupstreammonitorsnapshot.DefaultCreatedAt = accountupstreammonitorsnapshotDescCreatedAt.Default.(func() time.Time)
+	// accountupstreammonitorsnapshotDescUpdatedAt is the schema descriptor for updated_at field.
+	accountupstreammonitorsnapshotDescUpdatedAt := accountupstreammonitorsnapshotMixinFields0[1].Descriptor()
+	// accountupstreammonitorsnapshot.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	accountupstreammonitorsnapshot.DefaultUpdatedAt = accountupstreammonitorsnapshotDescUpdatedAt.Default.(func() time.Time)
+	// accountupstreammonitorsnapshot.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	accountupstreammonitorsnapshot.UpdateDefaultUpdatedAt = accountupstreammonitorsnapshotDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// accountupstreammonitorsnapshotDescSiteURL is the schema descriptor for site_url field.
+	accountupstreammonitorsnapshotDescSiteURL := accountupstreammonitorsnapshotFields[3].Descriptor()
+	// accountupstreammonitorsnapshot.SiteURLValidator is a validator for the "site_url" field. It is called by the builders before save.
+	accountupstreammonitorsnapshot.SiteURLValidator = accountupstreammonitorsnapshotDescSiteURL.Validators[0].(func(string) error)
+	// accountupstreammonitorsnapshotDescBalanceUnit is the schema descriptor for balance_unit field.
+	accountupstreammonitorsnapshotDescBalanceUnit := accountupstreammonitorsnapshotFields[5].Descriptor()
+	// accountupstreammonitorsnapshot.BalanceUnitValidator is a validator for the "balance_unit" field. It is called by the builders before save.
+	accountupstreammonitorsnapshot.BalanceUnitValidator = accountupstreammonitorsnapshotDescBalanceUnit.Validators[0].(func(string) error)
+	// accountupstreammonitorsnapshotDescRawMeta is the schema descriptor for raw_meta field.
+	accountupstreammonitorsnapshotDescRawMeta := accountupstreammonitorsnapshotFields[13].Descriptor()
+	// accountupstreammonitorsnapshot.DefaultRawMeta holds the default value on creation for the raw_meta field.
+	accountupstreammonitorsnapshot.DefaultRawMeta = accountupstreammonitorsnapshotDescRawMeta.Default.(func() map[string]interface{})
 	announcementFields := schema.Announcement{}.Fields()
 	_ = announcementFields
 	// announcementDescTitle is the schema descriptor for title field.

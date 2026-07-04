@@ -758,6 +758,8 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyAccountQuotaNotifyEnabled,
 		SettingKeyChannelMonitorEnabled,
 		SettingKeyChannelMonitorDefaultIntervalSeconds,
+		SettingKeyAccountUpstreamMonitorEnabled,
+		SettingKeyAccountUpstreamMonitorIntervalMinutes,
 		SettingKeyAvailableChannelsEnabled,
 		SettingKeyAffiliateEnabled,
 		SettingKeyRiskControlEnabled,
@@ -868,6 +870,8 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 
 		ChannelMonitorEnabled:                !isFalseSettingValue(settings[SettingKeyChannelMonitorEnabled]),
 		ChannelMonitorDefaultIntervalSeconds: parseChannelMonitorInterval(settings[SettingKeyChannelMonitorDefaultIntervalSeconds]),
+		AccountUpstreamMonitorEnabled:         !isFalseSettingValue(settings[SettingKeyAccountUpstreamMonitorEnabled]),
+		AccountUpstreamMonitorIntervalMinutes: parseAccountUpstreamMonitorInterval(settings[SettingKeyAccountUpstreamMonitorIntervalMinutes]),
 
 		AvailableChannelsEnabled: settings[SettingKeyAvailableChannelsEnabled] == "true",
 
@@ -931,6 +935,44 @@ func (s *SettingService) GetChannelMonitorRuntime(ctx context.Context) ChannelMo
 	return ChannelMonitorRuntime{
 		Enabled:                !isFalseSettingValue(vals[SettingKeyChannelMonitorEnabled]),
 		DefaultIntervalSeconds: parseChannelMonitorInterval(vals[SettingKeyChannelMonitorDefaultIntervalSeconds]),
+	}
+}
+
+func parseAccountUpstreamMonitorInterval(raw string) int {
+	v, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil {
+		return AccountUpstreamMonitorDefaultIntervalMins
+	}
+	return clampAccountUpstreamMonitorInterval(v)
+}
+
+func clampAccountUpstreamMonitorInterval(v int) int {
+	if v <= 0 {
+		return 0
+	}
+	if v < AccountUpstreamMonitorMinIntervalMins {
+		return AccountUpstreamMonitorMinIntervalMins
+	}
+	if v > AccountUpstreamMonitorMaxIntervalMins {
+		return AccountUpstreamMonitorMaxIntervalMins
+	}
+	return v
+}
+
+// GetAccountUpstreamMonitorRuntime reads the account upstream monitor feature
+// flags directly from the settings store. Fail-open so settings storage errors
+// do not silently disable read-only snapshot refresh.
+func (s *SettingService) GetAccountUpstreamMonitorRuntime(ctx context.Context) AccountUpstreamMonitorRuntime {
+	vals, err := s.settingRepo.GetMultiple(ctx, []string{
+		SettingKeyAccountUpstreamMonitorEnabled,
+		SettingKeyAccountUpstreamMonitorIntervalMinutes,
+	})
+	if err != nil {
+		return AccountUpstreamMonitorRuntime{Enabled: true, IntervalMinutes: AccountUpstreamMonitorDefaultIntervalMins}
+	}
+	return AccountUpstreamMonitorRuntime{
+		Enabled:         !isFalseSettingValue(vals[SettingKeyAccountUpstreamMonitorEnabled]),
+		IntervalMinutes: parseAccountUpstreamMonitorInterval(vals[SettingKeyAccountUpstreamMonitorIntervalMinutes]),
 	}
 }
 
@@ -1186,6 +1228,8 @@ type PublicSettingsInjectionPayload struct {
 	// that hid the "可用渠道" menu on page refresh.
 	ChannelMonitorEnabled                bool `json:"channel_monitor_enabled"`
 	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
+	AccountUpstreamMonitorEnabled         bool `json:"account_upstream_monitor_enabled"`
+	AccountUpstreamMonitorIntervalMinutes int  `json:"account_upstream_monitor_interval_minutes"`
 	AvailableChannelsEnabled             bool `json:"available_channels_enabled"`
 	AffiliateEnabled                     bool `json:"affiliate_enabled"`
 	RiskControlEnabled                   bool `json:"risk_control_enabled"`
@@ -1249,6 +1293,8 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 
 		ChannelMonitorEnabled:                settings.ChannelMonitorEnabled,
 		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
+		AccountUpstreamMonitorEnabled:         settings.AccountUpstreamMonitorEnabled,
+		AccountUpstreamMonitorIntervalMinutes: settings.AccountUpstreamMonitorIntervalMinutes,
 		AvailableChannelsEnabled:             settings.AvailableChannelsEnabled,
 		AffiliateEnabled:                     settings.AffiliateEnabled,
 		RiskControlEnabled:                   settings.RiskControlEnabled,
@@ -1884,6 +1930,12 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	updates[SettingKeyChannelMonitorEnabled] = strconv.FormatBool(settings.ChannelMonitorEnabled)
 	if v := clampChannelMonitorInterval(settings.ChannelMonitorDefaultIntervalSeconds); v > 0 {
 		updates[SettingKeyChannelMonitorDefaultIntervalSeconds] = strconv.Itoa(v)
+	}
+
+	// Account upstream monitor feature switch
+	updates[SettingKeyAccountUpstreamMonitorEnabled] = strconv.FormatBool(settings.AccountUpstreamMonitorEnabled)
+	if v := clampAccountUpstreamMonitorInterval(settings.AccountUpstreamMonitorIntervalMinutes); v > 0 {
+		updates[SettingKeyAccountUpstreamMonitorIntervalMinutes] = strconv.Itoa(v)
 	}
 
 	// Available channels feature switch
@@ -2810,6 +2862,10 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyChannelMonitorEnabled:                "true",
 		SettingKeyChannelMonitorDefaultIntervalSeconds: "60",
 
+		// Account upstream monitor defaults (enabled, 60m)
+		SettingKeyAccountUpstreamMonitorEnabled:         "true",
+		SettingKeyAccountUpstreamMonitorIntervalMinutes: "60",
+
 		// Available channels feature (default disabled; opt-in)
 		SettingKeyAvailableChannelsEnabled: "false",
 
@@ -3317,6 +3373,12 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	result.ChannelMonitorEnabled = !isFalseSettingValue(settings[SettingKeyChannelMonitorEnabled])
 	result.ChannelMonitorDefaultIntervalSeconds = parseChannelMonitorInterval(
 		settings[SettingKeyChannelMonitorDefaultIntervalSeconds],
+	)
+
+	// Account upstream monitor feature (default: enabled, 60m)
+	result.AccountUpstreamMonitorEnabled = !isFalseSettingValue(settings[SettingKeyAccountUpstreamMonitorEnabled])
+	result.AccountUpstreamMonitorIntervalMinutes = parseAccountUpstreamMonitorInterval(
+		settings[SettingKeyAccountUpstreamMonitorIntervalMinutes],
 	)
 
 	// Available channels feature (default: disabled; strict true)

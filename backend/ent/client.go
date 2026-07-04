@@ -17,6 +17,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Wei-Shaw/sub2api/ent/account"
 	"github.com/Wei-Shaw/sub2api/ent/accountgroup"
+	"github.com/Wei-Shaw/sub2api/ent/accountupstreammonitorrate"
+	"github.com/Wei-Shaw/sub2api/ent/accountupstreammonitorsnapshot"
 	"github.com/Wei-Shaw/sub2api/ent/announcement"
 	"github.com/Wei-Shaw/sub2api/ent/announcementread"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
@@ -65,6 +67,10 @@ type Client struct {
 	Account *AccountClient
 	// AccountGroup is the client for interacting with the AccountGroup builders.
 	AccountGroup *AccountGroupClient
+	// AccountUpstreamMonitorRate is the client for interacting with the AccountUpstreamMonitorRate builders.
+	AccountUpstreamMonitorRate *AccountUpstreamMonitorRateClient
+	// AccountUpstreamMonitorSnapshot is the client for interacting with the AccountUpstreamMonitorSnapshot builders.
+	AccountUpstreamMonitorSnapshot *AccountUpstreamMonitorSnapshotClient
 	// Announcement is the client for interacting with the Announcement builders.
 	Announcement *AnnouncementClient
 	// AnnouncementRead is the client for interacting with the AnnouncementRead builders.
@@ -143,6 +149,8 @@ func (c *Client) init() {
 	c.APIKey = NewAPIKeyClient(c.config)
 	c.Account = NewAccountClient(c.config)
 	c.AccountGroup = NewAccountGroupClient(c.config)
+	c.AccountUpstreamMonitorRate = NewAccountUpstreamMonitorRateClient(c.config)
+	c.AccountUpstreamMonitorSnapshot = NewAccountUpstreamMonitorSnapshotClient(c.config)
 	c.Announcement = NewAnnouncementClient(c.config)
 	c.AnnouncementRead = NewAnnouncementReadClient(c.config)
 	c.AuthIdentity = NewAuthIdentityClient(c.config)
@@ -265,43 +273,45 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                           ctx,
-		config:                        cfg,
-		APIKey:                        NewAPIKeyClient(cfg),
-		Account:                       NewAccountClient(cfg),
-		AccountGroup:                  NewAccountGroupClient(cfg),
-		Announcement:                  NewAnnouncementClient(cfg),
-		AnnouncementRead:              NewAnnouncementReadClient(cfg),
-		AuthIdentity:                  NewAuthIdentityClient(cfg),
-		AuthIdentityChannel:           NewAuthIdentityChannelClient(cfg),
-		ChannelMonitor:                NewChannelMonitorClient(cfg),
-		ChannelMonitorDailyRollup:     NewChannelMonitorDailyRollupClient(cfg),
-		ChannelMonitorHistory:         NewChannelMonitorHistoryClient(cfg),
-		ChannelMonitorRequestTemplate: NewChannelMonitorRequestTemplateClient(cfg),
-		ErrorPassthroughRule:          NewErrorPassthroughRuleClient(cfg),
-		Group:                         NewGroupClient(cfg),
-		IdempotencyRecord:             NewIdempotencyRecordClient(cfg),
-		IdentityAdoptionDecision:      NewIdentityAdoptionDecisionClient(cfg),
-		PaymentAuditLog:               NewPaymentAuditLogClient(cfg),
-		PaymentOrder:                  NewPaymentOrderClient(cfg),
-		PaymentProviderInstance:       NewPaymentProviderInstanceClient(cfg),
-		PendingAuthSession:            NewPendingAuthSessionClient(cfg),
-		PromoCode:                     NewPromoCodeClient(cfg),
-		PromoCodeUsage:                NewPromoCodeUsageClient(cfg),
-		Proxy:                         NewProxyClient(cfg),
-		RedeemCode:                    NewRedeemCodeClient(cfg),
-		SecuritySecret:                NewSecuritySecretClient(cfg),
-		Setting:                       NewSettingClient(cfg),
-		SubscriptionPlan:              NewSubscriptionPlanClient(cfg),
-		TLSFingerprintProfile:         NewTLSFingerprintProfileClient(cfg),
-		UsageCleanupTask:              NewUsageCleanupTaskClient(cfg),
-		UsageLog:                      NewUsageLogClient(cfg),
-		User:                          NewUserClient(cfg),
-		UserAllowedGroup:              NewUserAllowedGroupClient(cfg),
-		UserAttributeDefinition:       NewUserAttributeDefinitionClient(cfg),
-		UserAttributeValue:            NewUserAttributeValueClient(cfg),
-		UserPlatformQuota:             NewUserPlatformQuotaClient(cfg),
-		UserSubscription:              NewUserSubscriptionClient(cfg),
+		ctx:                            ctx,
+		config:                         cfg,
+		APIKey:                         NewAPIKeyClient(cfg),
+		Account:                        NewAccountClient(cfg),
+		AccountGroup:                   NewAccountGroupClient(cfg),
+		AccountUpstreamMonitorRate:     NewAccountUpstreamMonitorRateClient(cfg),
+		AccountUpstreamMonitorSnapshot: NewAccountUpstreamMonitorSnapshotClient(cfg),
+		Announcement:                   NewAnnouncementClient(cfg),
+		AnnouncementRead:               NewAnnouncementReadClient(cfg),
+		AuthIdentity:                   NewAuthIdentityClient(cfg),
+		AuthIdentityChannel:            NewAuthIdentityChannelClient(cfg),
+		ChannelMonitor:                 NewChannelMonitorClient(cfg),
+		ChannelMonitorDailyRollup:      NewChannelMonitorDailyRollupClient(cfg),
+		ChannelMonitorHistory:          NewChannelMonitorHistoryClient(cfg),
+		ChannelMonitorRequestTemplate:  NewChannelMonitorRequestTemplateClient(cfg),
+		ErrorPassthroughRule:           NewErrorPassthroughRuleClient(cfg),
+		Group:                          NewGroupClient(cfg),
+		IdempotencyRecord:              NewIdempotencyRecordClient(cfg),
+		IdentityAdoptionDecision:       NewIdentityAdoptionDecisionClient(cfg),
+		PaymentAuditLog:                NewPaymentAuditLogClient(cfg),
+		PaymentOrder:                   NewPaymentOrderClient(cfg),
+		PaymentProviderInstance:        NewPaymentProviderInstanceClient(cfg),
+		PendingAuthSession:             NewPendingAuthSessionClient(cfg),
+		PromoCode:                      NewPromoCodeClient(cfg),
+		PromoCodeUsage:                 NewPromoCodeUsageClient(cfg),
+		Proxy:                          NewProxyClient(cfg),
+		RedeemCode:                     NewRedeemCodeClient(cfg),
+		SecuritySecret:                 NewSecuritySecretClient(cfg),
+		Setting:                        NewSettingClient(cfg),
+		SubscriptionPlan:               NewSubscriptionPlanClient(cfg),
+		TLSFingerprintProfile:          NewTLSFingerprintProfileClient(cfg),
+		UsageCleanupTask:               NewUsageCleanupTaskClient(cfg),
+		UsageLog:                       NewUsageLogClient(cfg),
+		User:                           NewUserClient(cfg),
+		UserAllowedGroup:               NewUserAllowedGroupClient(cfg),
+		UserAttributeDefinition:        NewUserAttributeDefinitionClient(cfg),
+		UserAttributeValue:             NewUserAttributeValueClient(cfg),
+		UserPlatformQuota:              NewUserPlatformQuotaClient(cfg),
+		UserSubscription:               NewUserSubscriptionClient(cfg),
 	}, nil
 }
 
@@ -319,43 +329,45 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                           ctx,
-		config:                        cfg,
-		APIKey:                        NewAPIKeyClient(cfg),
-		Account:                       NewAccountClient(cfg),
-		AccountGroup:                  NewAccountGroupClient(cfg),
-		Announcement:                  NewAnnouncementClient(cfg),
-		AnnouncementRead:              NewAnnouncementReadClient(cfg),
-		AuthIdentity:                  NewAuthIdentityClient(cfg),
-		AuthIdentityChannel:           NewAuthIdentityChannelClient(cfg),
-		ChannelMonitor:                NewChannelMonitorClient(cfg),
-		ChannelMonitorDailyRollup:     NewChannelMonitorDailyRollupClient(cfg),
-		ChannelMonitorHistory:         NewChannelMonitorHistoryClient(cfg),
-		ChannelMonitorRequestTemplate: NewChannelMonitorRequestTemplateClient(cfg),
-		ErrorPassthroughRule:          NewErrorPassthroughRuleClient(cfg),
-		Group:                         NewGroupClient(cfg),
-		IdempotencyRecord:             NewIdempotencyRecordClient(cfg),
-		IdentityAdoptionDecision:      NewIdentityAdoptionDecisionClient(cfg),
-		PaymentAuditLog:               NewPaymentAuditLogClient(cfg),
-		PaymentOrder:                  NewPaymentOrderClient(cfg),
-		PaymentProviderInstance:       NewPaymentProviderInstanceClient(cfg),
-		PendingAuthSession:            NewPendingAuthSessionClient(cfg),
-		PromoCode:                     NewPromoCodeClient(cfg),
-		PromoCodeUsage:                NewPromoCodeUsageClient(cfg),
-		Proxy:                         NewProxyClient(cfg),
-		RedeemCode:                    NewRedeemCodeClient(cfg),
-		SecuritySecret:                NewSecuritySecretClient(cfg),
-		Setting:                       NewSettingClient(cfg),
-		SubscriptionPlan:              NewSubscriptionPlanClient(cfg),
-		TLSFingerprintProfile:         NewTLSFingerprintProfileClient(cfg),
-		UsageCleanupTask:              NewUsageCleanupTaskClient(cfg),
-		UsageLog:                      NewUsageLogClient(cfg),
-		User:                          NewUserClient(cfg),
-		UserAllowedGroup:              NewUserAllowedGroupClient(cfg),
-		UserAttributeDefinition:       NewUserAttributeDefinitionClient(cfg),
-		UserAttributeValue:            NewUserAttributeValueClient(cfg),
-		UserPlatformQuota:             NewUserPlatformQuotaClient(cfg),
-		UserSubscription:              NewUserSubscriptionClient(cfg),
+		ctx:                            ctx,
+		config:                         cfg,
+		APIKey:                         NewAPIKeyClient(cfg),
+		Account:                        NewAccountClient(cfg),
+		AccountGroup:                   NewAccountGroupClient(cfg),
+		AccountUpstreamMonitorRate:     NewAccountUpstreamMonitorRateClient(cfg),
+		AccountUpstreamMonitorSnapshot: NewAccountUpstreamMonitorSnapshotClient(cfg),
+		Announcement:                   NewAnnouncementClient(cfg),
+		AnnouncementRead:               NewAnnouncementReadClient(cfg),
+		AuthIdentity:                   NewAuthIdentityClient(cfg),
+		AuthIdentityChannel:            NewAuthIdentityChannelClient(cfg),
+		ChannelMonitor:                 NewChannelMonitorClient(cfg),
+		ChannelMonitorDailyRollup:      NewChannelMonitorDailyRollupClient(cfg),
+		ChannelMonitorHistory:          NewChannelMonitorHistoryClient(cfg),
+		ChannelMonitorRequestTemplate:  NewChannelMonitorRequestTemplateClient(cfg),
+		ErrorPassthroughRule:           NewErrorPassthroughRuleClient(cfg),
+		Group:                          NewGroupClient(cfg),
+		IdempotencyRecord:              NewIdempotencyRecordClient(cfg),
+		IdentityAdoptionDecision:       NewIdentityAdoptionDecisionClient(cfg),
+		PaymentAuditLog:                NewPaymentAuditLogClient(cfg),
+		PaymentOrder:                   NewPaymentOrderClient(cfg),
+		PaymentProviderInstance:        NewPaymentProviderInstanceClient(cfg),
+		PendingAuthSession:             NewPendingAuthSessionClient(cfg),
+		PromoCode:                      NewPromoCodeClient(cfg),
+		PromoCodeUsage:                 NewPromoCodeUsageClient(cfg),
+		Proxy:                          NewProxyClient(cfg),
+		RedeemCode:                     NewRedeemCodeClient(cfg),
+		SecuritySecret:                 NewSecuritySecretClient(cfg),
+		Setting:                        NewSettingClient(cfg),
+		SubscriptionPlan:               NewSubscriptionPlanClient(cfg),
+		TLSFingerprintProfile:          NewTLSFingerprintProfileClient(cfg),
+		UsageCleanupTask:               NewUsageCleanupTaskClient(cfg),
+		UsageLog:                       NewUsageLogClient(cfg),
+		User:                           NewUserClient(cfg),
+		UserAllowedGroup:               NewUserAllowedGroupClient(cfg),
+		UserAttributeDefinition:        NewUserAttributeDefinitionClient(cfg),
+		UserAttributeValue:             NewUserAttributeValueClient(cfg),
+		UserPlatformQuota:              NewUserPlatformQuotaClient(cfg),
+		UserSubscription:               NewUserSubscriptionClient(cfg),
 	}, nil
 }
 
@@ -385,7 +397,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.APIKey, c.Account, c.AccountGroup, c.Announcement, c.AnnouncementRead,
+		c.APIKey, c.Account, c.AccountGroup, c.AccountUpstreamMonitorRate,
+		c.AccountUpstreamMonitorSnapshot, c.Announcement, c.AnnouncementRead,
 		c.AuthIdentity, c.AuthIdentityChannel, c.ChannelMonitor,
 		c.ChannelMonitorDailyRollup, c.ChannelMonitorHistory,
 		c.ChannelMonitorRequestTemplate, c.ErrorPassthroughRule, c.Group,
@@ -404,7 +417,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.APIKey, c.Account, c.AccountGroup, c.Announcement, c.AnnouncementRead,
+		c.APIKey, c.Account, c.AccountGroup, c.AccountUpstreamMonitorRate,
+		c.AccountUpstreamMonitorSnapshot, c.Announcement, c.AnnouncementRead,
 		c.AuthIdentity, c.AuthIdentityChannel, c.ChannelMonitor,
 		c.ChannelMonitorDailyRollup, c.ChannelMonitorHistory,
 		c.ChannelMonitorRequestTemplate, c.ErrorPassthroughRule, c.Group,
@@ -428,6 +442,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Account.mutate(ctx, m)
 	case *AccountGroupMutation:
 		return c.AccountGroup.mutate(ctx, m)
+	case *AccountUpstreamMonitorRateMutation:
+		return c.AccountUpstreamMonitorRate.mutate(ctx, m)
+	case *AccountUpstreamMonitorSnapshotMutation:
+		return c.AccountUpstreamMonitorSnapshot.mutate(ctx, m)
 	case *AnnouncementMutation:
 		return c.Announcement.mutate(ctx, m)
 	case *AnnouncementReadMutation:
@@ -992,6 +1010,272 @@ func (c *AccountGroupClient) mutate(ctx context.Context, m *AccountGroupMutation
 		return (&AccountGroupDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown AccountGroup mutation op: %q", m.Op())
+	}
+}
+
+// AccountUpstreamMonitorRateClient is a client for the AccountUpstreamMonitorRate schema.
+type AccountUpstreamMonitorRateClient struct {
+	config
+}
+
+// NewAccountUpstreamMonitorRateClient returns a client for the AccountUpstreamMonitorRate from the given config.
+func NewAccountUpstreamMonitorRateClient(c config) *AccountUpstreamMonitorRateClient {
+	return &AccountUpstreamMonitorRateClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `accountupstreammonitorrate.Hooks(f(g(h())))`.
+func (c *AccountUpstreamMonitorRateClient) Use(hooks ...Hook) {
+	c.hooks.AccountUpstreamMonitorRate = append(c.hooks.AccountUpstreamMonitorRate, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `accountupstreammonitorrate.Intercept(f(g(h())))`.
+func (c *AccountUpstreamMonitorRateClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AccountUpstreamMonitorRate = append(c.inters.AccountUpstreamMonitorRate, interceptors...)
+}
+
+// Create returns a builder for creating a AccountUpstreamMonitorRate entity.
+func (c *AccountUpstreamMonitorRateClient) Create() *AccountUpstreamMonitorRateCreate {
+	mutation := newAccountUpstreamMonitorRateMutation(c.config, OpCreate)
+	return &AccountUpstreamMonitorRateCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AccountUpstreamMonitorRate entities.
+func (c *AccountUpstreamMonitorRateClient) CreateBulk(builders ...*AccountUpstreamMonitorRateCreate) *AccountUpstreamMonitorRateCreateBulk {
+	return &AccountUpstreamMonitorRateCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AccountUpstreamMonitorRateClient) MapCreateBulk(slice any, setFunc func(*AccountUpstreamMonitorRateCreate, int)) *AccountUpstreamMonitorRateCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AccountUpstreamMonitorRateCreateBulk{err: fmt.Errorf("calling to AccountUpstreamMonitorRateClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AccountUpstreamMonitorRateCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AccountUpstreamMonitorRateCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AccountUpstreamMonitorRate.
+func (c *AccountUpstreamMonitorRateClient) Update() *AccountUpstreamMonitorRateUpdate {
+	mutation := newAccountUpstreamMonitorRateMutation(c.config, OpUpdate)
+	return &AccountUpstreamMonitorRateUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AccountUpstreamMonitorRateClient) UpdateOne(_m *AccountUpstreamMonitorRate) *AccountUpstreamMonitorRateUpdateOne {
+	mutation := newAccountUpstreamMonitorRateMutation(c.config, OpUpdateOne, withAccountUpstreamMonitorRate(_m))
+	return &AccountUpstreamMonitorRateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AccountUpstreamMonitorRateClient) UpdateOneID(id int64) *AccountUpstreamMonitorRateUpdateOne {
+	mutation := newAccountUpstreamMonitorRateMutation(c.config, OpUpdateOne, withAccountUpstreamMonitorRateID(id))
+	return &AccountUpstreamMonitorRateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AccountUpstreamMonitorRate.
+func (c *AccountUpstreamMonitorRateClient) Delete() *AccountUpstreamMonitorRateDelete {
+	mutation := newAccountUpstreamMonitorRateMutation(c.config, OpDelete)
+	return &AccountUpstreamMonitorRateDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AccountUpstreamMonitorRateClient) DeleteOne(_m *AccountUpstreamMonitorRate) *AccountUpstreamMonitorRateDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AccountUpstreamMonitorRateClient) DeleteOneID(id int64) *AccountUpstreamMonitorRateDeleteOne {
+	builder := c.Delete().Where(accountupstreammonitorrate.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AccountUpstreamMonitorRateDeleteOne{builder}
+}
+
+// Query returns a query builder for AccountUpstreamMonitorRate.
+func (c *AccountUpstreamMonitorRateClient) Query() *AccountUpstreamMonitorRateQuery {
+	return &AccountUpstreamMonitorRateQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAccountUpstreamMonitorRate},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AccountUpstreamMonitorRate entity by its id.
+func (c *AccountUpstreamMonitorRateClient) Get(ctx context.Context, id int64) (*AccountUpstreamMonitorRate, error) {
+	return c.Query().Where(accountupstreammonitorrate.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AccountUpstreamMonitorRateClient) GetX(ctx context.Context, id int64) *AccountUpstreamMonitorRate {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AccountUpstreamMonitorRateClient) Hooks() []Hook {
+	return c.hooks.AccountUpstreamMonitorRate
+}
+
+// Interceptors returns the client interceptors.
+func (c *AccountUpstreamMonitorRateClient) Interceptors() []Interceptor {
+	return c.inters.AccountUpstreamMonitorRate
+}
+
+func (c *AccountUpstreamMonitorRateClient) mutate(ctx context.Context, m *AccountUpstreamMonitorRateMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AccountUpstreamMonitorRateCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AccountUpstreamMonitorRateUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AccountUpstreamMonitorRateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AccountUpstreamMonitorRateDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AccountUpstreamMonitorRate mutation op: %q", m.Op())
+	}
+}
+
+// AccountUpstreamMonitorSnapshotClient is a client for the AccountUpstreamMonitorSnapshot schema.
+type AccountUpstreamMonitorSnapshotClient struct {
+	config
+}
+
+// NewAccountUpstreamMonitorSnapshotClient returns a client for the AccountUpstreamMonitorSnapshot from the given config.
+func NewAccountUpstreamMonitorSnapshotClient(c config) *AccountUpstreamMonitorSnapshotClient {
+	return &AccountUpstreamMonitorSnapshotClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `accountupstreammonitorsnapshot.Hooks(f(g(h())))`.
+func (c *AccountUpstreamMonitorSnapshotClient) Use(hooks ...Hook) {
+	c.hooks.AccountUpstreamMonitorSnapshot = append(c.hooks.AccountUpstreamMonitorSnapshot, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `accountupstreammonitorsnapshot.Intercept(f(g(h())))`.
+func (c *AccountUpstreamMonitorSnapshotClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AccountUpstreamMonitorSnapshot = append(c.inters.AccountUpstreamMonitorSnapshot, interceptors...)
+}
+
+// Create returns a builder for creating a AccountUpstreamMonitorSnapshot entity.
+func (c *AccountUpstreamMonitorSnapshotClient) Create() *AccountUpstreamMonitorSnapshotCreate {
+	mutation := newAccountUpstreamMonitorSnapshotMutation(c.config, OpCreate)
+	return &AccountUpstreamMonitorSnapshotCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AccountUpstreamMonitorSnapshot entities.
+func (c *AccountUpstreamMonitorSnapshotClient) CreateBulk(builders ...*AccountUpstreamMonitorSnapshotCreate) *AccountUpstreamMonitorSnapshotCreateBulk {
+	return &AccountUpstreamMonitorSnapshotCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AccountUpstreamMonitorSnapshotClient) MapCreateBulk(slice any, setFunc func(*AccountUpstreamMonitorSnapshotCreate, int)) *AccountUpstreamMonitorSnapshotCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AccountUpstreamMonitorSnapshotCreateBulk{err: fmt.Errorf("calling to AccountUpstreamMonitorSnapshotClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AccountUpstreamMonitorSnapshotCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AccountUpstreamMonitorSnapshotCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AccountUpstreamMonitorSnapshot.
+func (c *AccountUpstreamMonitorSnapshotClient) Update() *AccountUpstreamMonitorSnapshotUpdate {
+	mutation := newAccountUpstreamMonitorSnapshotMutation(c.config, OpUpdate)
+	return &AccountUpstreamMonitorSnapshotUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AccountUpstreamMonitorSnapshotClient) UpdateOne(_m *AccountUpstreamMonitorSnapshot) *AccountUpstreamMonitorSnapshotUpdateOne {
+	mutation := newAccountUpstreamMonitorSnapshotMutation(c.config, OpUpdateOne, withAccountUpstreamMonitorSnapshot(_m))
+	return &AccountUpstreamMonitorSnapshotUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AccountUpstreamMonitorSnapshotClient) UpdateOneID(id int64) *AccountUpstreamMonitorSnapshotUpdateOne {
+	mutation := newAccountUpstreamMonitorSnapshotMutation(c.config, OpUpdateOne, withAccountUpstreamMonitorSnapshotID(id))
+	return &AccountUpstreamMonitorSnapshotUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AccountUpstreamMonitorSnapshot.
+func (c *AccountUpstreamMonitorSnapshotClient) Delete() *AccountUpstreamMonitorSnapshotDelete {
+	mutation := newAccountUpstreamMonitorSnapshotMutation(c.config, OpDelete)
+	return &AccountUpstreamMonitorSnapshotDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AccountUpstreamMonitorSnapshotClient) DeleteOne(_m *AccountUpstreamMonitorSnapshot) *AccountUpstreamMonitorSnapshotDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AccountUpstreamMonitorSnapshotClient) DeleteOneID(id int64) *AccountUpstreamMonitorSnapshotDeleteOne {
+	builder := c.Delete().Where(accountupstreammonitorsnapshot.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AccountUpstreamMonitorSnapshotDeleteOne{builder}
+}
+
+// Query returns a query builder for AccountUpstreamMonitorSnapshot.
+func (c *AccountUpstreamMonitorSnapshotClient) Query() *AccountUpstreamMonitorSnapshotQuery {
+	return &AccountUpstreamMonitorSnapshotQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAccountUpstreamMonitorSnapshot},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AccountUpstreamMonitorSnapshot entity by its id.
+func (c *AccountUpstreamMonitorSnapshotClient) Get(ctx context.Context, id int64) (*AccountUpstreamMonitorSnapshot, error) {
+	return c.Query().Where(accountupstreammonitorsnapshot.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AccountUpstreamMonitorSnapshotClient) GetX(ctx context.Context, id int64) *AccountUpstreamMonitorSnapshot {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AccountUpstreamMonitorSnapshotClient) Hooks() []Hook {
+	return c.hooks.AccountUpstreamMonitorSnapshot
+}
+
+// Interceptors returns the client interceptors.
+func (c *AccountUpstreamMonitorSnapshotClient) Interceptors() []Interceptor {
+	return c.inters.AccountUpstreamMonitorSnapshot
+}
+
+func (c *AccountUpstreamMonitorSnapshotClient) mutate(ctx context.Context, m *AccountUpstreamMonitorSnapshotMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AccountUpstreamMonitorSnapshotCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AccountUpstreamMonitorSnapshotUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AccountUpstreamMonitorSnapshotUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AccountUpstreamMonitorSnapshotDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AccountUpstreamMonitorSnapshot mutation op: %q", m.Op())
 	}
 }
 
@@ -6209,7 +6493,8 @@ func (c *UserSubscriptionClient) mutate(ctx context.Context, m *UserSubscription
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		APIKey, Account, AccountGroup, Announcement, AnnouncementRead, AuthIdentity,
+		APIKey, Account, AccountGroup, AccountUpstreamMonitorRate,
+		AccountUpstreamMonitorSnapshot, Announcement, AnnouncementRead, AuthIdentity,
 		AuthIdentityChannel, ChannelMonitor, ChannelMonitorDailyRollup,
 		ChannelMonitorHistory, ChannelMonitorRequestTemplate, ErrorPassthroughRule,
 		Group, IdempotencyRecord, IdentityAdoptionDecision, PaymentAuditLog,
@@ -6220,7 +6505,8 @@ type (
 		UserSubscription []ent.Hook
 	}
 	inters struct {
-		APIKey, Account, AccountGroup, Announcement, AnnouncementRead, AuthIdentity,
+		APIKey, Account, AccountGroup, AccountUpstreamMonitorRate,
+		AccountUpstreamMonitorSnapshot, Announcement, AnnouncementRead, AuthIdentity,
 		AuthIdentityChannel, ChannelMonitor, ChannelMonitorDailyRollup,
 		ChannelMonitorHistory, ChannelMonitorRequestTemplate, ErrorPassthroughRule,
 		Group, IdempotencyRecord, IdentityAdoptionDecision, PaymentAuditLog,

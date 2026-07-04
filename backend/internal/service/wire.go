@@ -384,6 +384,18 @@ func ProvideScheduledTestRunnerService(
 	return svc
 }
 
+// ProvideAccountUpstreamMonitorRunnerService creates and starts the read-only
+// upstream account snapshot refresher.
+func ProvideAccountUpstreamMonitorRunnerService(
+	monitorSvc *AccountUpstreamMonitorService,
+	settingSvc *SettingService,
+	cfg *config.Config,
+) *AccountUpstreamMonitorRunnerService {
+	svc := NewAccountUpstreamMonitorRunnerService(monitorSvc, settingSvc, cfg)
+	svc.Start()
+	return svc
+}
+
 // ProvideOpsScheduledReportService creates and starts OpsScheduledReportService.
 func ProvideOpsScheduledReportService(
 	opsService *OpsService,
@@ -582,6 +594,8 @@ var ProviderSet = wire.NewSet(
 	ProvideIdempotencyCleanupService,
 	ProvideScheduledTestService,
 	ProvideScheduledTestRunnerService,
+	NewAccountUpstreamMonitorService,
+	ProvideAccountUpstreamMonitorRunnerService,
 	NewGroupCapacityService,
 	NewChannelService,
 	NewModelPricingResolver,

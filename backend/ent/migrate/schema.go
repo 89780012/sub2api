@@ -246,6 +246,77 @@ var (
 			},
 		},
 	}
+	// AccountUpstreamMonitorRatesColumns holds the columns for the "account_upstream_monitor_rates" table.
+	AccountUpstreamMonitorRatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "account_id", Type: field.TypeInt64},
+		{Name: "provider", Type: field.TypeEnum, Enums: []string{"sub2api", "newapi"}, Default: "sub2api"},
+		{Name: "rate_key", Type: field.TypeString, Size: 256},
+		{Name: "display_name", Type: field.TypeString, Size: 256},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 512},
+		{Name: "ratio", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "completion_ratio", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "first_seen_at", Type: field.TypeTime},
+		{Name: "last_seen_at", Type: field.TypeTime},
+	}
+	// AccountUpstreamMonitorRatesTable holds the schema information for the "account_upstream_monitor_rates" table.
+	AccountUpstreamMonitorRatesTable = &schema.Table{
+		Name:       "account_upstream_monitor_rates",
+		Columns:    AccountUpstreamMonitorRatesColumns,
+		PrimaryKey: []*schema.Column{AccountUpstreamMonitorRatesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "accountupstreammonitorrate_account_id_rate_key",
+				Unique:  true,
+				Columns: []*schema.Column{AccountUpstreamMonitorRatesColumns[3], AccountUpstreamMonitorRatesColumns[5]},
+			},
+			{
+				Name:    "accountupstreammonitorrate_account_id_last_seen_at",
+				Unique:  false,
+				Columns: []*schema.Column{AccountUpstreamMonitorRatesColumns[3], AccountUpstreamMonitorRatesColumns[11]},
+			},
+		},
+	}
+	// AccountUpstreamMonitorSnapshotsColumns holds the columns for the "account_upstream_monitor_snapshots" table.
+	AccountUpstreamMonitorSnapshotsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "account_id", Type: field.TypeInt64, Unique: true},
+		{Name: "provider", Type: field.TypeEnum, Enums: []string{"sub2api", "newapi", "unsupported", "unknown"}, Default: "unknown"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"unknown", "unsupported", "success", "failed"}, Default: "unknown"},
+		{Name: "site_url", Type: field.TypeString, Nullable: true, Size: 512},
+		{Name: "balance", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "balance_unit", Type: field.TypeString, Nullable: true, Size: 32},
+		{Name: "quota", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "quota_used", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "today_cost", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "total_cost", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "last_checked_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_success_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_error", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "raw_meta", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+	}
+	// AccountUpstreamMonitorSnapshotsTable holds the schema information for the "account_upstream_monitor_snapshots" table.
+	AccountUpstreamMonitorSnapshotsTable = &schema.Table{
+		Name:       "account_upstream_monitor_snapshots",
+		Columns:    AccountUpstreamMonitorSnapshotsColumns,
+		PrimaryKey: []*schema.Column{AccountUpstreamMonitorSnapshotsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "accountupstreammonitorsnapshot_status_last_checked_at",
+				Unique:  false,
+				Columns: []*schema.Column{AccountUpstreamMonitorSnapshotsColumns[5], AccountUpstreamMonitorSnapshotsColumns[13]},
+			},
+			{
+				Name:    "accountupstreammonitorsnapshot_provider",
+				Unique:  false,
+				Columns: []*schema.Column{AccountUpstreamMonitorSnapshotsColumns[4]},
+			},
+		},
+	}
 	// AnnouncementsColumns holds the columns for the "announcements" table.
 	AnnouncementsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -1785,6 +1856,8 @@ var (
 		APIKeysTable,
 		AccountsTable,
 		AccountGroupsTable,
+		AccountUpstreamMonitorRatesTable,
+		AccountUpstreamMonitorSnapshotsTable,
 		AnnouncementsTable,
 		AnnouncementReadsTable,
 		AuthIdentitiesTable,
@@ -1834,6 +1907,12 @@ func init() {
 	AccountGroupsTable.ForeignKeys[1].RefTable = GroupsTable
 	AccountGroupsTable.Annotation = &entsql.Annotation{
 		Table: "account_groups",
+	}
+	AccountUpstreamMonitorRatesTable.Annotation = &entsql.Annotation{
+		Table: "account_upstream_monitor_rates",
+	}
+	AccountUpstreamMonitorSnapshotsTable.Annotation = &entsql.Annotation{
+		Table: "account_upstream_monitor_snapshots",
 	}
 	AnnouncementsTable.Annotation = &entsql.Annotation{
 		Table: "announcements",

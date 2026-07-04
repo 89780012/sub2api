@@ -14,6 +14,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/Wei-Shaw/sub2api/ent/account"
 	"github.com/Wei-Shaw/sub2api/ent/accountgroup"
+	"github.com/Wei-Shaw/sub2api/ent/accountupstreammonitorrate"
+	"github.com/Wei-Shaw/sub2api/ent/accountupstreammonitorsnapshot"
 	"github.com/Wei-Shaw/sub2api/ent/announcement"
 	"github.com/Wei-Shaw/sub2api/ent/announcementread"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
@@ -60,41 +62,43 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeAPIKey                        = "APIKey"
-	TypeAccount                       = "Account"
-	TypeAccountGroup                  = "AccountGroup"
-	TypeAnnouncement                  = "Announcement"
-	TypeAnnouncementRead              = "AnnouncementRead"
-	TypeAuthIdentity                  = "AuthIdentity"
-	TypeAuthIdentityChannel           = "AuthIdentityChannel"
-	TypeChannelMonitor                = "ChannelMonitor"
-	TypeChannelMonitorDailyRollup     = "ChannelMonitorDailyRollup"
-	TypeChannelMonitorHistory         = "ChannelMonitorHistory"
-	TypeChannelMonitorRequestTemplate = "ChannelMonitorRequestTemplate"
-	TypeErrorPassthroughRule          = "ErrorPassthroughRule"
-	TypeGroup                         = "Group"
-	TypeIdempotencyRecord             = "IdempotencyRecord"
-	TypeIdentityAdoptionDecision      = "IdentityAdoptionDecision"
-	TypePaymentAuditLog               = "PaymentAuditLog"
-	TypePaymentOrder                  = "PaymentOrder"
-	TypePaymentProviderInstance       = "PaymentProviderInstance"
-	TypePendingAuthSession            = "PendingAuthSession"
-	TypePromoCode                     = "PromoCode"
-	TypePromoCodeUsage                = "PromoCodeUsage"
-	TypeProxy                         = "Proxy"
-	TypeRedeemCode                    = "RedeemCode"
-	TypeSecuritySecret                = "SecuritySecret"
-	TypeSetting                       = "Setting"
-	TypeSubscriptionPlan              = "SubscriptionPlan"
-	TypeTLSFingerprintProfile         = "TLSFingerprintProfile"
-	TypeUsageCleanupTask              = "UsageCleanupTask"
-	TypeUsageLog                      = "UsageLog"
-	TypeUser                          = "User"
-	TypeUserAllowedGroup              = "UserAllowedGroup"
-	TypeUserAttributeDefinition       = "UserAttributeDefinition"
-	TypeUserAttributeValue            = "UserAttributeValue"
-	TypeUserPlatformQuota             = "UserPlatformQuota"
-	TypeUserSubscription              = "UserSubscription"
+	TypeAPIKey                         = "APIKey"
+	TypeAccount                        = "Account"
+	TypeAccountGroup                   = "AccountGroup"
+	TypeAccountUpstreamMonitorRate     = "AccountUpstreamMonitorRate"
+	TypeAccountUpstreamMonitorSnapshot = "AccountUpstreamMonitorSnapshot"
+	TypeAnnouncement                   = "Announcement"
+	TypeAnnouncementRead               = "AnnouncementRead"
+	TypeAuthIdentity                   = "AuthIdentity"
+	TypeAuthIdentityChannel            = "AuthIdentityChannel"
+	TypeChannelMonitor                 = "ChannelMonitor"
+	TypeChannelMonitorDailyRollup      = "ChannelMonitorDailyRollup"
+	TypeChannelMonitorHistory          = "ChannelMonitorHistory"
+	TypeChannelMonitorRequestTemplate  = "ChannelMonitorRequestTemplate"
+	TypeErrorPassthroughRule           = "ErrorPassthroughRule"
+	TypeGroup                          = "Group"
+	TypeIdempotencyRecord              = "IdempotencyRecord"
+	TypeIdentityAdoptionDecision       = "IdentityAdoptionDecision"
+	TypePaymentAuditLog                = "PaymentAuditLog"
+	TypePaymentOrder                   = "PaymentOrder"
+	TypePaymentProviderInstance        = "PaymentProviderInstance"
+	TypePendingAuthSession             = "PendingAuthSession"
+	TypePromoCode                      = "PromoCode"
+	TypePromoCodeUsage                 = "PromoCodeUsage"
+	TypeProxy                          = "Proxy"
+	TypeRedeemCode                     = "RedeemCode"
+	TypeSecuritySecret                 = "SecuritySecret"
+	TypeSetting                        = "Setting"
+	TypeSubscriptionPlan               = "SubscriptionPlan"
+	TypeTLSFingerprintProfile          = "TLSFingerprintProfile"
+	TypeUsageCleanupTask               = "UsageCleanupTask"
+	TypeUsageLog                       = "UsageLog"
+	TypeUser                           = "User"
+	TypeUserAllowedGroup               = "UserAllowedGroup"
+	TypeUserAttributeDefinition        = "UserAttributeDefinition"
+	TypeUserAttributeValue             = "UserAttributeValue"
+	TypeUserPlatformQuota              = "UserPlatformQuota"
+	TypeUserSubscription               = "UserSubscription"
 )
 
 // APIKeyMutation represents an operation that mutates the APIKey nodes in the graph.
@@ -5291,6 +5295,2551 @@ func (m *AccountGroupMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown AccountGroup edge %s", name)
+}
+
+// AccountUpstreamMonitorRateMutation represents an operation that mutates the AccountUpstreamMonitorRate nodes in the graph.
+type AccountUpstreamMonitorRateMutation struct {
+	config
+	op                  Op
+	typ                 string
+	id                  *int64
+	created_at          *time.Time
+	updated_at          *time.Time
+	account_id          *int64
+	addaccount_id       *int64
+	provider            *accountupstreammonitorrate.Provider
+	rate_key            *string
+	display_name        *string
+	description         *string
+	ratio               *float64
+	addratio            *float64
+	completion_ratio    *float64
+	addcompletion_ratio *float64
+	first_seen_at       *time.Time
+	last_seen_at        *time.Time
+	clearedFields       map[string]struct{}
+	done                bool
+	oldValue            func(context.Context) (*AccountUpstreamMonitorRate, error)
+	predicates          []predicate.AccountUpstreamMonitorRate
+}
+
+var _ ent.Mutation = (*AccountUpstreamMonitorRateMutation)(nil)
+
+// accountupstreammonitorrateOption allows management of the mutation configuration using functional options.
+type accountupstreammonitorrateOption func(*AccountUpstreamMonitorRateMutation)
+
+// newAccountUpstreamMonitorRateMutation creates new mutation for the AccountUpstreamMonitorRate entity.
+func newAccountUpstreamMonitorRateMutation(c config, op Op, opts ...accountupstreammonitorrateOption) *AccountUpstreamMonitorRateMutation {
+	m := &AccountUpstreamMonitorRateMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAccountUpstreamMonitorRate,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAccountUpstreamMonitorRateID sets the ID field of the mutation.
+func withAccountUpstreamMonitorRateID(id int64) accountupstreammonitorrateOption {
+	return func(m *AccountUpstreamMonitorRateMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AccountUpstreamMonitorRate
+		)
+		m.oldValue = func(ctx context.Context) (*AccountUpstreamMonitorRate, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AccountUpstreamMonitorRate.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAccountUpstreamMonitorRate sets the old AccountUpstreamMonitorRate of the mutation.
+func withAccountUpstreamMonitorRate(node *AccountUpstreamMonitorRate) accountupstreammonitorrateOption {
+	return func(m *AccountUpstreamMonitorRateMutation) {
+		m.oldValue = func(context.Context) (*AccountUpstreamMonitorRate, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AccountUpstreamMonitorRateMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AccountUpstreamMonitorRateMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AccountUpstreamMonitorRateMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AccountUpstreamMonitorRateMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AccountUpstreamMonitorRate.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AccountUpstreamMonitorRateMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AccountUpstreamMonitorRateMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AccountUpstreamMonitorRate entity.
+// If the AccountUpstreamMonitorRate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorRateMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AccountUpstreamMonitorRateMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AccountUpstreamMonitorRateMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AccountUpstreamMonitorRateMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AccountUpstreamMonitorRate entity.
+// If the AccountUpstreamMonitorRate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorRateMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AccountUpstreamMonitorRateMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetAccountID sets the "account_id" field.
+func (m *AccountUpstreamMonitorRateMutation) SetAccountID(i int64) {
+	m.account_id = &i
+	m.addaccount_id = nil
+}
+
+// AccountID returns the value of the "account_id" field in the mutation.
+func (m *AccountUpstreamMonitorRateMutation) AccountID() (r int64, exists bool) {
+	v := m.account_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountID returns the old "account_id" field's value of the AccountUpstreamMonitorRate entity.
+// If the AccountUpstreamMonitorRate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorRateMutation) OldAccountID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountID: %w", err)
+	}
+	return oldValue.AccountID, nil
+}
+
+// AddAccountID adds i to the "account_id" field.
+func (m *AccountUpstreamMonitorRateMutation) AddAccountID(i int64) {
+	if m.addaccount_id != nil {
+		*m.addaccount_id += i
+	} else {
+		m.addaccount_id = &i
+	}
+}
+
+// AddedAccountID returns the value that was added to the "account_id" field in this mutation.
+func (m *AccountUpstreamMonitorRateMutation) AddedAccountID() (r int64, exists bool) {
+	v := m.addaccount_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAccountID resets all changes to the "account_id" field.
+func (m *AccountUpstreamMonitorRateMutation) ResetAccountID() {
+	m.account_id = nil
+	m.addaccount_id = nil
+}
+
+// SetProvider sets the "provider" field.
+func (m *AccountUpstreamMonitorRateMutation) SetProvider(a accountupstreammonitorrate.Provider) {
+	m.provider = &a
+}
+
+// Provider returns the value of the "provider" field in the mutation.
+func (m *AccountUpstreamMonitorRateMutation) Provider() (r accountupstreammonitorrate.Provider, exists bool) {
+	v := m.provider
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProvider returns the old "provider" field's value of the AccountUpstreamMonitorRate entity.
+// If the AccountUpstreamMonitorRate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorRateMutation) OldProvider(ctx context.Context) (v accountupstreammonitorrate.Provider, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProvider is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProvider requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProvider: %w", err)
+	}
+	return oldValue.Provider, nil
+}
+
+// ResetProvider resets all changes to the "provider" field.
+func (m *AccountUpstreamMonitorRateMutation) ResetProvider() {
+	m.provider = nil
+}
+
+// SetRateKey sets the "rate_key" field.
+func (m *AccountUpstreamMonitorRateMutation) SetRateKey(s string) {
+	m.rate_key = &s
+}
+
+// RateKey returns the value of the "rate_key" field in the mutation.
+func (m *AccountUpstreamMonitorRateMutation) RateKey() (r string, exists bool) {
+	v := m.rate_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRateKey returns the old "rate_key" field's value of the AccountUpstreamMonitorRate entity.
+// If the AccountUpstreamMonitorRate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorRateMutation) OldRateKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRateKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRateKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRateKey: %w", err)
+	}
+	return oldValue.RateKey, nil
+}
+
+// ResetRateKey resets all changes to the "rate_key" field.
+func (m *AccountUpstreamMonitorRateMutation) ResetRateKey() {
+	m.rate_key = nil
+}
+
+// SetDisplayName sets the "display_name" field.
+func (m *AccountUpstreamMonitorRateMutation) SetDisplayName(s string) {
+	m.display_name = &s
+}
+
+// DisplayName returns the value of the "display_name" field in the mutation.
+func (m *AccountUpstreamMonitorRateMutation) DisplayName() (r string, exists bool) {
+	v := m.display_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDisplayName returns the old "display_name" field's value of the AccountUpstreamMonitorRate entity.
+// If the AccountUpstreamMonitorRate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorRateMutation) OldDisplayName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDisplayName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDisplayName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDisplayName: %w", err)
+	}
+	return oldValue.DisplayName, nil
+}
+
+// ResetDisplayName resets all changes to the "display_name" field.
+func (m *AccountUpstreamMonitorRateMutation) ResetDisplayName() {
+	m.display_name = nil
+}
+
+// SetDescription sets the "description" field.
+func (m *AccountUpstreamMonitorRateMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *AccountUpstreamMonitorRateMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the AccountUpstreamMonitorRate entity.
+// If the AccountUpstreamMonitorRate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorRateMutation) OldDescription(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ClearDescription clears the value of the "description" field.
+func (m *AccountUpstreamMonitorRateMutation) ClearDescription() {
+	m.description = nil
+	m.clearedFields[accountupstreammonitorrate.FieldDescription] = struct{}{}
+}
+
+// DescriptionCleared returns if the "description" field was cleared in this mutation.
+func (m *AccountUpstreamMonitorRateMutation) DescriptionCleared() bool {
+	_, ok := m.clearedFields[accountupstreammonitorrate.FieldDescription]
+	return ok
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *AccountUpstreamMonitorRateMutation) ResetDescription() {
+	m.description = nil
+	delete(m.clearedFields, accountupstreammonitorrate.FieldDescription)
+}
+
+// SetRatio sets the "ratio" field.
+func (m *AccountUpstreamMonitorRateMutation) SetRatio(f float64) {
+	m.ratio = &f
+	m.addratio = nil
+}
+
+// Ratio returns the value of the "ratio" field in the mutation.
+func (m *AccountUpstreamMonitorRateMutation) Ratio() (r float64, exists bool) {
+	v := m.ratio
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRatio returns the old "ratio" field's value of the AccountUpstreamMonitorRate entity.
+// If the AccountUpstreamMonitorRate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorRateMutation) OldRatio(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRatio is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRatio requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRatio: %w", err)
+	}
+	return oldValue.Ratio, nil
+}
+
+// AddRatio adds f to the "ratio" field.
+func (m *AccountUpstreamMonitorRateMutation) AddRatio(f float64) {
+	if m.addratio != nil {
+		*m.addratio += f
+	} else {
+		m.addratio = &f
+	}
+}
+
+// AddedRatio returns the value that was added to the "ratio" field in this mutation.
+func (m *AccountUpstreamMonitorRateMutation) AddedRatio() (r float64, exists bool) {
+	v := m.addratio
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRatio resets all changes to the "ratio" field.
+func (m *AccountUpstreamMonitorRateMutation) ResetRatio() {
+	m.ratio = nil
+	m.addratio = nil
+}
+
+// SetCompletionRatio sets the "completion_ratio" field.
+func (m *AccountUpstreamMonitorRateMutation) SetCompletionRatio(f float64) {
+	m.completion_ratio = &f
+	m.addcompletion_ratio = nil
+}
+
+// CompletionRatio returns the value of the "completion_ratio" field in the mutation.
+func (m *AccountUpstreamMonitorRateMutation) CompletionRatio() (r float64, exists bool) {
+	v := m.completion_ratio
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompletionRatio returns the old "completion_ratio" field's value of the AccountUpstreamMonitorRate entity.
+// If the AccountUpstreamMonitorRate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorRateMutation) OldCompletionRatio(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompletionRatio is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompletionRatio requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompletionRatio: %w", err)
+	}
+	return oldValue.CompletionRatio, nil
+}
+
+// AddCompletionRatio adds f to the "completion_ratio" field.
+func (m *AccountUpstreamMonitorRateMutation) AddCompletionRatio(f float64) {
+	if m.addcompletion_ratio != nil {
+		*m.addcompletion_ratio += f
+	} else {
+		m.addcompletion_ratio = &f
+	}
+}
+
+// AddedCompletionRatio returns the value that was added to the "completion_ratio" field in this mutation.
+func (m *AccountUpstreamMonitorRateMutation) AddedCompletionRatio() (r float64, exists bool) {
+	v := m.addcompletion_ratio
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearCompletionRatio clears the value of the "completion_ratio" field.
+func (m *AccountUpstreamMonitorRateMutation) ClearCompletionRatio() {
+	m.completion_ratio = nil
+	m.addcompletion_ratio = nil
+	m.clearedFields[accountupstreammonitorrate.FieldCompletionRatio] = struct{}{}
+}
+
+// CompletionRatioCleared returns if the "completion_ratio" field was cleared in this mutation.
+func (m *AccountUpstreamMonitorRateMutation) CompletionRatioCleared() bool {
+	_, ok := m.clearedFields[accountupstreammonitorrate.FieldCompletionRatio]
+	return ok
+}
+
+// ResetCompletionRatio resets all changes to the "completion_ratio" field.
+func (m *AccountUpstreamMonitorRateMutation) ResetCompletionRatio() {
+	m.completion_ratio = nil
+	m.addcompletion_ratio = nil
+	delete(m.clearedFields, accountupstreammonitorrate.FieldCompletionRatio)
+}
+
+// SetFirstSeenAt sets the "first_seen_at" field.
+func (m *AccountUpstreamMonitorRateMutation) SetFirstSeenAt(t time.Time) {
+	m.first_seen_at = &t
+}
+
+// FirstSeenAt returns the value of the "first_seen_at" field in the mutation.
+func (m *AccountUpstreamMonitorRateMutation) FirstSeenAt() (r time.Time, exists bool) {
+	v := m.first_seen_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFirstSeenAt returns the old "first_seen_at" field's value of the AccountUpstreamMonitorRate entity.
+// If the AccountUpstreamMonitorRate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorRateMutation) OldFirstSeenAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFirstSeenAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFirstSeenAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFirstSeenAt: %w", err)
+	}
+	return oldValue.FirstSeenAt, nil
+}
+
+// ResetFirstSeenAt resets all changes to the "first_seen_at" field.
+func (m *AccountUpstreamMonitorRateMutation) ResetFirstSeenAt() {
+	m.first_seen_at = nil
+}
+
+// SetLastSeenAt sets the "last_seen_at" field.
+func (m *AccountUpstreamMonitorRateMutation) SetLastSeenAt(t time.Time) {
+	m.last_seen_at = &t
+}
+
+// LastSeenAt returns the value of the "last_seen_at" field in the mutation.
+func (m *AccountUpstreamMonitorRateMutation) LastSeenAt() (r time.Time, exists bool) {
+	v := m.last_seen_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastSeenAt returns the old "last_seen_at" field's value of the AccountUpstreamMonitorRate entity.
+// If the AccountUpstreamMonitorRate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorRateMutation) OldLastSeenAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastSeenAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastSeenAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastSeenAt: %w", err)
+	}
+	return oldValue.LastSeenAt, nil
+}
+
+// ResetLastSeenAt resets all changes to the "last_seen_at" field.
+func (m *AccountUpstreamMonitorRateMutation) ResetLastSeenAt() {
+	m.last_seen_at = nil
+}
+
+// Where appends a list predicates to the AccountUpstreamMonitorRateMutation builder.
+func (m *AccountUpstreamMonitorRateMutation) Where(ps ...predicate.AccountUpstreamMonitorRate) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AccountUpstreamMonitorRateMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AccountUpstreamMonitorRateMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AccountUpstreamMonitorRate, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AccountUpstreamMonitorRateMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AccountUpstreamMonitorRateMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AccountUpstreamMonitorRate).
+func (m *AccountUpstreamMonitorRateMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AccountUpstreamMonitorRateMutation) Fields() []string {
+	fields := make([]string, 0, 11)
+	if m.created_at != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldUpdatedAt)
+	}
+	if m.account_id != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldAccountID)
+	}
+	if m.provider != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldProvider)
+	}
+	if m.rate_key != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldRateKey)
+	}
+	if m.display_name != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldDisplayName)
+	}
+	if m.description != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldDescription)
+	}
+	if m.ratio != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldRatio)
+	}
+	if m.completion_ratio != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldCompletionRatio)
+	}
+	if m.first_seen_at != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldFirstSeenAt)
+	}
+	if m.last_seen_at != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldLastSeenAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AccountUpstreamMonitorRateMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case accountupstreammonitorrate.FieldCreatedAt:
+		return m.CreatedAt()
+	case accountupstreammonitorrate.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case accountupstreammonitorrate.FieldAccountID:
+		return m.AccountID()
+	case accountupstreammonitorrate.FieldProvider:
+		return m.Provider()
+	case accountupstreammonitorrate.FieldRateKey:
+		return m.RateKey()
+	case accountupstreammonitorrate.FieldDisplayName:
+		return m.DisplayName()
+	case accountupstreammonitorrate.FieldDescription:
+		return m.Description()
+	case accountupstreammonitorrate.FieldRatio:
+		return m.Ratio()
+	case accountupstreammonitorrate.FieldCompletionRatio:
+		return m.CompletionRatio()
+	case accountupstreammonitorrate.FieldFirstSeenAt:
+		return m.FirstSeenAt()
+	case accountupstreammonitorrate.FieldLastSeenAt:
+		return m.LastSeenAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AccountUpstreamMonitorRateMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case accountupstreammonitorrate.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case accountupstreammonitorrate.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case accountupstreammonitorrate.FieldAccountID:
+		return m.OldAccountID(ctx)
+	case accountupstreammonitorrate.FieldProvider:
+		return m.OldProvider(ctx)
+	case accountupstreammonitorrate.FieldRateKey:
+		return m.OldRateKey(ctx)
+	case accountupstreammonitorrate.FieldDisplayName:
+		return m.OldDisplayName(ctx)
+	case accountupstreammonitorrate.FieldDescription:
+		return m.OldDescription(ctx)
+	case accountupstreammonitorrate.FieldRatio:
+		return m.OldRatio(ctx)
+	case accountupstreammonitorrate.FieldCompletionRatio:
+		return m.OldCompletionRatio(ctx)
+	case accountupstreammonitorrate.FieldFirstSeenAt:
+		return m.OldFirstSeenAt(ctx)
+	case accountupstreammonitorrate.FieldLastSeenAt:
+		return m.OldLastSeenAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown AccountUpstreamMonitorRate field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AccountUpstreamMonitorRateMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case accountupstreammonitorrate.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case accountupstreammonitorrate.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case accountupstreammonitorrate.FieldAccountID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountID(v)
+		return nil
+	case accountupstreammonitorrate.FieldProvider:
+		v, ok := value.(accountupstreammonitorrate.Provider)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProvider(v)
+		return nil
+	case accountupstreammonitorrate.FieldRateKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRateKey(v)
+		return nil
+	case accountupstreammonitorrate.FieldDisplayName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDisplayName(v)
+		return nil
+	case accountupstreammonitorrate.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
+		return nil
+	case accountupstreammonitorrate.FieldRatio:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRatio(v)
+		return nil
+	case accountupstreammonitorrate.FieldCompletionRatio:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompletionRatio(v)
+		return nil
+	case accountupstreammonitorrate.FieldFirstSeenAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFirstSeenAt(v)
+		return nil
+	case accountupstreammonitorrate.FieldLastSeenAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastSeenAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AccountUpstreamMonitorRate field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AccountUpstreamMonitorRateMutation) AddedFields() []string {
+	var fields []string
+	if m.addaccount_id != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldAccountID)
+	}
+	if m.addratio != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldRatio)
+	}
+	if m.addcompletion_ratio != nil {
+		fields = append(fields, accountupstreammonitorrate.FieldCompletionRatio)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AccountUpstreamMonitorRateMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case accountupstreammonitorrate.FieldAccountID:
+		return m.AddedAccountID()
+	case accountupstreammonitorrate.FieldRatio:
+		return m.AddedRatio()
+	case accountupstreammonitorrate.FieldCompletionRatio:
+		return m.AddedCompletionRatio()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AccountUpstreamMonitorRateMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case accountupstreammonitorrate.FieldAccountID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAccountID(v)
+		return nil
+	case accountupstreammonitorrate.FieldRatio:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRatio(v)
+		return nil
+	case accountupstreammonitorrate.FieldCompletionRatio:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCompletionRatio(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AccountUpstreamMonitorRate numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AccountUpstreamMonitorRateMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(accountupstreammonitorrate.FieldDescription) {
+		fields = append(fields, accountupstreammonitorrate.FieldDescription)
+	}
+	if m.FieldCleared(accountupstreammonitorrate.FieldCompletionRatio) {
+		fields = append(fields, accountupstreammonitorrate.FieldCompletionRatio)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AccountUpstreamMonitorRateMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AccountUpstreamMonitorRateMutation) ClearField(name string) error {
+	switch name {
+	case accountupstreammonitorrate.FieldDescription:
+		m.ClearDescription()
+		return nil
+	case accountupstreammonitorrate.FieldCompletionRatio:
+		m.ClearCompletionRatio()
+		return nil
+	}
+	return fmt.Errorf("unknown AccountUpstreamMonitorRate nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AccountUpstreamMonitorRateMutation) ResetField(name string) error {
+	switch name {
+	case accountupstreammonitorrate.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case accountupstreammonitorrate.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case accountupstreammonitorrate.FieldAccountID:
+		m.ResetAccountID()
+		return nil
+	case accountupstreammonitorrate.FieldProvider:
+		m.ResetProvider()
+		return nil
+	case accountupstreammonitorrate.FieldRateKey:
+		m.ResetRateKey()
+		return nil
+	case accountupstreammonitorrate.FieldDisplayName:
+		m.ResetDisplayName()
+		return nil
+	case accountupstreammonitorrate.FieldDescription:
+		m.ResetDescription()
+		return nil
+	case accountupstreammonitorrate.FieldRatio:
+		m.ResetRatio()
+		return nil
+	case accountupstreammonitorrate.FieldCompletionRatio:
+		m.ResetCompletionRatio()
+		return nil
+	case accountupstreammonitorrate.FieldFirstSeenAt:
+		m.ResetFirstSeenAt()
+		return nil
+	case accountupstreammonitorrate.FieldLastSeenAt:
+		m.ResetLastSeenAt()
+		return nil
+	}
+	return fmt.Errorf("unknown AccountUpstreamMonitorRate field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AccountUpstreamMonitorRateMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AccountUpstreamMonitorRateMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AccountUpstreamMonitorRateMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AccountUpstreamMonitorRateMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AccountUpstreamMonitorRateMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AccountUpstreamMonitorRateMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AccountUpstreamMonitorRateMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown AccountUpstreamMonitorRate unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AccountUpstreamMonitorRateMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown AccountUpstreamMonitorRate edge %s", name)
+}
+
+// AccountUpstreamMonitorSnapshotMutation represents an operation that mutates the AccountUpstreamMonitorSnapshot nodes in the graph.
+type AccountUpstreamMonitorSnapshotMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *int64
+	created_at      *time.Time
+	updated_at      *time.Time
+	account_id      *int64
+	addaccount_id   *int64
+	provider        *accountupstreammonitorsnapshot.Provider
+	status          *accountupstreammonitorsnapshot.Status
+	site_url        *string
+	balance         *float64
+	addbalance      *float64
+	balance_unit    *string
+	quota           *float64
+	addquota        *float64
+	quota_used      *float64
+	addquota_used   *float64
+	today_cost      *float64
+	addtoday_cost   *float64
+	total_cost      *float64
+	addtotal_cost   *float64
+	last_checked_at *time.Time
+	last_success_at *time.Time
+	last_error      *string
+	raw_meta        *map[string]interface{}
+	clearedFields   map[string]struct{}
+	done            bool
+	oldValue        func(context.Context) (*AccountUpstreamMonitorSnapshot, error)
+	predicates      []predicate.AccountUpstreamMonitorSnapshot
+}
+
+var _ ent.Mutation = (*AccountUpstreamMonitorSnapshotMutation)(nil)
+
+// accountupstreammonitorsnapshotOption allows management of the mutation configuration using functional options.
+type accountupstreammonitorsnapshotOption func(*AccountUpstreamMonitorSnapshotMutation)
+
+// newAccountUpstreamMonitorSnapshotMutation creates new mutation for the AccountUpstreamMonitorSnapshot entity.
+func newAccountUpstreamMonitorSnapshotMutation(c config, op Op, opts ...accountupstreammonitorsnapshotOption) *AccountUpstreamMonitorSnapshotMutation {
+	m := &AccountUpstreamMonitorSnapshotMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAccountUpstreamMonitorSnapshot,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAccountUpstreamMonitorSnapshotID sets the ID field of the mutation.
+func withAccountUpstreamMonitorSnapshotID(id int64) accountupstreammonitorsnapshotOption {
+	return func(m *AccountUpstreamMonitorSnapshotMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AccountUpstreamMonitorSnapshot
+		)
+		m.oldValue = func(ctx context.Context) (*AccountUpstreamMonitorSnapshot, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AccountUpstreamMonitorSnapshot.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAccountUpstreamMonitorSnapshot sets the old AccountUpstreamMonitorSnapshot of the mutation.
+func withAccountUpstreamMonitorSnapshot(node *AccountUpstreamMonitorSnapshot) accountupstreammonitorsnapshotOption {
+	return func(m *AccountUpstreamMonitorSnapshotMutation) {
+		m.oldValue = func(context.Context) (*AccountUpstreamMonitorSnapshot, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AccountUpstreamMonitorSnapshotMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AccountUpstreamMonitorSnapshotMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AccountUpstreamMonitorSnapshotMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AccountUpstreamMonitorSnapshot.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetAccountID sets the "account_id" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetAccountID(i int64) {
+	m.account_id = &i
+	m.addaccount_id = nil
+}
+
+// AccountID returns the value of the "account_id" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) AccountID() (r int64, exists bool) {
+	v := m.account_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountID returns the old "account_id" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldAccountID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountID: %w", err)
+	}
+	return oldValue.AccountID, nil
+}
+
+// AddAccountID adds i to the "account_id" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddAccountID(i int64) {
+	if m.addaccount_id != nil {
+		*m.addaccount_id += i
+	} else {
+		m.addaccount_id = &i
+	}
+}
+
+// AddedAccountID returns the value that was added to the "account_id" field in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddedAccountID() (r int64, exists bool) {
+	v := m.addaccount_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAccountID resets all changes to the "account_id" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetAccountID() {
+	m.account_id = nil
+	m.addaccount_id = nil
+}
+
+// SetProvider sets the "provider" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetProvider(a accountupstreammonitorsnapshot.Provider) {
+	m.provider = &a
+}
+
+// Provider returns the value of the "provider" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) Provider() (r accountupstreammonitorsnapshot.Provider, exists bool) {
+	v := m.provider
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProvider returns the old "provider" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldProvider(ctx context.Context) (v accountupstreammonitorsnapshot.Provider, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProvider is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProvider requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProvider: %w", err)
+	}
+	return oldValue.Provider, nil
+}
+
+// ResetProvider resets all changes to the "provider" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetProvider() {
+	m.provider = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetStatus(a accountupstreammonitorsnapshot.Status) {
+	m.status = &a
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) Status() (r accountupstreammonitorsnapshot.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldStatus(ctx context.Context) (v accountupstreammonitorsnapshot.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetSiteURL sets the "site_url" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetSiteURL(s string) {
+	m.site_url = &s
+}
+
+// SiteURL returns the value of the "site_url" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) SiteURL() (r string, exists bool) {
+	v := m.site_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSiteURL returns the old "site_url" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldSiteURL(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSiteURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSiteURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSiteURL: %w", err)
+	}
+	return oldValue.SiteURL, nil
+}
+
+// ClearSiteURL clears the value of the "site_url" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearSiteURL() {
+	m.site_url = nil
+	m.clearedFields[accountupstreammonitorsnapshot.FieldSiteURL] = struct{}{}
+}
+
+// SiteURLCleared returns if the "site_url" field was cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) SiteURLCleared() bool {
+	_, ok := m.clearedFields[accountupstreammonitorsnapshot.FieldSiteURL]
+	return ok
+}
+
+// ResetSiteURL resets all changes to the "site_url" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetSiteURL() {
+	m.site_url = nil
+	delete(m.clearedFields, accountupstreammonitorsnapshot.FieldSiteURL)
+}
+
+// SetBalance sets the "balance" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetBalance(f float64) {
+	m.balance = &f
+	m.addbalance = nil
+}
+
+// Balance returns the value of the "balance" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) Balance() (r float64, exists bool) {
+	v := m.balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBalance returns the old "balance" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldBalance(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBalance is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBalance requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBalance: %w", err)
+	}
+	return oldValue.Balance, nil
+}
+
+// AddBalance adds f to the "balance" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddBalance(f float64) {
+	if m.addbalance != nil {
+		*m.addbalance += f
+	} else {
+		m.addbalance = &f
+	}
+}
+
+// AddedBalance returns the value that was added to the "balance" field in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddedBalance() (r float64, exists bool) {
+	v := m.addbalance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearBalance clears the value of the "balance" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearBalance() {
+	m.balance = nil
+	m.addbalance = nil
+	m.clearedFields[accountupstreammonitorsnapshot.FieldBalance] = struct{}{}
+}
+
+// BalanceCleared returns if the "balance" field was cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) BalanceCleared() bool {
+	_, ok := m.clearedFields[accountupstreammonitorsnapshot.FieldBalance]
+	return ok
+}
+
+// ResetBalance resets all changes to the "balance" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetBalance() {
+	m.balance = nil
+	m.addbalance = nil
+	delete(m.clearedFields, accountupstreammonitorsnapshot.FieldBalance)
+}
+
+// SetBalanceUnit sets the "balance_unit" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetBalanceUnit(s string) {
+	m.balance_unit = &s
+}
+
+// BalanceUnit returns the value of the "balance_unit" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) BalanceUnit() (r string, exists bool) {
+	v := m.balance_unit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBalanceUnit returns the old "balance_unit" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldBalanceUnit(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBalanceUnit is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBalanceUnit requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBalanceUnit: %w", err)
+	}
+	return oldValue.BalanceUnit, nil
+}
+
+// ClearBalanceUnit clears the value of the "balance_unit" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearBalanceUnit() {
+	m.balance_unit = nil
+	m.clearedFields[accountupstreammonitorsnapshot.FieldBalanceUnit] = struct{}{}
+}
+
+// BalanceUnitCleared returns if the "balance_unit" field was cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) BalanceUnitCleared() bool {
+	_, ok := m.clearedFields[accountupstreammonitorsnapshot.FieldBalanceUnit]
+	return ok
+}
+
+// ResetBalanceUnit resets all changes to the "balance_unit" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetBalanceUnit() {
+	m.balance_unit = nil
+	delete(m.clearedFields, accountupstreammonitorsnapshot.FieldBalanceUnit)
+}
+
+// SetQuota sets the "quota" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetQuota(f float64) {
+	m.quota = &f
+	m.addquota = nil
+}
+
+// Quota returns the value of the "quota" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) Quota() (r float64, exists bool) {
+	v := m.quota
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuota returns the old "quota" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldQuota(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuota is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuota requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuota: %w", err)
+	}
+	return oldValue.Quota, nil
+}
+
+// AddQuota adds f to the "quota" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddQuota(f float64) {
+	if m.addquota != nil {
+		*m.addquota += f
+	} else {
+		m.addquota = &f
+	}
+}
+
+// AddedQuota returns the value that was added to the "quota" field in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddedQuota() (r float64, exists bool) {
+	v := m.addquota
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearQuota clears the value of the "quota" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearQuota() {
+	m.quota = nil
+	m.addquota = nil
+	m.clearedFields[accountupstreammonitorsnapshot.FieldQuota] = struct{}{}
+}
+
+// QuotaCleared returns if the "quota" field was cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) QuotaCleared() bool {
+	_, ok := m.clearedFields[accountupstreammonitorsnapshot.FieldQuota]
+	return ok
+}
+
+// ResetQuota resets all changes to the "quota" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetQuota() {
+	m.quota = nil
+	m.addquota = nil
+	delete(m.clearedFields, accountupstreammonitorsnapshot.FieldQuota)
+}
+
+// SetQuotaUsed sets the "quota_used" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetQuotaUsed(f float64) {
+	m.quota_used = &f
+	m.addquota_used = nil
+}
+
+// QuotaUsed returns the value of the "quota_used" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) QuotaUsed() (r float64, exists bool) {
+	v := m.quota_used
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaUsed returns the old "quota_used" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldQuotaUsed(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaUsed is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaUsed requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaUsed: %w", err)
+	}
+	return oldValue.QuotaUsed, nil
+}
+
+// AddQuotaUsed adds f to the "quota_used" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddQuotaUsed(f float64) {
+	if m.addquota_used != nil {
+		*m.addquota_used += f
+	} else {
+		m.addquota_used = &f
+	}
+}
+
+// AddedQuotaUsed returns the value that was added to the "quota_used" field in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddedQuotaUsed() (r float64, exists bool) {
+	v := m.addquota_used
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearQuotaUsed clears the value of the "quota_used" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearQuotaUsed() {
+	m.quota_used = nil
+	m.addquota_used = nil
+	m.clearedFields[accountupstreammonitorsnapshot.FieldQuotaUsed] = struct{}{}
+}
+
+// QuotaUsedCleared returns if the "quota_used" field was cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) QuotaUsedCleared() bool {
+	_, ok := m.clearedFields[accountupstreammonitorsnapshot.FieldQuotaUsed]
+	return ok
+}
+
+// ResetQuotaUsed resets all changes to the "quota_used" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetQuotaUsed() {
+	m.quota_used = nil
+	m.addquota_used = nil
+	delete(m.clearedFields, accountupstreammonitorsnapshot.FieldQuotaUsed)
+}
+
+// SetTodayCost sets the "today_cost" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetTodayCost(f float64) {
+	m.today_cost = &f
+	m.addtoday_cost = nil
+}
+
+// TodayCost returns the value of the "today_cost" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) TodayCost() (r float64, exists bool) {
+	v := m.today_cost
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTodayCost returns the old "today_cost" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldTodayCost(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTodayCost is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTodayCost requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTodayCost: %w", err)
+	}
+	return oldValue.TodayCost, nil
+}
+
+// AddTodayCost adds f to the "today_cost" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddTodayCost(f float64) {
+	if m.addtoday_cost != nil {
+		*m.addtoday_cost += f
+	} else {
+		m.addtoday_cost = &f
+	}
+}
+
+// AddedTodayCost returns the value that was added to the "today_cost" field in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddedTodayCost() (r float64, exists bool) {
+	v := m.addtoday_cost
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearTodayCost clears the value of the "today_cost" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearTodayCost() {
+	m.today_cost = nil
+	m.addtoday_cost = nil
+	m.clearedFields[accountupstreammonitorsnapshot.FieldTodayCost] = struct{}{}
+}
+
+// TodayCostCleared returns if the "today_cost" field was cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) TodayCostCleared() bool {
+	_, ok := m.clearedFields[accountupstreammonitorsnapshot.FieldTodayCost]
+	return ok
+}
+
+// ResetTodayCost resets all changes to the "today_cost" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetTodayCost() {
+	m.today_cost = nil
+	m.addtoday_cost = nil
+	delete(m.clearedFields, accountupstreammonitorsnapshot.FieldTodayCost)
+}
+
+// SetTotalCost sets the "total_cost" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetTotalCost(f float64) {
+	m.total_cost = &f
+	m.addtotal_cost = nil
+}
+
+// TotalCost returns the value of the "total_cost" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) TotalCost() (r float64, exists bool) {
+	v := m.total_cost
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTotalCost returns the old "total_cost" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldTotalCost(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTotalCost is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTotalCost requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTotalCost: %w", err)
+	}
+	return oldValue.TotalCost, nil
+}
+
+// AddTotalCost adds f to the "total_cost" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddTotalCost(f float64) {
+	if m.addtotal_cost != nil {
+		*m.addtotal_cost += f
+	} else {
+		m.addtotal_cost = &f
+	}
+}
+
+// AddedTotalCost returns the value that was added to the "total_cost" field in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddedTotalCost() (r float64, exists bool) {
+	v := m.addtotal_cost
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearTotalCost clears the value of the "total_cost" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearTotalCost() {
+	m.total_cost = nil
+	m.addtotal_cost = nil
+	m.clearedFields[accountupstreammonitorsnapshot.FieldTotalCost] = struct{}{}
+}
+
+// TotalCostCleared returns if the "total_cost" field was cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) TotalCostCleared() bool {
+	_, ok := m.clearedFields[accountupstreammonitorsnapshot.FieldTotalCost]
+	return ok
+}
+
+// ResetTotalCost resets all changes to the "total_cost" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetTotalCost() {
+	m.total_cost = nil
+	m.addtotal_cost = nil
+	delete(m.clearedFields, accountupstreammonitorsnapshot.FieldTotalCost)
+}
+
+// SetLastCheckedAt sets the "last_checked_at" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetLastCheckedAt(t time.Time) {
+	m.last_checked_at = &t
+}
+
+// LastCheckedAt returns the value of the "last_checked_at" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) LastCheckedAt() (r time.Time, exists bool) {
+	v := m.last_checked_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastCheckedAt returns the old "last_checked_at" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldLastCheckedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastCheckedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastCheckedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastCheckedAt: %w", err)
+	}
+	return oldValue.LastCheckedAt, nil
+}
+
+// ClearLastCheckedAt clears the value of the "last_checked_at" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearLastCheckedAt() {
+	m.last_checked_at = nil
+	m.clearedFields[accountupstreammonitorsnapshot.FieldLastCheckedAt] = struct{}{}
+}
+
+// LastCheckedAtCleared returns if the "last_checked_at" field was cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) LastCheckedAtCleared() bool {
+	_, ok := m.clearedFields[accountupstreammonitorsnapshot.FieldLastCheckedAt]
+	return ok
+}
+
+// ResetLastCheckedAt resets all changes to the "last_checked_at" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetLastCheckedAt() {
+	m.last_checked_at = nil
+	delete(m.clearedFields, accountupstreammonitorsnapshot.FieldLastCheckedAt)
+}
+
+// SetLastSuccessAt sets the "last_success_at" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetLastSuccessAt(t time.Time) {
+	m.last_success_at = &t
+}
+
+// LastSuccessAt returns the value of the "last_success_at" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) LastSuccessAt() (r time.Time, exists bool) {
+	v := m.last_success_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastSuccessAt returns the old "last_success_at" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldLastSuccessAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastSuccessAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastSuccessAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastSuccessAt: %w", err)
+	}
+	return oldValue.LastSuccessAt, nil
+}
+
+// ClearLastSuccessAt clears the value of the "last_success_at" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearLastSuccessAt() {
+	m.last_success_at = nil
+	m.clearedFields[accountupstreammonitorsnapshot.FieldLastSuccessAt] = struct{}{}
+}
+
+// LastSuccessAtCleared returns if the "last_success_at" field was cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) LastSuccessAtCleared() bool {
+	_, ok := m.clearedFields[accountupstreammonitorsnapshot.FieldLastSuccessAt]
+	return ok
+}
+
+// ResetLastSuccessAt resets all changes to the "last_success_at" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetLastSuccessAt() {
+	m.last_success_at = nil
+	delete(m.clearedFields, accountupstreammonitorsnapshot.FieldLastSuccessAt)
+}
+
+// SetLastError sets the "last_error" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetLastError(s string) {
+	m.last_error = &s
+}
+
+// LastError returns the value of the "last_error" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) LastError() (r string, exists bool) {
+	v := m.last_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastError returns the old "last_error" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldLastError(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastError: %w", err)
+	}
+	return oldValue.LastError, nil
+}
+
+// ClearLastError clears the value of the "last_error" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearLastError() {
+	m.last_error = nil
+	m.clearedFields[accountupstreammonitorsnapshot.FieldLastError] = struct{}{}
+}
+
+// LastErrorCleared returns if the "last_error" field was cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) LastErrorCleared() bool {
+	_, ok := m.clearedFields[accountupstreammonitorsnapshot.FieldLastError]
+	return ok
+}
+
+// ResetLastError resets all changes to the "last_error" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetLastError() {
+	m.last_error = nil
+	delete(m.clearedFields, accountupstreammonitorsnapshot.FieldLastError)
+}
+
+// SetRawMeta sets the "raw_meta" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetRawMeta(value map[string]interface{}) {
+	m.raw_meta = &value
+}
+
+// RawMeta returns the value of the "raw_meta" field in the mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) RawMeta() (r map[string]interface{}, exists bool) {
+	v := m.raw_meta
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRawMeta returns the old "raw_meta" field's value of the AccountUpstreamMonitorSnapshot entity.
+// If the AccountUpstreamMonitorSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldRawMeta(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRawMeta is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRawMeta requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRawMeta: %w", err)
+	}
+	return oldValue.RawMeta, nil
+}
+
+// ResetRawMeta resets all changes to the "raw_meta" field.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetRawMeta() {
+	m.raw_meta = nil
+}
+
+// Where appends a list predicates to the AccountUpstreamMonitorSnapshotMutation builder.
+func (m *AccountUpstreamMonitorSnapshotMutation) Where(ps ...predicate.AccountUpstreamMonitorSnapshot) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AccountUpstreamMonitorSnapshotMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AccountUpstreamMonitorSnapshotMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AccountUpstreamMonitorSnapshot, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AccountUpstreamMonitorSnapshotMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AccountUpstreamMonitorSnapshot).
+func (m *AccountUpstreamMonitorSnapshotMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AccountUpstreamMonitorSnapshotMutation) Fields() []string {
+	fields := make([]string, 0, 16)
+	if m.created_at != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldUpdatedAt)
+	}
+	if m.account_id != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldAccountID)
+	}
+	if m.provider != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldProvider)
+	}
+	if m.status != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldStatus)
+	}
+	if m.site_url != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldSiteURL)
+	}
+	if m.balance != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldBalance)
+	}
+	if m.balance_unit != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldBalanceUnit)
+	}
+	if m.quota != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldQuota)
+	}
+	if m.quota_used != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldQuotaUsed)
+	}
+	if m.today_cost != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldTodayCost)
+	}
+	if m.total_cost != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldTotalCost)
+	}
+	if m.last_checked_at != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldLastCheckedAt)
+	}
+	if m.last_success_at != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldLastSuccessAt)
+	}
+	if m.last_error != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldLastError)
+	}
+	if m.raw_meta != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldRawMeta)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AccountUpstreamMonitorSnapshotMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case accountupstreammonitorsnapshot.FieldCreatedAt:
+		return m.CreatedAt()
+	case accountupstreammonitorsnapshot.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case accountupstreammonitorsnapshot.FieldAccountID:
+		return m.AccountID()
+	case accountupstreammonitorsnapshot.FieldProvider:
+		return m.Provider()
+	case accountupstreammonitorsnapshot.FieldStatus:
+		return m.Status()
+	case accountupstreammonitorsnapshot.FieldSiteURL:
+		return m.SiteURL()
+	case accountupstreammonitorsnapshot.FieldBalance:
+		return m.Balance()
+	case accountupstreammonitorsnapshot.FieldBalanceUnit:
+		return m.BalanceUnit()
+	case accountupstreammonitorsnapshot.FieldQuota:
+		return m.Quota()
+	case accountupstreammonitorsnapshot.FieldQuotaUsed:
+		return m.QuotaUsed()
+	case accountupstreammonitorsnapshot.FieldTodayCost:
+		return m.TodayCost()
+	case accountupstreammonitorsnapshot.FieldTotalCost:
+		return m.TotalCost()
+	case accountupstreammonitorsnapshot.FieldLastCheckedAt:
+		return m.LastCheckedAt()
+	case accountupstreammonitorsnapshot.FieldLastSuccessAt:
+		return m.LastSuccessAt()
+	case accountupstreammonitorsnapshot.FieldLastError:
+		return m.LastError()
+	case accountupstreammonitorsnapshot.FieldRawMeta:
+		return m.RawMeta()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AccountUpstreamMonitorSnapshotMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case accountupstreammonitorsnapshot.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case accountupstreammonitorsnapshot.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case accountupstreammonitorsnapshot.FieldAccountID:
+		return m.OldAccountID(ctx)
+	case accountupstreammonitorsnapshot.FieldProvider:
+		return m.OldProvider(ctx)
+	case accountupstreammonitorsnapshot.FieldStatus:
+		return m.OldStatus(ctx)
+	case accountupstreammonitorsnapshot.FieldSiteURL:
+		return m.OldSiteURL(ctx)
+	case accountupstreammonitorsnapshot.FieldBalance:
+		return m.OldBalance(ctx)
+	case accountupstreammonitorsnapshot.FieldBalanceUnit:
+		return m.OldBalanceUnit(ctx)
+	case accountupstreammonitorsnapshot.FieldQuota:
+		return m.OldQuota(ctx)
+	case accountupstreammonitorsnapshot.FieldQuotaUsed:
+		return m.OldQuotaUsed(ctx)
+	case accountupstreammonitorsnapshot.FieldTodayCost:
+		return m.OldTodayCost(ctx)
+	case accountupstreammonitorsnapshot.FieldTotalCost:
+		return m.OldTotalCost(ctx)
+	case accountupstreammonitorsnapshot.FieldLastCheckedAt:
+		return m.OldLastCheckedAt(ctx)
+	case accountupstreammonitorsnapshot.FieldLastSuccessAt:
+		return m.OldLastSuccessAt(ctx)
+	case accountupstreammonitorsnapshot.FieldLastError:
+		return m.OldLastError(ctx)
+	case accountupstreammonitorsnapshot.FieldRawMeta:
+		return m.OldRawMeta(ctx)
+	}
+	return nil, fmt.Errorf("unknown AccountUpstreamMonitorSnapshot field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AccountUpstreamMonitorSnapshotMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case accountupstreammonitorsnapshot.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldAccountID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountID(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldProvider:
+		v, ok := value.(accountupstreammonitorsnapshot.Provider)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProvider(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldStatus:
+		v, ok := value.(accountupstreammonitorsnapshot.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldSiteURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSiteURL(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldBalance:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBalance(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldBalanceUnit:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBalanceUnit(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldQuota:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuota(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldQuotaUsed:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaUsed(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldTodayCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTodayCost(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldTotalCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTotalCost(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldLastCheckedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastCheckedAt(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldLastSuccessAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastSuccessAt(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldLastError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastError(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldRawMeta:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRawMeta(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AccountUpstreamMonitorSnapshot field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddedFields() []string {
+	var fields []string
+	if m.addaccount_id != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldAccountID)
+	}
+	if m.addbalance != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldBalance)
+	}
+	if m.addquota != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldQuota)
+	}
+	if m.addquota_used != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldQuotaUsed)
+	}
+	if m.addtoday_cost != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldTodayCost)
+	}
+	if m.addtotal_cost != nil {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldTotalCost)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case accountupstreammonitorsnapshot.FieldAccountID:
+		return m.AddedAccountID()
+	case accountupstreammonitorsnapshot.FieldBalance:
+		return m.AddedBalance()
+	case accountupstreammonitorsnapshot.FieldQuota:
+		return m.AddedQuota()
+	case accountupstreammonitorsnapshot.FieldQuotaUsed:
+		return m.AddedQuotaUsed()
+	case accountupstreammonitorsnapshot.FieldTodayCost:
+		return m.AddedTodayCost()
+	case accountupstreammonitorsnapshot.FieldTotalCost:
+		return m.AddedTotalCost()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case accountupstreammonitorsnapshot.FieldAccountID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAccountID(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldBalance:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBalance(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldQuota:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddQuota(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldQuotaUsed:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddQuotaUsed(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldTodayCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTodayCost(v)
+		return nil
+	case accountupstreammonitorsnapshot.FieldTotalCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTotalCost(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AccountUpstreamMonitorSnapshot numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(accountupstreammonitorsnapshot.FieldSiteURL) {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldSiteURL)
+	}
+	if m.FieldCleared(accountupstreammonitorsnapshot.FieldBalance) {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldBalance)
+	}
+	if m.FieldCleared(accountupstreammonitorsnapshot.FieldBalanceUnit) {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldBalanceUnit)
+	}
+	if m.FieldCleared(accountupstreammonitorsnapshot.FieldQuota) {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldQuota)
+	}
+	if m.FieldCleared(accountupstreammonitorsnapshot.FieldQuotaUsed) {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldQuotaUsed)
+	}
+	if m.FieldCleared(accountupstreammonitorsnapshot.FieldTodayCost) {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldTodayCost)
+	}
+	if m.FieldCleared(accountupstreammonitorsnapshot.FieldTotalCost) {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldTotalCost)
+	}
+	if m.FieldCleared(accountupstreammonitorsnapshot.FieldLastCheckedAt) {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldLastCheckedAt)
+	}
+	if m.FieldCleared(accountupstreammonitorsnapshot.FieldLastSuccessAt) {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldLastSuccessAt)
+	}
+	if m.FieldCleared(accountupstreammonitorsnapshot.FieldLastError) {
+		fields = append(fields, accountupstreammonitorsnapshot.FieldLastError)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearField(name string) error {
+	switch name {
+	case accountupstreammonitorsnapshot.FieldSiteURL:
+		m.ClearSiteURL()
+		return nil
+	case accountupstreammonitorsnapshot.FieldBalance:
+		m.ClearBalance()
+		return nil
+	case accountupstreammonitorsnapshot.FieldBalanceUnit:
+		m.ClearBalanceUnit()
+		return nil
+	case accountupstreammonitorsnapshot.FieldQuota:
+		m.ClearQuota()
+		return nil
+	case accountupstreammonitorsnapshot.FieldQuotaUsed:
+		m.ClearQuotaUsed()
+		return nil
+	case accountupstreammonitorsnapshot.FieldTodayCost:
+		m.ClearTodayCost()
+		return nil
+	case accountupstreammonitorsnapshot.FieldTotalCost:
+		m.ClearTotalCost()
+		return nil
+	case accountupstreammonitorsnapshot.FieldLastCheckedAt:
+		m.ClearLastCheckedAt()
+		return nil
+	case accountupstreammonitorsnapshot.FieldLastSuccessAt:
+		m.ClearLastSuccessAt()
+		return nil
+	case accountupstreammonitorsnapshot.FieldLastError:
+		m.ClearLastError()
+		return nil
+	}
+	return fmt.Errorf("unknown AccountUpstreamMonitorSnapshot nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetField(name string) error {
+	switch name {
+	case accountupstreammonitorsnapshot.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case accountupstreammonitorsnapshot.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case accountupstreammonitorsnapshot.FieldAccountID:
+		m.ResetAccountID()
+		return nil
+	case accountupstreammonitorsnapshot.FieldProvider:
+		m.ResetProvider()
+		return nil
+	case accountupstreammonitorsnapshot.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case accountupstreammonitorsnapshot.FieldSiteURL:
+		m.ResetSiteURL()
+		return nil
+	case accountupstreammonitorsnapshot.FieldBalance:
+		m.ResetBalance()
+		return nil
+	case accountupstreammonitorsnapshot.FieldBalanceUnit:
+		m.ResetBalanceUnit()
+		return nil
+	case accountupstreammonitorsnapshot.FieldQuota:
+		m.ResetQuota()
+		return nil
+	case accountupstreammonitorsnapshot.FieldQuotaUsed:
+		m.ResetQuotaUsed()
+		return nil
+	case accountupstreammonitorsnapshot.FieldTodayCost:
+		m.ResetTodayCost()
+		return nil
+	case accountupstreammonitorsnapshot.FieldTotalCost:
+		m.ResetTotalCost()
+		return nil
+	case accountupstreammonitorsnapshot.FieldLastCheckedAt:
+		m.ResetLastCheckedAt()
+		return nil
+	case accountupstreammonitorsnapshot.FieldLastSuccessAt:
+		m.ResetLastSuccessAt()
+		return nil
+	case accountupstreammonitorsnapshot.FieldLastError:
+		m.ResetLastError()
+		return nil
+	case accountupstreammonitorsnapshot.FieldRawMeta:
+		m.ResetRawMeta()
+		return nil
+	}
+	return fmt.Errorf("unknown AccountUpstreamMonitorSnapshot field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AccountUpstreamMonitorSnapshotMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AccountUpstreamMonitorSnapshotMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown AccountUpstreamMonitorSnapshot unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AccountUpstreamMonitorSnapshotMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown AccountUpstreamMonitorSnapshot edge %s", name)
 }
 
 // AnnouncementMutation represents an operation that mutates the Announcement nodes in the graph.

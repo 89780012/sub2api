@@ -925,6 +925,37 @@ export interface TempUnschedulableStatus {
   state?: TempUnschedulableState
 }
 
+export type AccountUpstreamMonitorProvider = 'sub2api' | 'newapi' | 'unsupported' | 'unknown'
+export type AccountUpstreamMonitorStatus = 'unknown' | 'unsupported' | 'success' | 'failed'
+
+export interface AccountUpstreamMonitorRate {
+  rate_key: string
+  display_name: string
+  description?: string | null
+  ratio: number
+  completion_ratio?: number | null
+  first_seen_at?: string | null
+  last_seen_at?: string | null
+}
+
+export interface AccountUpstreamMonitorSnapshot {
+  account_id: number
+  provider: AccountUpstreamMonitorProvider
+  status: AccountUpstreamMonitorStatus
+  site_url?: string | null
+  balance?: number | null
+  balance_unit?: string | null
+  quota?: number | null
+  quota_used?: number | null
+  today_cost?: number | null
+  total_cost?: number | null
+  last_checked_at?: string | null
+  last_success_at?: string | null
+  last_error?: string | null
+  raw_meta?: Record<string, unknown>
+  rates: AccountUpstreamMonitorRate[]
+}
+
 export interface Account {
   id: number
   name: string

@@ -238,6 +238,10 @@ type SystemSettings struct {
 	ChannelMonitorEnabled                bool `json:"channel_monitor_enabled"`
 	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
 
+	// Account upstream monitor feature switch
+	AccountUpstreamMonitorEnabled         bool `json:"account_upstream_monitor_enabled"`
+	AccountUpstreamMonitorIntervalMinutes int  `json:"account_upstream_monitor_interval_minutes"`
+
 	// Available Channels feature switch (user-facing aggregate view)
 	AvailableChannelsEnabled bool `json:"available_channels_enabled"`
 
@@ -313,6 +317,9 @@ type PublicSettings struct {
 
 	ChannelMonitorEnabled                bool `json:"channel_monitor_enabled"`
 	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
+
+	AccountUpstreamMonitorEnabled         bool `json:"account_upstream_monitor_enabled"`
+	AccountUpstreamMonitorIntervalMinutes int  `json:"account_upstream_monitor_interval_minutes"`
 
 	AvailableChannelsEnabled bool `json:"available_channels_enabled"`
 

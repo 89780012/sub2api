@@ -604,6 +604,10 @@ export interface SystemSettings {
   channel_monitor_enabled: boolean;
   channel_monitor_default_interval_seconds: number;
 
+  // Account upstream monitor feature switch
+  account_upstream_monitor_enabled: boolean;
+  account_upstream_monitor_interval_minutes: number;
+
   // Available Channels feature switch
   available_channels_enabled: boolean;
 
@@ -836,6 +840,10 @@ export interface UpdateSettingsRequest {
   // Channel Monitor feature switch
   channel_monitor_enabled?: boolean;
   channel_monitor_default_interval_seconds?: number;
+
+  // Account upstream monitor feature switch
+  account_upstream_monitor_enabled?: boolean;
+  account_upstream_monitor_interval_minutes?: number;
 
   // Available Channels feature switch
   available_channels_enabled?: boolean;

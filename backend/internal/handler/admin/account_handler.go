@@ -58,6 +58,7 @@ type AccountHandler struct {
 	sessionLimitCache       service.SessionLimitCache
 	rpmCache                service.RPMCache
 	tokenCacheInvalidator   service.TokenCacheInvalidator
+	upstreamMonitorService  *service.AccountUpstreamMonitorService
 }
 
 // NewAccountHandler creates a new admin account handler
@@ -75,7 +76,12 @@ func NewAccountHandler(
 	sessionLimitCache service.SessionLimitCache,
 	rpmCache service.RPMCache,
 	tokenCacheInvalidator service.TokenCacheInvalidator,
+	upstreamMonitorServices ...*service.AccountUpstreamMonitorService,
 ) *AccountHandler {
+	var upstreamMonitorService *service.AccountUpstreamMonitorService
+	if len(upstreamMonitorServices) > 0 {
+		upstreamMonitorService = upstreamMonitorServices[0]
+	}
 	return &AccountHandler{
 		adminService:            adminService,
 		oauthService:            oauthService,
@@ -90,6 +96,7 @@ func NewAccountHandler(
 		sessionLimitCache:       sessionLimitCache,
 		rpmCache:                rpmCache,
 		tokenCacheInvalidator:   tokenCacheInvalidator,
+		upstreamMonitorService:  upstreamMonitorService,
 	}
 }
 
@@ -148,6 +155,10 @@ type BulkUpdateAccountsRequest struct {
 	Credentials             map[string]any            `json:"credentials"`
 	Extra                   map[string]any            `json:"extra"`
 	ConfirmMixedChannelRisk *bool                     `json:"confirm_mixed_channel_risk"` // 用户确认混合渠道风险
+}
+
+type accountUpstreamMonitorBatchRequest struct {
+	IDs []int64 `json:"ids" binding:"required"`
 }
 
 type BulkUpdateAccountFilters struct {
@@ -464,6 +475,63 @@ func (h *AccountHandler) GetByID(c *gin.Context) {
 	}
 
 	response.Success(c, h.buildAccountResponseWithRuntime(c.Request.Context(), account))
+}
+
+// GetUpstreamMonitor returns the latest local upstream monitor snapshot.
+func (h *AccountHandler) GetUpstreamMonitor(c *gin.Context) {
+	if h.upstreamMonitorService == nil {
+		response.ErrorFrom(c, infraerrors.ServiceUnavailable("ACCOUNT_UPSTREAM_MONITOR_UNAVAILABLE", "account upstream monitor service unavailable"))
+		return
+	}
+	accountID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || accountID <= 0 {
+		response.BadRequest(c, "Invalid account ID")
+		return
+	}
+	snapshot, err := h.upstreamMonitorService.Get(c.Request.Context(), accountID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, snapshot)
+}
+
+// GetUpstreamMonitorBatch returns latest local upstream monitor snapshots for account list rows.
+func (h *AccountHandler) GetUpstreamMonitorBatch(c *gin.Context) {
+	if h.upstreamMonitorService == nil {
+		response.ErrorFrom(c, infraerrors.ServiceUnavailable("ACCOUNT_UPSTREAM_MONITOR_UNAVAILABLE", "account upstream monitor service unavailable"))
+		return
+	}
+	var req accountUpstreamMonitorBatchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	snapshots, err := h.upstreamMonitorService.GetBatch(c.Request.Context(), req.IDs)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, gin.H{"items": snapshots})
+}
+
+// RefreshUpstreamMonitor refreshes only one account's read-only upstream monitor snapshot.
+func (h *AccountHandler) RefreshUpstreamMonitor(c *gin.Context) {
+	if h.upstreamMonitorService == nil {
+		response.ErrorFrom(c, infraerrors.ServiceUnavailable("ACCOUNT_UPSTREAM_MONITOR_UNAVAILABLE", "account upstream monitor service unavailable"))
+		return
+	}
+	accountID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || accountID <= 0 {
+		response.BadRequest(c, "Invalid account ID")
+		return
+	}
+	snapshot, err := h.upstreamMonitorService.RefreshAccount(c.Request.Context(), accountID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, snapshot)
 }
 
 // CheckMixedChannel handles checking mixed channel risk for account-group binding.

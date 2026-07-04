@@ -7215,6 +7215,9 @@ const form = reactive<SettingsForm>({
   // Channel Monitor feature switch
   channel_monitor_enabled: true,
   channel_monitor_default_interval_seconds: 60,
+  // Account upstream monitor feature switch
+  account_upstream_monitor_enabled: true,
+  account_upstream_monitor_interval_minutes: 60,
   // Available Channels feature switch
   available_channels_enabled: false,
   // Affiliate (邀请返利) feature switch

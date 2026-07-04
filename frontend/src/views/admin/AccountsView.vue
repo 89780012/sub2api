@@ -270,6 +270,66 @@
               :error="todayStatsError"
             />
           </template>
+          <template #cell-upstream_monitor="{ row }">
+            <div class="min-w-[220px] max-w-[280px] space-y-1.5">
+              <div class="flex items-center gap-2">
+                <span
+                  class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium"
+                  :class="getUpstreamMonitorStatusClass(getUpstreamMonitorSnapshot(row))"
+                  :title="getUpstreamMonitorSnapshot(row)?.last_error || ''"
+                >
+                  {{ getUpstreamMonitorStatusLabel(getUpstreamMonitorSnapshot(row)) }}
+                </span>
+                <span
+                  v-if="getUpstreamMonitorProviderLabel(getUpstreamMonitorSnapshot(row))"
+                  class="text-xs text-gray-500 dark:text-gray-400"
+                >
+                  {{ getUpstreamMonitorProviderLabel(getUpstreamMonitorSnapshot(row)) }}
+                </span>
+                <button
+                  class="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-400 dark:hover:bg-dark-700 dark:hover:text-primary-300"
+                  :disabled="upstreamMonitorRefreshing.has(row.id)"
+                  :title="t('admin.accounts.upstreamMonitor.refresh')"
+                  @click.stop="handleRefreshUpstreamMonitor(row)"
+                >
+                  <Icon name="refresh" size="xs" :class="{ 'animate-spin': upstreamMonitorRefreshing.has(row.id) }" />
+                </button>
+              </div>
+              <div class="text-xs text-gray-600 dark:text-gray-300">
+                {{ t('admin.accounts.upstreamMonitor.balance') }}: {{ formatUpstreamBalance(getUpstreamMonitorSnapshot(row)) }}
+              </div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">
+                {{ t('admin.accounts.upstreamMonitor.checkedAt') }}: {{ getUpstreamMonitorTime(getUpstreamMonitorSnapshot(row)) }}
+              </div>
+              <div
+                v-if="getUpstreamMonitorSnapshot(row)?.last_error && getUpstreamMonitorSnapshot(row)?.status !== 'success'"
+                class="max-w-[260px] truncate text-xs text-rose-600 dark:text-rose-300"
+                :title="getUpstreamMonitorSnapshot(row)?.last_error || ''"
+              >
+                {{ getUpstreamMonitorSnapshot(row)?.last_error }}
+              </div>
+              <div v-if="getUpstreamMonitorSnapshot(row)?.rates?.length" class="flex flex-wrap gap-1">
+                <span
+                  v-for="rate in getUpstreamMonitorSnapshot(row)?.rates.slice(0, 3)"
+                  :key="rate.rate_key"
+                  class="inline-flex max-w-[120px] items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                  :title="`${rate.display_name}: ${formatUpstreamRate(rate)}`"
+                >
+                  <span class="truncate">{{ rate.display_name }}</span>
+                  <span class="font-mono">{{ formatUpstreamRate(rate) }}</span>
+                </span>
+                <span
+                  v-if="(getUpstreamMonitorSnapshot(row)?.rates.length || 0) > 3"
+                  class="text-[11px] text-gray-400 dark:text-gray-500"
+                >
+                  +{{ (getUpstreamMonitorSnapshot(row)?.rates.length || 0) - 3 }}
+                </span>
+              </div>
+              <div v-else-if="upstreamMonitorLoading && !getUpstreamMonitorSnapshot(row)" class="text-xs text-gray-400 dark:text-gray-500">
+                {{ t('common.loading') }}
+              </div>
+            </div>
+          </template>
           <template #cell-groups="{ row }">
             <AccountGroupsCell :groups="row.groups" :max-display="4" />
           </template>
@@ -434,7 +494,7 @@ import TLSFingerprintProfilesModal from '@/components/admin/TLSFingerprintProfil
 import { buildOpenAIUsageRefreshKey } from '@/utils/accountUsageRefresh'
 import { formatDateTime, formatRelativeTime } from '@/utils/format'
 import { proxyExpiryBadgeClass, proxyExpiryLabelKey } from '@/utils/proxyExpiry'
-import type { Account, AccountPlatform, AccountType, Proxy as AccountProxy, AdminGroup, WindowStats, ClaudeModel } from '@/types'
+import type { Account, AccountPlatform, AccountType, Proxy as AccountProxy, AdminGroup, WindowStats, ClaudeModel, AccountUpstreamMonitorSnapshot, AccountUpstreamMonitorRate } from '@/types'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -572,6 +632,12 @@ const todayStatsError = ref<string | null>(null)
 const todayStatsReqSeq = ref(0)
 const pendingTodayStatsRefresh = ref(false)
 const usageManualRefreshToken = ref(0)
+const upstreamMonitorByAccountId = ref<Record<string, AccountUpstreamMonitorSnapshot>>({})
+const upstreamMonitorLoading = ref(false)
+const upstreamMonitorError = ref<string | null>(null)
+const upstreamMonitorReqSeq = ref(0)
+const pendingUpstreamMonitorRefresh = ref(false)
+const upstreamMonitorRefreshing = reactive(new Set<number>())
 
 const buildDefaultTodayStats = (): WindowStats => ({
   requests: 0,
@@ -621,6 +687,40 @@ const refreshTodayStatsBatch = async () => {
   } finally {
     if (reqSeq === todayStatsReqSeq.value) {
       todayStatsLoading.value = false
+    }
+  }
+}
+
+const refreshUpstreamMonitorBatch = async () => {
+  if (hiddenColumns.has('upstream_monitor')) {
+    upstreamMonitorLoading.value = false
+    upstreamMonitorError.value = null
+    return
+  }
+
+  const accountIDs = accounts.value.map(account => account.id)
+  const reqSeq = ++upstreamMonitorReqSeq.value
+  if (accountIDs.length === 0) {
+    upstreamMonitorByAccountId.value = {}
+    upstreamMonitorError.value = null
+    upstreamMonitorLoading.value = false
+    return
+  }
+
+  upstreamMonitorLoading.value = true
+  upstreamMonitorError.value = null
+
+  try {
+    const result = await adminAPI.accounts.getUpstreamMonitorBatch(accountIDs)
+    if (reqSeq !== upstreamMonitorReqSeq.value) return
+    upstreamMonitorByAccountId.value = result.items ?? {}
+  } catch (error) {
+    if (reqSeq !== upstreamMonitorReqSeq.value) return
+    upstreamMonitorError.value = 'Failed'
+    console.error('Failed to load account upstream monitor snapshots:', error)
+  } finally {
+    if (reqSeq === upstreamMonitorReqSeq.value) {
+      upstreamMonitorLoading.value = false
     }
   }
 }
@@ -729,6 +829,11 @@ const toggleColumn = (key: string) => {
       console.error('Failed to load account today stats after showing column:', error)
     })
   }
+  if (key === 'upstream_monitor' && wasHidden) {
+    refreshUpstreamMonitorBatch().catch((error) => {
+      console.error('Failed to load account upstream monitor snapshots after showing column:', error)
+    })
+  }
 }
 
 const isColumnVisible = (key: string) => !hiddenColumns.has(key)
@@ -799,6 +904,7 @@ const load = async () => {
   hasPendingListSync.value = false
   resetAutoRefreshCache()
   pendingTodayStatsRefresh.value = false
+  pendingUpstreamMonitorRefresh.value = false
   if (isFirstLoad.value) {
     requestParams.lite = '1'
   }
@@ -807,21 +913,23 @@ const load = async () => {
     isFirstLoad.value = false
     delete requestParams.lite
   }
-  await refreshTodayStatsBatch()
+  await Promise.all([refreshTodayStatsBatch(), refreshUpstreamMonitorBatch()])
 }
 
 const reload = async () => {
   hasPendingListSync.value = false
   resetAutoRefreshCache()
   pendingTodayStatsRefresh.value = false
+  pendingUpstreamMonitorRefresh.value = false
   await baseReload()
-  await refreshTodayStatsBatch()
+  await Promise.all([refreshTodayStatsBatch(), refreshUpstreamMonitorBatch()])
 }
 
 const debouncedReload = () => {
   hasPendingListSync.value = false
   resetAutoRefreshCache()
   pendingTodayStatsRefresh.value = true
+  pendingUpstreamMonitorRefresh.value = true
   baseDebouncedReload()
 }
 
@@ -829,6 +937,7 @@ const handlePageChange = (page: number) => {
   hasPendingListSync.value = false
   resetAutoRefreshCache()
   pendingTodayStatsRefresh.value = true
+  pendingUpstreamMonitorRefresh.value = true
   baseHandlePageChange(page)
 }
 
@@ -836,6 +945,7 @@ const handlePageSizeChange = (size: number) => {
   hasPendingListSync.value = false
   resetAutoRefreshCache()
   pendingTodayStatsRefresh.value = true
+  pendingUpstreamMonitorRefresh.value = true
   baseHandlePageSizeChange(size)
 }
 
@@ -849,15 +959,26 @@ const handleSort = (key: string, order: AccountSortOrder) => {
   hasPendingListSync.value = false
   resetAutoRefreshCache()
   pendingTodayStatsRefresh.value = true
+  pendingUpstreamMonitorRefresh.value = true
   load()
 }
 
 watch(loading, (isLoading, wasLoading) => {
-  if (wasLoading && !isLoading && pendingTodayStatsRefresh.value) {
+  if (wasLoading && !isLoading && (pendingTodayStatsRefresh.value || pendingUpstreamMonitorRefresh.value)) {
+    const shouldRefreshTodayStats = pendingTodayStatsRefresh.value
+    const shouldRefreshUpstreamMonitor = pendingUpstreamMonitorRefresh.value
     pendingTodayStatsRefresh.value = false
-    refreshTodayStatsBatch().catch((error) => {
-      console.error('Failed to refresh account today stats after table load:', error)
-    })
+    pendingUpstreamMonitorRefresh.value = false
+    if (shouldRefreshTodayStats) {
+      refreshTodayStatsBatch().catch((error) => {
+        console.error('Failed to refresh account today stats after table load:', error)
+      })
+    }
+    if (shouldRefreshUpstreamMonitor) {
+      refreshUpstreamMonitorBatch().catch((error) => {
+        console.error('Failed to refresh account upstream monitor snapshots after table load:', error)
+      })
+    }
   }
 })
 
@@ -973,7 +1094,7 @@ const refreshAccountsIncrementally = async () => {
       hasPendingListSync.value = false
     }
 
-    await refreshTodayStatsBatch()
+    await Promise.all([refreshTodayStatsBatch(), refreshUpstreamMonitorBatch()])
   } catch (error) {
     console.error('Auto refresh failed:', error)
   } finally {
@@ -1131,6 +1252,80 @@ function getAntigravityTierClass(row: any): string {
   }
 }
 
+function getUpstreamMonitorSnapshot(row: Account): AccountUpstreamMonitorSnapshot | null {
+  return upstreamMonitorByAccountId.value[String(row.id)] ?? null
+}
+
+function getUpstreamMonitorStatusLabel(snapshot: AccountUpstreamMonitorSnapshot | null): string {
+  if (upstreamMonitorError.value) return t('admin.accounts.upstreamMonitor.loadFailed')
+  if (!snapshot) return t('admin.accounts.upstreamMonitor.notCollected')
+  switch (snapshot.status) {
+    case 'success': return t('admin.accounts.upstreamMonitor.success')
+    case 'failed': return t('admin.accounts.upstreamMonitor.failed')
+    case 'unsupported': return t('admin.accounts.upstreamMonitor.unsupported')
+    default: return t('admin.accounts.upstreamMonitor.unknown')
+  }
+}
+
+function getUpstreamMonitorStatusClass(snapshot: AccountUpstreamMonitorSnapshot | null): string {
+  if (upstreamMonitorError.value) return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
+  if (!snapshot) return 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+  switch (snapshot.status) {
+    case 'success': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+    case 'failed': return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
+    case 'unsupported': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+    default: return 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+  }
+}
+
+function getUpstreamMonitorProviderLabel(snapshot: AccountUpstreamMonitorSnapshot | null): string {
+  if (!snapshot || snapshot.provider === 'unknown') return ''
+  if (snapshot.provider === 'sub2api') return 'Sub2API'
+  if (snapshot.provider === 'newapi') return 'NewAPI'
+  return t('admin.accounts.upstreamMonitor.unsupported')
+}
+
+function formatUpstreamBalance(snapshot: AccountUpstreamMonitorSnapshot | null): string {
+  if (!snapshot || snapshot.balance === null || snapshot.balance === undefined) {
+    return t('admin.accounts.upstreamMonitor.noBalance')
+  }
+  const unit = snapshot.balance_unit ? ` ${snapshot.balance_unit}` : ''
+  return `${Number(snapshot.balance).toFixed(4)}${unit}`
+}
+
+function formatUpstreamRate(rate: AccountUpstreamMonitorRate): string {
+  const input = `${Number(rate.ratio).toFixed(2)}x`
+  if (rate.completion_ratio === null || rate.completion_ratio === undefined) return input
+  return `${input}/${Number(rate.completion_ratio).toFixed(2)}x`
+}
+
+function getUpstreamMonitorTime(snapshot: AccountUpstreamMonitorSnapshot | null): string {
+  const value = snapshot?.last_success_at || snapshot?.last_checked_at
+  return value ? formatRelativeTime(value) : t('admin.accounts.upstreamMonitor.noTime')
+}
+
+async function handleRefreshUpstreamMonitor(row: Account) {
+  if (upstreamMonitorRefreshing.has(row.id)) return
+  upstreamMonitorRefreshing.add(row.id)
+  try {
+    const snapshot = await adminAPI.accounts.refreshUpstreamMonitor(row.id)
+    upstreamMonitorByAccountId.value = {
+      ...upstreamMonitorByAccountId.value,
+      [String(row.id)]: snapshot
+    }
+    if (snapshot.status === 'success') {
+      appStore.showSuccess(t('admin.accounts.upstreamMonitor.refreshSuccess'))
+    } else {
+      appStore.showWarning(snapshot.last_error || getUpstreamMonitorStatusLabel(snapshot))
+    }
+  } catch (error: any) {
+    console.error('Failed to refresh account upstream monitor:', error)
+    appStore.showError(error?.message || t('admin.accounts.upstreamMonitor.refreshFailed'))
+  } finally {
+    upstreamMonitorRefreshing.delete(row.id)
+  }
+}
+
 // All available columns
 const allColumns = computed(() => {
   const c = [
@@ -1140,7 +1335,8 @@ const allColumns = computed(() => {
     { key: 'capacity', label: t('admin.accounts.columns.capacity'), sortable: false },
     { key: 'status', label: t('admin.accounts.columns.status'), sortable: true },
     { key: 'schedulable', label: t('admin.accounts.columns.schedulable'), sortable: true },
-    { key: 'today_stats', label: t('admin.accounts.columns.todayStats'), sortable: false }
+    { key: 'today_stats', label: t('admin.accounts.columns.todayStats'), sortable: false },
+    { key: 'upstream_monitor', label: t('admin.accounts.columns.upstreamMonitor'), sortable: false }
   ]
   if (!authStore.isSimpleMode) {
     c.push({ key: 'groups', label: t('admin.accounts.columns.groups'), sortable: false })
