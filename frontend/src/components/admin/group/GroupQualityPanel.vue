@@ -555,6 +555,12 @@ const recentScheduleLines = computed<string[]>(() => {
     primaryMeta.value?.manual_primary_account_id ||
     null
   const primaryLabel = accountLabel(primaryCandidateID, candidates)
+  const shouldShowPrimaryAttempt = Boolean(primaryLabel && (
+    trace.primary_hit ||
+    trace.primary_bypass_reason ||
+    trace.layer === 'load_balance' ||
+    candidates.length > 0
+  ))
   const lines: string[] = []
 
   if (trace.layer === 'previous_response_id') {
@@ -563,7 +569,7 @@ const recentScheduleLines = computed<string[]>(() => {
     }))
   }
 
-  if (primaryLabel && (trace.primary_hit || trace.primary_bypass_reason)) {
+  if (shouldShowPrimaryAttempt) {
     lines.push(t('admin.groups.qualityPanel.recentScheduleSteps.primaryTry', {
       account: primaryLabel
     }))
@@ -577,6 +583,11 @@ const recentScheduleLines = computed<string[]>(() => {
     lines.push(t('admin.groups.qualityPanel.recentScheduleSteps.primarySkipped', {
       account: primaryLabel,
       reason: translatePrimaryBypassReason(trace.primary_bypass_reason)
+    }))
+  } else if (shouldShowPrimaryAttempt && trace.layer === 'load_balance') {
+    lines.push(t('admin.groups.qualityPanel.recentScheduleSteps.primarySkipped', {
+      account: primaryLabel,
+      reason: translatePrimaryBypassReason('primary_bypass_not_recorded')
     }))
   }
 
@@ -599,7 +610,7 @@ const recentScheduleLines = computed<string[]>(() => {
         candidates: candidateLabels.join(' -> ')
       }))
     } else if (trace.layer === 'load_balance') {
-      lines.push(t('admin.groups.qualityPanel.recentScheduleReasons.loadBalance'))
+      lines.push(t('admin.groups.qualityPanel.recentScheduleSteps.loadBalanceNoCandidates'))
     }
   }
 

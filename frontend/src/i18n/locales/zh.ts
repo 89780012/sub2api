@@ -2362,6 +2362,7 @@ export default {
           primarySkipped: '跳过主账号：{account}，原因：{reason}',
           stickySelected: '再检查 sticky 会话，命中：{account}',
           loadBalanceCandidates: '进入负载均衡候选顺序：{candidates}',
+          loadBalanceNoCandidates: '进入负载均衡候选，但这条调度日志没有记录候选顺序',
           candidateSelected: '{account}（命中）',
           finalSelected: '最终命中账号：{account}',
           time: '调度时间：{time}'
@@ -2375,7 +2376,8 @@ export default {
           primary_runtime_blocked: '账号运行时处于阻断/冷却状态',
           primary_group_mismatch: '账号不属于当前分组',
           primary_channel_restricted: '账号被当前渠道模型限制排除',
-          primary_slot_busy: '账号并发槽已满'
+          primary_slot_busy: '账号并发槽已满',
+          primary_bypass_not_recorded: '这条调度日志没有记录具体原因，可能来自旧日志或旧调度路径'
         },
         priorityLabel: '优先级 {priority}',
         scheduleRankLabel: '调度 #{rank}',

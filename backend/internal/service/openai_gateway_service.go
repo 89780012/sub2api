@@ -2104,7 +2104,8 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 	}
 
 	// ============ Layer 1.5: Group primary account ============
-	if primaryAccount := s.tryPrimaryAccountHit(ctx, group, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, requiredCapability); primaryAccount != nil {
+	primaryBypassReason := ""
+	if primaryAccount, reason := s.tryPrimaryAccountHitWithReason(ctx, group, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, requiredCapability); primaryAccount != nil {
 		result, err := s.tryAcquireAccountSlot(ctx, primaryAccount.ID, primaryAccount.Concurrency)
 		if err == nil && result != nil && result.Acquired {
 			selection, selectErr := s.newAcquiredSelectionResult(ctx, primaryAccount, result.ReleaseFunc)
@@ -2120,6 +2121,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 			s.persistPrimaryPromotionFromSelection(ctx, group, primaryAccount.ID, hadExcludedFailures)
 			return selection, nil
 		}
+		primaryBypassReason = groupPrimaryBypassReasonSlotBusy
 
 		waitingCount, _ := s.concurrencyService.GetAccountWaitingCount(ctx, primaryAccount.ID)
 		if waitingCount < cfg.StickySessionMaxWaiting {
@@ -2138,6 +2140,8 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 			s.persistPrimaryPromotionFromSelection(ctx, group, primaryAccount.ID, hadExcludedFailures)
 			return selection, nil
 		}
+	} else if reason != "" {
+		primaryBypassReason = reason
 	}
 
 	// ============ Layer 2: Load-aware selection ============
@@ -2261,7 +2265,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 					_ = s.setStickySessionAccountID(ctx, groupID, sessionHash, fresh.ID, openaiStickySessionTTL)
 				}
 				if selection.ScheduleTrace != nil {
-					attachPrimaryTrace(selection.ScheduleTrace, group, false, "primary_unavailable")
+					attachPrimaryTrace(selection.ScheduleTrace, group, false, primaryBypassReason)
 				}
 				s.persistPrimaryPromotionFromSelection(ctx, group, fresh.ID, hadExcludedFailures)
 				return selection, true, nil
@@ -2300,7 +2304,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 					_ = s.setStickySessionAccountID(ctx, groupID, sessionHash, fresh.ID, openaiStickySessionTTL)
 				}
 				if selection.ScheduleTrace != nil {
-					attachPrimaryTrace(selection.ScheduleTrace, group, false, "primary_unavailable")
+					attachPrimaryTrace(selection.ScheduleTrace, group, false, primaryBypassReason)
 				}
 				s.persistPrimaryPromotionFromSelection(ctx, group, fresh.ID, hadExcludedFailures)
 				return selection, nil
@@ -2350,7 +2354,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 			return nil, err
 		}
 		if selection.ScheduleTrace != nil {
-			attachPrimaryTrace(selection.ScheduleTrace, group, false, "primary_unavailable")
+			attachPrimaryTrace(selection.ScheduleTrace, group, false, primaryBypassReason)
 		}
 		s.persistPrimaryPromotionFromSelection(ctx, group, fresh.ID, hadExcludedFailures)
 		return selection, nil

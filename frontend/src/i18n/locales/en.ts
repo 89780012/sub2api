@@ -2270,6 +2270,7 @@ export default {
           primarySkipped: 'Skipped primary account {account}: {reason}',
           stickySelected: 'Checked sticky session next, selected: {account}',
           loadBalanceCandidates: 'Load-balance candidate order: {candidates}',
+          loadBalanceNoCandidates: 'Entered load-balance selection, but this trace did not record candidate order',
           candidateSelected: '{account} (selected)',
           finalSelected: 'Final selected account: {account}',
           time: 'Scheduled at: {time}'
@@ -2283,7 +2284,8 @@ export default {
           primary_runtime_blocked: 'account is blocked or cooling down at runtime',
           primary_group_mismatch: 'account does not belong to this group',
           primary_channel_restricted: 'account is excluded by channel model restrictions',
-          primary_slot_busy: 'account concurrency slots are full'
+          primary_slot_busy: 'account concurrency slots are full',
+          primary_bypass_not_recorded: 'this scheduling trace did not record the concrete reason; it may be an old trace or legacy scheduling path'
         },
         priorityLabel: 'Priority {priority}',
         scheduleRankLabel: 'Schedule #{rank}',
