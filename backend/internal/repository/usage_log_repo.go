@@ -3665,6 +3665,127 @@ type AccountUsageStatsResponse = usagestats.AccountUsageStatsResponse
 // EndpointStat represents endpoint usage statistics row.
 type EndpointStat = usagestats.EndpointStat
 
+func accountPoolRateAnalysisOrderBy(sortBy, sortOrder string) string {
+	order := "ASC"
+	if strings.EqualFold(strings.TrimSpace(sortOrder), "desc") {
+		order = "DESC"
+	}
+
+	switch strings.ToLower(strings.TrimSpace(sortBy)) {
+	case "account_cost":
+		return fmt.Sprintf("account_cost %s, group_name ASC, group_id ASC", order)
+	case "theoretical_cost":
+		return fmt.Sprintf("theoretical_cost %s, group_name ASC, group_id ASC", order)
+	case "requests":
+		return fmt.Sprintf("requests %s, group_name ASC, group_id ASC", order)
+	case "coverage_rate":
+		return fmt.Sprintf("coverage_rate %s, group_name ASC, group_id ASC", order)
+	default:
+		return fmt.Sprintf("(inferred_multiplier IS NULL) ASC, inferred_multiplier %s, group_name ASC, group_id ASC", order)
+	}
+}
+
+func (r *usageLogRepository) GetAccountPoolRateAnalysis(ctx context.Context, query usagestats.AccountPoolRateAnalysisQuery) (resp *usagestats.AccountPoolRateAnalysisResponse, err error) {
+	orderBy := accountPoolRateAnalysisOrderBy(query.SortBy, query.SortOrder)
+	sqlQuery := fmt.Sprintf(`
+		WITH grouped AS (
+			SELECT
+				COALESCE(ul.group_id, 0) AS group_id,
+				COALESCE(g.name, '') AS group_name,
+				COALESCE(g.platform, '') AS platform,
+				COALESCE(g.rate_multiplier, 1) AS configured_rate_multiplier,
+				COUNT(*) AS requests,
+				COUNT(*) FILTER (WHERE ul.account_stats_cost IS NOT NULL AND ul.account_stats_cost > 0) AS valid_requests,
+				COUNT(*) FILTER (WHERE ul.account_stats_cost IS NULL OR ul.account_stats_cost <= 0) AS uncovered_requests,
+				COALESCE(SUM(ul.input_tokens), 0) AS input_tokens,
+				COALESCE(SUM(ul.output_tokens), 0) AS output_tokens,
+				COALESCE(SUM(ul.input_tokens) FILTER (WHERE ul.account_stats_cost IS NOT NULL AND ul.account_stats_cost > 0), 0) AS valid_input_tokens,
+				COALESCE(SUM(ul.output_tokens) FILTER (WHERE ul.account_stats_cost IS NOT NULL AND ul.account_stats_cost > 0), 0) AS valid_output_tokens,
+				COALESCE(SUM(ul.account_stats_cost) FILTER (WHERE ul.account_stats_cost IS NOT NULL AND ul.account_stats_cost > 0), 0) AS theoretical_cost,
+				COALESCE(SUM(ul.account_stats_cost * COALESCE(ul.account_rate_multiplier, 1)) FILTER (WHERE ul.account_stats_cost IS NOT NULL AND ul.account_stats_cost > 0), 0) AS account_cost
+			FROM usage_logs ul
+			LEFT JOIN groups g ON g.id = ul.group_id
+			WHERE ul.created_at >= $1 AND ul.created_at < $2
+			GROUP BY ul.group_id, g.name, g.platform, g.rate_multiplier
+		)
+		SELECT
+			group_id,
+			group_name,
+			platform,
+			configured_rate_multiplier,
+			requests,
+			valid_requests,
+			uncovered_requests,
+			input_tokens,
+			output_tokens,
+			valid_input_tokens,
+			valid_output_tokens,
+			theoretical_cost,
+			account_cost,
+			CASE WHEN theoretical_cost > 0 THEN account_cost / theoretical_cost ELSE NULL END AS inferred_multiplier,
+			CASE WHEN requests > 0 THEN valid_requests::float / requests ELSE 0 END AS coverage_rate
+		FROM grouped
+		ORDER BY %s
+	`, orderBy)
+
+	rows, err := r.sql.QueryContext(ctx, sqlQuery, query.StartTime, query.EndTime)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil && err == nil {
+			err = closeErr
+			resp = nil
+		}
+	}()
+
+	items := make([]usagestats.AccountPoolRateAnalysisItem, 0)
+	summary := usagestats.AccountPoolRateAnalysisSummary{}
+	for rows.Next() {
+		var item usagestats.AccountPoolRateAnalysisItem
+		var inferred sql.NullFloat64
+		if err = rows.Scan(
+			&item.GroupID,
+			&item.GroupName,
+			&item.Platform,
+			&item.ConfiguredRateMultiplier,
+			&item.Requests,
+			&item.ValidRequests,
+			&item.UncoveredRequests,
+			&item.InputTokens,
+			&item.OutputTokens,
+			&item.ValidInputTokens,
+			&item.ValidOutputTokens,
+			&item.TheoreticalCost,
+			&item.AccountCost,
+			&inferred,
+			&item.CoverageRate,
+		); err != nil {
+			return nil, err
+		}
+		if inferred.Valid {
+			item.InferredMultiplier = &inferred.Float64
+			summary.ValidGroups++
+		}
+
+		summary.Groups++
+		summary.Requests += item.Requests
+		summary.ValidRequests += item.ValidRequests
+		summary.UncoveredRequests += item.UncoveredRequests
+		summary.TheoreticalCost += item.TheoreticalCost
+		summary.AccountCost += item.AccountCost
+		items = append(items, item)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &usagestats.AccountPoolRateAnalysisResponse{
+		Items:   items,
+		Summary: summary,
+	}, nil
+}
+
 func (r *usageLogRepository) getEndpointStatsByColumnWithFilters(ctx context.Context, endpointColumn string, startTime, endTime time.Time, userID, apiKeyID, accountID, groupID int64, model string, requestType *int16, stream *bool, billingType *int8) (results []EndpointStat, err error) {
 	actualCostExpr := "COALESCE(SUM(actual_cost), 0) as actual_cost"
 	if accountID > 0 && userID == 0 && apiKeyID == 0 {

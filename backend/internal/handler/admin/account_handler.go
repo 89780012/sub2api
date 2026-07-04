@@ -25,6 +25,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -1098,6 +1099,86 @@ func (h *AccountHandler) GetStats(c *gin.Context) {
 	startTime := timezone.StartOfDay(now.AddDate(0, 0, -days+1))
 
 	stats, err := h.accountUsageService.GetAccountUsageStats(c.Request.Context(), accountID, startTime, endTime)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, stats)
+}
+
+func parseAccountPoolRateAnalysisSort(c *gin.Context) (string, string, bool) {
+	sortBy := strings.TrimSpace(c.DefaultQuery("sort_by", "inferred_multiplier"))
+	if sortBy == "" {
+		sortBy = "inferred_multiplier"
+	}
+	switch sortBy {
+	case "inferred_multiplier", "account_cost", "theoretical_cost", "requests", "coverage_rate":
+	default:
+		response.BadRequest(c, "Invalid sort_by")
+		return "", "", false
+	}
+
+	sortOrder := strings.ToLower(strings.TrimSpace(c.DefaultQuery("sort_order", "asc")))
+	if sortOrder == "" {
+		sortOrder = "asc"
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		response.BadRequest(c, "Invalid sort_order")
+		return "", "", false
+	}
+	return sortBy, sortOrder, true
+}
+
+func parseAccountPoolRateAnalysisRange(c *gin.Context) (time.Time, time.Time, bool) {
+	userTZ := c.Query("timezone")
+	now := timezone.NowInUserLocation(userTZ)
+	startTime := timezone.StartOfDayInUserLocation(now.AddDate(0, 0, -6), userTZ)
+	endTime := timezone.StartOfDayInUserLocation(now.AddDate(0, 0, 1), userTZ)
+
+	if startDate := strings.TrimSpace(c.Query("start_date")); startDate != "" {
+		t, err := timezone.ParseInUserLocation("2006-01-02", startDate, userTZ)
+		if err != nil {
+			response.BadRequest(c, "Invalid start_date format, use YYYY-MM-DD")
+			return time.Time{}, time.Time{}, false
+		}
+		startTime = t
+	}
+
+	if endDate := strings.TrimSpace(c.Query("end_date")); endDate != "" {
+		t, err := timezone.ParseInUserLocation("2006-01-02", endDate, userTZ)
+		if err != nil {
+			response.BadRequest(c, "Invalid end_date format, use YYYY-MM-DD")
+			return time.Time{}, time.Time{}, false
+		}
+		endTime = t.AddDate(0, 0, 1)
+	}
+
+	if !endTime.After(startTime) {
+		response.BadRequest(c, "end_date must be on or after start_date")
+		return time.Time{}, time.Time{}, false
+	}
+	return startTime, endTime, true
+}
+
+// GetPoolRateAnalysis handles account pool / group multiplier analysis.
+// GET /api/v1/admin/accounts/pool-rate-analysis
+func (h *AccountHandler) GetPoolRateAnalysis(c *gin.Context) {
+	startTime, endTime, ok := parseAccountPoolRateAnalysisRange(c)
+	if !ok {
+		return
+	}
+	sortBy, sortOrder, ok := parseAccountPoolRateAnalysisSort(c)
+	if !ok {
+		return
+	}
+
+	stats, err := h.accountUsageService.GetAccountPoolRateAnalysis(c.Request.Context(), usagestats.AccountPoolRateAnalysisQuery{
+		StartTime: startTime,
+		EndTime:   endTime,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+	})
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

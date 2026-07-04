@@ -391,6 +391,7 @@ export default {
     availableChannels: 'Available Channels',
     subscriptions: 'Subscriptions',
     accounts: 'Accounts',
+    accountRateAnalysis: 'Pool Rates',
     proxies: 'Proxies',
     redeemCodes: 'Redeem Codes',
     ops: 'Ops',
@@ -3143,6 +3144,34 @@ export default {
     accounts: {
       title: 'Account Management',
       description: 'Manage AI platform accounts and credentials',
+      rateAnalysis: {
+        title: 'Account Pool Rate Analysis',
+        description: 'Aggregate historical usage by account pool and infer account-side cost multipliers from account stats pricing costs.',
+        pricingRules: 'Account Stats Pricing Rules',
+        coverageHint: 'Only samples with account stats pricing coverage and theoretical cost above 0 are used for multiplier calculation; uncovered samples only affect coverage.',
+        noValidSamples: 'No valid samples',
+        empty: 'No usage records in the selected date range',
+        failedToLoad: 'Failed to load account pool rate analysis',
+        columns: {
+          pool: 'Account Pool',
+          configuredRate: 'Configured Group Rate',
+          requests: 'Requests',
+          coverage: 'Coverage',
+          inputTokens: 'Input Tokens',
+          outputTokens: 'Output Tokens',
+          theoreticalCost: 'Theoretical Cost',
+          accountCost: 'Account Cost',
+          inferredMultiplier: 'Inferred Multiplier'
+        },
+        summary: {
+          groups: 'Pools',
+          validGroups: 'Valid Pools',
+          requests: 'Requests',
+          uncoveredRequests: 'Uncovered Requests',
+          theoreticalCost: 'Theoretical Cost',
+          accountCost: 'Account Cost'
+        }
+      },
       createAccount: 'Create Account',
       autoRefresh: 'Auto Refresh',
       enableAutoRefresh: 'Enable auto refresh',

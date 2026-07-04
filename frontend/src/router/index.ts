@@ -490,6 +490,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/admin/accounts/rate-analysis',
+    name: 'AdminAccountPoolRateAnalysis',
+    component: () => import('@/views/admin/AccountPoolRateAnalysisView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Account Pool Rate Analysis',
+      titleKey: 'admin.accounts.rateAnalysis.title',
+      descriptionKey: 'admin.accounts.rateAnalysis.description'
+    }
+  },
+  {
     path: '/admin/announcements',
     name: 'AdminAnnouncements',
     component: () => import('@/views/admin/AnnouncementsView.vue'),

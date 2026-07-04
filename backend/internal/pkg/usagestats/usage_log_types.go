@@ -373,3 +373,48 @@ type AccountUsageStatsResponse struct {
 	Endpoints         []EndpointStat        `json:"endpoints"`
 	UpstreamEndpoints []EndpointStat        `json:"upstream_endpoints"`
 }
+
+// AccountPoolRateAnalysisQuery describes the date window and ordering for
+// account-pool multiplier analysis.
+type AccountPoolRateAnalysisQuery struct {
+	StartTime time.Time
+	EndTime   time.Time
+	SortBy    string
+	SortOrder string
+}
+
+// AccountPoolRateAnalysisItem is one account pool / group aggregate row.
+type AccountPoolRateAnalysisItem struct {
+	GroupID                  int64    `json:"group_id"`
+	GroupName                string   `json:"group_name"`
+	Platform                 string   `json:"platform"`
+	ConfiguredRateMultiplier float64  `json:"configured_rate_multiplier"`
+	Requests                 int64    `json:"requests"`
+	ValidRequests            int64    `json:"valid_requests"`
+	UncoveredRequests        int64    `json:"uncovered_requests"`
+	InputTokens              int64    `json:"input_tokens"`
+	OutputTokens             int64    `json:"output_tokens"`
+	ValidInputTokens         int64    `json:"valid_input_tokens"`
+	ValidOutputTokens        int64    `json:"valid_output_tokens"`
+	TheoreticalCost          float64  `json:"theoretical_cost"`
+	AccountCost              float64  `json:"account_cost"`
+	InferredMultiplier       *float64 `json:"inferred_multiplier"`
+	CoverageRate             float64  `json:"coverage_rate"`
+}
+
+// AccountPoolRateAnalysisSummary aggregates all rows in the response.
+type AccountPoolRateAnalysisSummary struct {
+	Groups            int64   `json:"groups"`
+	ValidGroups       int64   `json:"valid_groups"`
+	Requests          int64   `json:"requests"`
+	ValidRequests     int64   `json:"valid_requests"`
+	UncoveredRequests int64   `json:"uncovered_requests"`
+	TheoreticalCost   float64 `json:"theoretical_cost"`
+	AccountCost       float64 `json:"account_cost"`
+}
+
+// AccountPoolRateAnalysisResponse is the admin account-pool multiplier analysis response.
+type AccountPoolRateAnalysisResponse struct {
+	Items   []AccountPoolRateAnalysisItem  `json:"items"`
+	Summary AccountPoolRateAnalysisSummary `json:"summary"`
+}

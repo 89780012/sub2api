@@ -70,6 +70,7 @@ type UsageLogRepository interface {
 
 	// Account stats
 	GetAccountUsageStats(ctx context.Context, accountID int64, startTime, endTime time.Time) (*usagestats.AccountUsageStatsResponse, error)
+	GetAccountPoolRateAnalysis(ctx context.Context, query usagestats.AccountPoolRateAnalysisQuery) (*usagestats.AccountPoolRateAnalysisResponse, error)
 
 	// Aggregated stats (optimized)
 	GetUserStatsAggregated(ctx context.Context, userID int64, startTime, endTime time.Time) (*usagestats.UsageStats, error)
@@ -1139,6 +1140,14 @@ func (s *AccountUsageService) GetAccountUsageStats(ctx context.Context, accountI
 	stats, err := s.usageLogRepo.GetAccountUsageStats(ctx, accountID, startTime, endTime)
 	if err != nil {
 		return nil, fmt.Errorf("get account usage stats failed: %w", err)
+	}
+	return stats, nil
+}
+
+func (s *AccountUsageService) GetAccountPoolRateAnalysis(ctx context.Context, query usagestats.AccountPoolRateAnalysisQuery) (*usagestats.AccountPoolRateAnalysisResponse, error) {
+	stats, err := s.usageLogRepo.GetAccountPoolRateAnalysis(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("get account pool rate analysis failed: %w", err)
 	}
 	return stats, nil
 }

@@ -19,7 +19,9 @@ import type {
   CodexSessionImportRequest,
   CodexSessionImportResult,
   CheckMixedChannelRequest,
-  CheckMixedChannelResponse
+  CheckMixedChannelResponse,
+  AccountPoolRateAnalysisResponse,
+  AccountPoolRateAnalysisSortBy
 } from '@/types'
 
 /**
@@ -237,6 +239,20 @@ export async function applyOAuthCredentials(
 export async function getStats(id: number, days: number = 30): Promise<AccountUsageStatsResponse> {
   const { data } = await apiClient.get<AccountUsageStatsResponse>(`/admin/accounts/${id}/stats`, {
     params: { days }
+  })
+  return data
+}
+
+export async function getPoolRateAnalysis(params: {
+  start_date: string
+  end_date: string
+  sort_by?: AccountPoolRateAnalysisSortBy
+  sort_order?: 'asc' | 'desc'
+  timezone?: string
+}, options?: { signal?: AbortSignal }): Promise<AccountPoolRateAnalysisResponse> {
+  const { data } = await apiClient.get<AccountPoolRateAnalysisResponse>('/admin/accounts/pool-rate-analysis', {
+    params,
+    signal: options?.signal
   })
   return data
 }
@@ -718,6 +734,7 @@ export const accountsAPI = {
   refreshCredentials,
   applyOAuthCredentials,
   getStats,
+  getPoolRateAnalysis,
   clearError,
   getUsage,
   getTodayStats,

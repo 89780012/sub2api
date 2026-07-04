@@ -391,6 +391,7 @@ export default {
     availableChannels: '可用渠道',
     subscriptions: '订阅管理',
     accounts: '账号管理',
+    accountRateAnalysis: '账号池倍率',
     proxies: 'IP管理',
     redeemCodes: '兑换码',
     ops: '运维监控',
@@ -3216,6 +3217,34 @@ export default {
     accounts: {
       title: '账号管理',
       description: '管理 AI 平台账号和 Cookie',
+      rateAnalysis: {
+        title: '账号池倍率分析',
+        description: '按账号池聚合历史使用记录，基于账号统计定价成本反推账号侧实际倍率。',
+        pricingRules: '账号统计定价规则',
+        coverageHint: '仅使用已命中账号统计定价规则且理论成本大于 0 的样本计算倍率；未覆盖样本只计入覆盖率。',
+        noValidSamples: '缺少有效样本',
+        empty: '当前日期范围内没有使用记录',
+        failedToLoad: '账号池倍率分析加载失败',
+        columns: {
+          pool: '账号池',
+          configuredRate: '当前分组倍率',
+          requests: '请求数',
+          coverage: '覆盖率',
+          inputTokens: '输入 Tokens',
+          outputTokens: '输出 Tokens',
+          theoreticalCost: '理论成本',
+          accountCost: '账号侧成本',
+          inferredMultiplier: '推断倍率'
+        },
+        summary: {
+          groups: '账号池',
+          validGroups: '有效账号池',
+          requests: '总请求',
+          uncoveredRequests: '未覆盖请求',
+          theoreticalCost: '理论成本',
+          accountCost: '账号侧成本'
+        }
+      },
       createAccount: '添加账号',
       autoRefresh: '自动刷新',
       enableAutoRefresh: '启用自动刷新',

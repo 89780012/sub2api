@@ -1886,6 +1886,46 @@ export interface AccountUsageStatsResponse {
   upstream_endpoints: EndpointStat[]
 }
 
+export type AccountPoolRateAnalysisSortBy =
+  | 'inferred_multiplier'
+  | 'account_cost'
+  | 'theoretical_cost'
+  | 'requests'
+  | 'coverage_rate'
+
+export interface AccountPoolRateAnalysisItem {
+  group_id: number
+  group_name: string
+  platform: GroupPlatform | string
+  configured_rate_multiplier: number
+  requests: number
+  valid_requests: number
+  uncovered_requests: number
+  input_tokens: number
+  output_tokens: number
+  valid_input_tokens: number
+  valid_output_tokens: number
+  theoretical_cost: number
+  account_cost: number
+  inferred_multiplier: number | null
+  coverage_rate: number
+}
+
+export interface AccountPoolRateAnalysisSummary {
+  groups: number
+  valid_groups: number
+  requests: number
+  valid_requests: number
+  uncovered_requests: number
+  theoretical_cost: number
+  account_cost: number
+}
+
+export interface AccountPoolRateAnalysisResponse {
+  items: AccountPoolRateAnalysisItem[]
+  summary: AccountPoolRateAnalysisSummary
+}
+
 // ==================== User Attribute Types ====================
 
 export type UserAttributeType = 'text' | 'textarea' | 'number' | 'email' | 'url' | 'date' | 'select' | 'multi_select'
