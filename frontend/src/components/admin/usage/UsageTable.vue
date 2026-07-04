@@ -427,6 +427,15 @@
       <div class="w-[440px] max-w-[min(90vw,440px)] rounded-lg border border-gray-700 bg-gray-900 px-3 py-2.5 text-xs text-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
         <div class="space-y-2">
           <div class="text-xs font-semibold text-gray-300">{{ t('admin.usage.scheduleDetail') }}</div>
+          <div v-if="scheduleDecisionLines(scheduleTooltipData).length" class="space-y-1 rounded-md border border-gray-700 bg-gray-800/70 px-2.5 py-2">
+            <div
+              v-for="(line, index) in scheduleDecisionLines(scheduleTooltipData)"
+              :key="`${index}-${line}`"
+              class="break-words leading-5 text-gray-100"
+            >
+              {{ line }}
+            </div>
+          </div>
           <div v-if="scheduleTooltipData?.schedule_trace?.reason" class="flex items-center justify-between gap-4">
             <span class="text-gray-400">{{ t('admin.usage.scheduleReason') }}</span>
             <span class="text-right font-medium text-white">{{ scheduleTooltipData.schedule_trace.reason }}</span>
@@ -574,7 +583,7 @@ function accountBilled(row: { total_cost?: number | null; account_stats_cost?: n
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Icon from '@/components/icons/Icon.vue'
-import type { AdminUsageLog } from '@/types'
+import type { AdminUsageLog, UsageScheduleCandidateScore } from '@/types'
 import type { Column } from '@/components/common/types'
 
 interface Props {
@@ -642,6 +651,84 @@ const formatDuration = (ms: number | null | undefined): string => {
 const formatRate = (value: number | null | undefined): string => {
   if (value == null || Number.isNaN(value)) return '-'
   return `${(value * 100).toFixed(0)}%`
+}
+
+const scheduleAccountLabel = (row: AdminUsageLog, accountID?: number | null, candidates: UsageScheduleCandidateScore[] = []): string => {
+  if (!accountID) return ''
+  const candidate = candidates.find(item => item.account_id === accountID)
+  if (candidate?.account_name) return candidate.account_name
+  if (row.account_id === accountID && row.account?.name) return row.account.name
+  return `#${accountID}`
+}
+
+const translateSchedulePrimaryBypassReason = (reason?: string | null): string => {
+  if (!reason) return ''
+  const key = `admin.usage.schedulePrimaryBypassReasons.${reason}`
+  const label = t(key)
+  return label === key ? reason : label
+}
+
+const scheduleDecisionLines = (row: AdminUsageLog | null): string[] => {
+  const trace = row?.schedule_trace
+  if (!row || !trace) return []
+
+  const candidates = trace.candidates || []
+  const selectedLabel = scheduleAccountLabel(row, trace.selected_account_id || row.account_id, candidates) || '-'
+  const primaryLabel = scheduleAccountLabel(row, trace.primary_candidate_id, candidates)
+  const lines: string[] = []
+
+  if (trace.layer === 'previous_response_id') {
+    lines.push(t('admin.usage.scheduleDecision.previousResponse', { account: selectedLabel }))
+  }
+
+  const shouldShowPrimaryAttempt = Boolean(primaryLabel && (
+    trace.primary_hit ||
+    trace.primary_bypass_reason ||
+    trace.layer === 'load_balance' ||
+    candidates.length > 0
+  ))
+  if (shouldShowPrimaryAttempt) {
+    lines.push(t('admin.usage.scheduleDecision.primaryTry', { account: primaryLabel }))
+  }
+
+  if (trace.primary_hit) {
+    lines.push(t('admin.usage.scheduleDecision.primarySelected', { account: selectedLabel }))
+  } else if (trace.primary_bypass_reason && primaryLabel) {
+    lines.push(t('admin.usage.scheduleDecision.primarySkipped', {
+      account: primaryLabel,
+      reason: translateSchedulePrimaryBypassReason(trace.primary_bypass_reason)
+    }))
+  } else if (shouldShowPrimaryAttempt && trace.layer === 'load_balance') {
+    lines.push(t('admin.usage.scheduleDecision.primarySkipped', {
+      account: primaryLabel,
+      reason: translateSchedulePrimaryBypassReason('primary_bypass_not_recorded')
+    }))
+  }
+
+  if (trace.sticky_hit && trace.layer !== 'previous_response_id') {
+    lines.push(t('admin.usage.scheduleDecision.stickySelected', { account: selectedLabel }))
+  }
+
+  if (trace.layer === 'load_balance' || candidates.length > 0) {
+    const candidateLabels = candidates.map(candidate => {
+      const label = scheduleAccountLabel(row, candidate.account_id, candidates) || '-'
+      if (!candidate.selected) return label
+      return t('admin.usage.scheduleDecision.candidateSelected', { account: label })
+    })
+    if (candidateLabels.length > 0) {
+      lines.push(t('admin.usage.scheduleDecision.loadBalanceCandidates', {
+        candidates: candidateLabels.join(' -> ')
+      }))
+    } else if (trace.layer === 'load_balance') {
+      lines.push(t('admin.usage.scheduleDecision.loadBalanceNoCandidates'))
+    }
+  }
+
+  if (trace.selected_account_id || row.account_id) {
+    lines.push(t('admin.usage.scheduleDecision.finalSelected', { account: selectedLabel }))
+  }
+
+  return lines
 }
 
 const getScheduleLabel = (row: AdminUsageLog): string => {
