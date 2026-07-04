@@ -1392,6 +1392,7 @@ export interface UsageScheduleTrace {
   selected_account_id?: number
   priority?: number | null
   primary_hit?: boolean
+  primary_candidate_id?: number
   primary_source?: string | null
   primary_bypass_reason?: string | null
   sticky_hit?: boolean

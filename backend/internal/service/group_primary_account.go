@@ -15,6 +15,16 @@ const (
 	groupPrimaryReasonManualSet          = "manual_set"
 	groupPrimaryReasonRetryExhausted     = "same_account_retry_exhausted"
 	groupPrimaryReasonFailoverStabilized = "failover_stabilized"
+
+	groupPrimaryBypassReasonUnavailable               = "primary_unavailable"
+	groupPrimaryBypassReasonNotConfigured             = "primary_not_configured"
+	groupPrimaryBypassReasonExcludedAfterFailover     = "primary_excluded_after_failover"
+	groupPrimaryBypassReasonUnschedulableOrNotFound   = "primary_unschedulable_or_not_found"
+	groupPrimaryBypassReasonModelOrCapabilityMismatch = "primary_model_or_capability_mismatch"
+	groupPrimaryBypassReasonRuntimeBlocked            = "primary_runtime_blocked"
+	groupPrimaryBypassReasonGroupMismatch             = "primary_group_mismatch"
+	groupPrimaryBypassReasonChannelRestricted         = "primary_channel_restricted"
+	groupPrimaryBypassReasonSlotBusy                  = "primary_slot_busy"
 )
 
 type groupPrimaryCandidate struct {
@@ -199,6 +209,7 @@ func attachPrimaryTrace(trace *UsageScheduleTrace, group *Group, hit bool, bypas
 		return
 	}
 	trace.PrimaryHit = hit
+	trace.PrimaryCandidateID = group.currentPreferredPrimaryAccountID()
 	trace.PrimarySource = strings.TrimSpace(group.ActivePrimarySource)
 	trace.PrimaryBypassReason = strings.TrimSpace(bypassReason)
 }

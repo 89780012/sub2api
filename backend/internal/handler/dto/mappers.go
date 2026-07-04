@@ -626,6 +626,7 @@ func usageScheduleTraceFromService(trace *service.UsageScheduleTrace) *UsageSche
 		SelectedAccountID:   trace.SelectedAccountID,
 		Priority:            trace.Priority,
 		PrimaryHit:          trace.PrimaryHit,
+		PrimaryCandidateID:  trace.PrimaryCandidateID,
 		PrimarySource:       trace.PrimarySource,
 		PrimaryBypassReason: trace.PrimaryBypassReason,
 		StickyHit:           trace.StickyHit,

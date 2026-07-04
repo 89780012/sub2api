@@ -2355,6 +2355,28 @@ export default {
           loadBalance: '回退到负载均衡选择',
           unknown: '最近一次调度原因未知'
         },
+        recentScheduleSteps: {
+          previousResponse: '先按 previous_response_id 续写上下文查找，命中：{account}',
+          primaryTry: '先尝试主账号：{account}',
+          primarySelected: '主账号符合条件，直接命中：{account}',
+          primarySkipped: '跳过主账号：{account}，原因：{reason}',
+          stickySelected: '再检查 sticky 会话，命中：{account}',
+          loadBalanceCandidates: '进入负载均衡候选顺序：{candidates}',
+          candidateSelected: '{account}（命中）',
+          finalSelected: '最终命中账号：{account}',
+          time: '调度时间：{time}'
+        },
+        primaryBypassReasons: {
+          primary_unavailable: '主账号当前不可用',
+          primary_not_configured: '没有配置可用主账号',
+          primary_excluded_after_failover: '本次请求已因失败重试排除该账号',
+          primary_unschedulable_or_not_found: '账号不存在、未启用或不可调度',
+          primary_model_or_capability_mismatch: '模型、压缩态或接口能力不匹配',
+          primary_runtime_blocked: '账号运行时处于阻断/冷却状态',
+          primary_group_mismatch: '账号不属于当前分组',
+          primary_channel_restricted: '账号被当前渠道模型限制排除',
+          primary_slot_busy: '账号并发槽已满'
+        },
         priorityLabel: '优先级 {priority}',
         scheduleRankLabel: '调度 #{rank}',
         concurrencyLabel: '并发 {concurrency}',

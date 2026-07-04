@@ -540,6 +540,7 @@ type UsageScheduleTrace struct {
 	SelectedAccountID   int64                         `json:"selected_account_id,omitempty"`
 	Priority            *int                          `json:"priority,omitempty"`
 	PrimaryHit          bool                          `json:"primary_hit,omitempty"`
+	PrimaryCandidateID  int64                         `json:"primary_candidate_id,omitempty"`
 	PrimarySource       string                        `json:"primary_source,omitempty"`
 	PrimaryBypassReason string                        `json:"primary_bypass_reason,omitempty"`
 	StickyHit           bool                          `json:"sticky_hit,omitempty"`

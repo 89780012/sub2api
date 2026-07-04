@@ -34,14 +34,20 @@
             {{ activePrimaryMeta }}
           </div>
           <div
-            v-if="recentScheduleSummary"
+            v-if="recentScheduleLines.length"
             class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 dark:border-dark-600 dark:bg-dark-800/60 dark:text-gray-300"
           >
             <div class="font-medium text-gray-800 dark:text-gray-100">
               {{ t('admin.groups.qualityPanel.recentScheduleTitle') }}
             </div>
-            <div class="mt-1">
-              {{ recentScheduleSummary }}
+            <div class="mt-1 space-y-1">
+              <div
+                v-for="(line, index) in recentScheduleLines"
+                :key="`${index}-${line}`"
+                class="leading-relaxed"
+              >
+                {{ line }}
+              </div>
             </div>
           </div>
           <div
@@ -378,7 +384,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { useAppStore } from '@/stores/app'
-import type { AdminGroup, GroupAccountQualityItem } from '@/types'
+import type { AdminGroup, GroupAccountQualityItem, UsageScheduleCandidateScore, UsageScheduleTrace } from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import PlatformIcon from '@/components/common/PlatformIcon.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -416,7 +422,7 @@ const primaryMeta = ref<{
   active_primary_switched_at?: string | null
   primary_failover_cooldown_seconds?: number
   primary_allow_manual_auto_replace?: boolean
-  recent_schedule_trace?: import('@/types').UsageScheduleTrace | null
+  recent_schedule_trace?: UsageScheduleTrace | null
   recent_schedule_request_id?: string
   recent_schedule_created_at?: string | null
 } | null>(null)
@@ -521,38 +527,99 @@ const failoverTakeoverHint = computed(() => {
     account: activePrimaryItem.value.account_name
   })
 })
-const recentScheduleSummary = computed(() => {
-  const trace = primaryMeta.value?.recent_schedule_trace
-  if (!trace) return ''
+const accountLabel = (accountID?: number | null, candidates: UsageScheduleCandidateScore[] = []) => {
+  if (!accountID) return ''
+  const itemName = sortedItems.value.find(item => item.account_id === accountID)?.account_name
+  const candidateName = candidates.find(candidate => candidate.account_id === accountID)?.account_name
+  return itemName || candidateName || `#${accountID}`
+}
 
-  const selectedName = sortedItems.value.find(item => item.account_id === trace.selected_account_id)?.account_name
-  const selectedLabel = selectedName || (trace.selected_account_id ? `#${trace.selected_account_id}` : '')
+const translatePrimaryBypassReason = (reason?: string | null) => {
+  if (!reason) return ''
+  const key = `admin.groups.qualityPanel.primaryBypassReasons.${reason}`
+  const label = t(key)
+  return label === key ? reason : label
+}
+
+const recentScheduleLines = computed<string[]>(() => {
+  const trace = primaryMeta.value?.recent_schedule_trace
+  if (!trace) return []
+
+  const candidates = trace.candidates || []
+  const selectedLabel = accountLabel(trace.selected_account_id, candidates) || '-'
   const createdAt = primaryMeta.value?.recent_schedule_created_at
     ? new Date(primaryMeta.value.recent_schedule_created_at).toLocaleString()
     : ''
+  const primaryCandidateID = trace.primary_candidate_id ||
+    primaryMeta.value?.active_primary_account_id ||
+    primaryMeta.value?.manual_primary_account_id ||
+    null
+  const primaryLabel = accountLabel(primaryCandidateID, candidates)
+  const lines: string[] = []
 
-  let reason = ''
   if (trace.layer === 'previous_response_id') {
-    reason = t('admin.groups.qualityPanel.recentScheduleReasons.previousResponse')
-  } else if (trace.primary_hit) {
-    reason = t('admin.groups.qualityPanel.recentScheduleReasons.primaryHit')
-  } else if (trace.sticky_hit) {
-    reason = t('admin.groups.qualityPanel.recentScheduleReasons.stickyHit')
-  } else if (trace.primary_bypass_reason) {
-    reason = t('admin.groups.qualityPanel.recentScheduleReasons.primaryBypass', {
-      reason: trace.primary_bypass_reason
-    })
-  } else if (trace.layer === 'load_balance') {
-    reason = t('admin.groups.qualityPanel.recentScheduleReasons.loadBalance')
-  } else {
-    reason = trace.layer || t('admin.groups.qualityPanel.recentScheduleReasons.unknown')
+    lines.push(t('admin.groups.qualityPanel.recentScheduleSteps.previousResponse', {
+      account: selectedLabel
+    }))
   }
 
-  return t('admin.groups.qualityPanel.recentScheduleSummary', {
-    reason,
-    account: selectedLabel || '-',
-    time: createdAt || '-'
-  })
+  if (primaryLabel && (trace.primary_hit || trace.primary_bypass_reason)) {
+    lines.push(t('admin.groups.qualityPanel.recentScheduleSteps.primaryTry', {
+      account: primaryLabel
+    }))
+  }
+
+  if (trace.primary_hit) {
+    lines.push(t('admin.groups.qualityPanel.recentScheduleSteps.primarySelected', {
+      account: selectedLabel
+    }))
+  } else if (trace.primary_bypass_reason && primaryLabel) {
+    lines.push(t('admin.groups.qualityPanel.recentScheduleSteps.primarySkipped', {
+      account: primaryLabel,
+      reason: translatePrimaryBypassReason(trace.primary_bypass_reason)
+    }))
+  }
+
+  if (trace.sticky_hit && trace.layer !== 'previous_response_id') {
+    lines.push(t('admin.groups.qualityPanel.recentScheduleSteps.stickySelected', {
+      account: selectedLabel
+    }))
+  }
+
+  if (trace.layer === 'load_balance' || candidates.length > 0) {
+    const candidateLabels = candidates.map(candidate => {
+      const label = accountLabel(candidate.account_id, candidates) || '-'
+      if (!candidate.selected) return label
+      return t('admin.groups.qualityPanel.recentScheduleSteps.candidateSelected', {
+        account: label
+      })
+    })
+    if (candidateLabels.length > 0) {
+      lines.push(t('admin.groups.qualityPanel.recentScheduleSteps.loadBalanceCandidates', {
+        candidates: candidateLabels.join(' -> ')
+      }))
+    } else if (trace.layer === 'load_balance') {
+      lines.push(t('admin.groups.qualityPanel.recentScheduleReasons.loadBalance'))
+    }
+  }
+
+  if (trace.selected_account_id) {
+    lines.push(t('admin.groups.qualityPanel.recentScheduleSteps.finalSelected', {
+      account: selectedLabel
+    }))
+  }
+
+  if (createdAt) {
+    lines.push(t('admin.groups.qualityPanel.recentScheduleSteps.time', {
+      time: createdAt
+    }))
+  }
+
+  if (lines.length === 0) {
+    lines.push(trace.layer || t('admin.groups.qualityPanel.recentScheduleReasons.unknown'))
+  }
+
+  return lines
 })
 
 const loadQuality = async () => {

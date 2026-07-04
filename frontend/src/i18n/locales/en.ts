@@ -2263,6 +2263,28 @@ export default {
           loadBalance: 'Fell back to load-balance selection',
           unknown: 'Latest scheduling reason is unknown'
         },
+        recentScheduleSteps: {
+          previousResponse: 'Checked previous_response_id continuation first, selected: {account}',
+          primaryTry: 'Tried primary account first: {account}',
+          primarySelected: 'Primary account qualified and was selected: {account}',
+          primarySkipped: 'Skipped primary account {account}: {reason}',
+          stickySelected: 'Checked sticky session next, selected: {account}',
+          loadBalanceCandidates: 'Load-balance candidate order: {candidates}',
+          candidateSelected: '{account} (selected)',
+          finalSelected: 'Final selected account: {account}',
+          time: 'Scheduled at: {time}'
+        },
+        primaryBypassReasons: {
+          primary_unavailable: 'primary account is currently unavailable',
+          primary_not_configured: 'no usable primary account is configured',
+          primary_excluded_after_failover: 'this request already excluded the account after a failed retry',
+          primary_unschedulable_or_not_found: 'account does not exist, is disabled, or is unschedulable',
+          primary_model_or_capability_mismatch: 'model, compact state, or endpoint capability does not match',
+          primary_runtime_blocked: 'account is blocked or cooling down at runtime',
+          primary_group_mismatch: 'account does not belong to this group',
+          primary_channel_restricted: 'account is excluded by channel model restrictions',
+          primary_slot_busy: 'account concurrency slots are full'
+        },
         priorityLabel: 'Priority {priority}',
         scheduleRankLabel: 'Schedule #{rank}',
         concurrencyLabel: 'Concurrency {concurrency}',

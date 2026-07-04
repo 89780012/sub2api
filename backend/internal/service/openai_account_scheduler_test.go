@@ -1448,6 +1448,73 @@ func TestOpenAIGatewayService_SelectAccountWithScheduler_ManualPrimaryOverridesS
 	}
 }
 
+func TestOpenAIGatewayService_SelectAccountWithScheduler_ManualPrimaryExcludedRecordsBypassTrace(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10152)
+	manualPrimaryID := int64(21701)
+	secondaryID := int64(21702)
+	accounts := []Account{
+		{
+			ID:          manualPrimaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+		{
+			ID:          secondaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    1,
+			GroupIDs:    []int64{groupID},
+		},
+	}
+	groupRepo := schedulerTestGroupRepo{
+		group: &Group{
+			ID:                     groupID,
+			PrimaryAccountMode:     GroupPrimaryAccountModeManual,
+			ManualPrimaryAccountID: &manualPrimaryID,
+			ActivePrimaryAccountID: &manualPrimaryID,
+		},
+	}
+	svc := &OpenAIGatewayService{
+		accountRepo:        schedulerGroupAwareOpenAIAccountRepo{schedulerTestOpenAIAccountRepo{accounts: accounts}},
+		groupRepo:          groupRepo,
+		cfg:                &config.Config{},
+		rateLimitService:   newOpenAIAdvancedSchedulerRateLimitService("true"),
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{}),
+	}
+
+	selection, decision, err := svc.SelectAccountWithScheduler(
+		ctx,
+		&groupID,
+		"",
+		"session_hash_manual_primary_excluded",
+		"gpt-5.1",
+		map[int64]struct{}{manualPrimaryID: {}},
+		OpenAIUpstreamTransportAny,
+		false,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, selection)
+	require.NotNil(t, selection.Account)
+	require.Equal(t, secondaryID, selection.Account.ID)
+	require.Equal(t, openAIAccountScheduleLayerLoadBalance, decision.Layer)
+	require.NotNil(t, selection.ScheduleTrace)
+	require.Equal(t, manualPrimaryID, selection.ScheduleTrace.PrimaryCandidateID)
+	require.Equal(t, groupPrimaryBypassReasonExcludedAfterFailover, selection.ScheduleTrace.PrimaryBypassReason)
+	require.False(t, selection.ScheduleTrace.PrimaryHit)
+	if selection.ReleaseFunc != nil {
+		selection.ReleaseFunc()
+	}
+}
+
 func TestOpenAIGatewayService_SelectAccountWithScheduler_SessionStickyEscapeByTTFT(t *testing.T) {
 	ctx := context.Background()
 	groupID := int64(10101)

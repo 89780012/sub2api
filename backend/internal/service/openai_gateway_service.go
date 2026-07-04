@@ -389,39 +389,56 @@ func (s *OpenAIGatewayService) tryPrimaryAccountHit(
 	requireCompact bool,
 	requiredCapability OpenAIEndpointCapability,
 ) *Account {
+	account, _ := s.tryPrimaryAccountHitWithReason(ctx, group, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, requiredCapability)
+	return account
+}
+
+func (s *OpenAIGatewayService) tryPrimaryAccountHitWithReason(
+	ctx context.Context,
+	group *Group,
+	groupID *int64,
+	sessionHash string,
+	requestedModel string,
+	excludedIDs map[int64]struct{},
+	requireCompact bool,
+	requiredCapability OpenAIEndpointCapability,
+) (*Account, string) {
 	if s == nil || group == nil {
-		return nil
+		return nil, groupPrimaryBypassReasonNotConfigured
 	}
 	primaryAccountID := group.currentPreferredPrimaryAccountID()
 	if primaryAccountID <= 0 {
-		return nil
+		return nil, groupPrimaryBypassReasonNotConfigured
 	}
 	if _, excluded := excludedIDs[primaryAccountID]; excluded {
-		return nil
+		return nil, groupPrimaryBypassReasonExcludedAfterFailover
 	}
 	account, err := s.getSchedulableAccount(ctx, primaryAccountID)
 	if err != nil || account == nil {
-		return nil
+		return nil, groupPrimaryBypassReasonUnschedulableOrNotFound
 	}
 	if !isOpenAIAccountEligibleForRequest(ctx, account, requestedModel, requireCompact, requiredCapability) {
-		return nil
+		return nil, groupPrimaryBypassReasonModelOrCapabilityMismatch
 	}
 	if s.isOpenAIAccountRuntimeBlocked(account) {
-		return nil
+		return nil, groupPrimaryBypassReasonRuntimeBlocked
 	}
 	account = s.recheckSelectedOpenAIAccountFromDB(ctx, account, requestedModel, requireCompact, requiredCapability)
-	if account == nil || !openAIStickyAccountMatchesGroup(account, groupID) {
-		return nil
+	if account == nil {
+		return nil, groupPrimaryBypassReasonUnschedulableOrNotFound
+	}
+	if !openAIStickyAccountMatchesGroup(account, groupID) {
+		return nil, groupPrimaryBypassReasonGroupMismatch
 	}
 	if groupID != nil && s.needsUpstreamChannelRestrictionCheck(ctx, groupID) &&
 		s.isUpstreamModelRestrictedByChannel(ctx, *groupID, account, requestedModel, requireCompact) {
-		return nil
+		return nil, groupPrimaryBypassReasonChannelRestricted
 	}
 	if sessionHash != "" {
 		_ = s.refreshStickySessionTTL(ctx, groupID, sessionHash, openaiStickySessionTTL)
 	}
 	s.promotePrimaryCandidateIfReady(ctx, group, account.ID)
-	return account
+	return account, ""
 }
 
 func (s *OpenAIGatewayService) persistPrimaryPromotionFromSelection(
