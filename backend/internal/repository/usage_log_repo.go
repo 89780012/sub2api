@@ -3681,7 +3681,7 @@ func accountPoolRateAnalysisOrderBy(sortBy, sortOrder string) string {
 	case "coverage_rate":
 		return fmt.Sprintf("coverage_rate %s, group_name ASC, group_id ASC", order)
 	default:
-		return fmt.Sprintf("(inferred_multiplier IS NULL) ASC, inferred_multiplier %s, group_name ASC, group_id ASC", order)
+		return fmt.Sprintf("inferred_multiplier %s NULLS LAST, group_name ASC, group_id ASC", order)
 	}
 }
 

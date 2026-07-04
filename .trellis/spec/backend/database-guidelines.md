@@ -43,3 +43,4 @@ Sub2API uses PostgreSQL, Ent schemas, a custom embedded migration runner, and ra
 - Do not bypass soft-delete filters in user-facing reads unless the method name and test make that explicit.
 - Do not leak database errors through handlers. Translate to service/application errors first.
 - Do not update only Ent schemas or only SQL migrations when adding persistent fields; both sides and generated code must agree.
+- Do not reference a SELECT alias inside an `ORDER BY` expression such as `(alias IS NULL)`. PostgreSQL treats that as a real column lookup. Use `alias ASC NULLS LAST`, repeat the full expression, or wrap the projection in an outer query.

@@ -12,11 +12,11 @@ import (
 
 func TestAccountPoolRateAnalysisOrderBy(t *testing.T) {
 	require.Equal(t,
-		"(inferred_multiplier IS NULL) ASC, inferred_multiplier ASC, group_name ASC, group_id ASC",
+		"inferred_multiplier ASC NULLS LAST, group_name ASC, group_id ASC",
 		accountPoolRateAnalysisOrderBy("inferred_multiplier", "asc"),
 	)
 	require.Equal(t,
-		"(inferred_multiplier IS NULL) ASC, inferred_multiplier DESC, group_name ASC, group_id ASC",
+		"inferred_multiplier DESC NULLS LAST, group_name ASC, group_id ASC",
 		accountPoolRateAnalysisOrderBy("unknown", "desc"),
 	)
 	require.Equal(t,
