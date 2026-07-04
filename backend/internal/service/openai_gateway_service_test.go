@@ -427,6 +427,22 @@ func (c *stubGatewayCache) DeleteSessionAccountID(ctx context.Context, groupID i
 	return nil
 }
 
+func (c *stubGatewayCache) DeleteSessionAccountIDsByGroupPrefix(ctx context.Context, groupID int64, sessionHashPrefix string) error {
+	if c.sessionBindings == nil {
+		return nil
+	}
+	if c.deletedSessions == nil {
+		c.deletedSessions = make(map[string]int)
+	}
+	for key := range c.sessionBindings {
+		if strings.HasPrefix(key, sessionHashPrefix) {
+			c.deletedSessions[key]++
+			delete(c.sessionBindings, key)
+		}
+	}
+	return nil
+}
+
 func TestOpenAISelectAccountWithLoadAwareness_FiltersUnschedulable(t *testing.T) {
 	now := time.Now()
 	resetAt := now.Add(10 * time.Minute)

@@ -2256,6 +2256,7 @@ func (s *adminServiceImpl) UpdateGroupPrimaryAccount(ctx context.Context, groupI
 	if err != nil {
 		return nil, err
 	}
+	previousPrimaryAccountID := group.currentPreferredPrimaryAccountID()
 
 	mode := strings.TrimSpace(input.PrimaryAccountMode)
 	if mode == "" {
@@ -2319,6 +2320,11 @@ func (s *adminServiceImpl) UpdateGroupPrimaryAccount(ctx context.Context, groupI
 
 	if err := s.groupRepo.Update(ctx, group); err != nil {
 		return nil, err
+	}
+	if group.Platform == PlatformOpenAI && previousPrimaryAccountID != group.currentPreferredPrimaryAccountID() {
+		if clearer, ok := s.runtimeBlocker.(OpenAIStickyBindingClearer); ok {
+			clearer.ClearOpenAIStickyBindingsForGroup(ctx, groupID)
+		}
 	}
 	if s.authCacheInvalidator != nil {
 		s.authCacheInvalidator.InvalidateAuthCacheByGroupID(ctx, groupID)

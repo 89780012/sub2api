@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -10,6 +11,7 @@ import (
 )
 
 const stickySessionPrefix = "sticky_session:"
+const stickySessionScanCount = 1000
 
 type gatewayCache struct {
 	rdb *redis.Client
@@ -50,4 +52,28 @@ func (c *gatewayCache) RefreshSessionTTL(ctx context.Context, groupID int64, ses
 func (c *gatewayCache) DeleteSessionAccountID(ctx context.Context, groupID int64, sessionHash string) error {
 	key := buildSessionKey(groupID, sessionHash)
 	return c.rdb.Del(ctx, key).Err()
+}
+
+func (c *gatewayCache) DeleteSessionAccountIDsByGroupPrefix(ctx context.Context, groupID int64, sessionHashPrefix string) error {
+	prefix := strings.TrimSpace(sessionHashPrefix)
+	if c == nil || c.rdb == nil || prefix == "" {
+		return nil
+	}
+	pattern := buildSessionKey(groupID, prefix) + "*"
+	var cursor uint64
+	for {
+		keys, next, err := c.rdb.Scan(ctx, cursor, pattern, stickySessionScanCount).Result()
+		if err != nil {
+			return err
+		}
+		if len(keys) > 0 {
+			if err := c.rdb.Del(ctx, keys...).Err(); err != nil {
+				return err
+			}
+		}
+		cursor = next
+		if cursor == 0 {
+			return nil
+		}
+	}
 }

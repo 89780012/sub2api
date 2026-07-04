@@ -49,6 +49,7 @@ type OpenAIWSStateStore interface {
 	BindResponseAccount(ctx context.Context, groupID int64, responseID string, accountID int64, ttl time.Duration) error
 	GetResponseAccount(ctx context.Context, groupID int64, responseID string) (int64, error)
 	DeleteResponseAccount(ctx context.Context, groupID int64, responseID string) error
+	DeleteResponseAccountsByGroup(ctx context.Context, groupID int64) error
 
 	BindResponseConn(responseID, connID string, ttl time.Duration)
 	GetResponseConn(responseID string) (string, bool)
@@ -164,6 +165,28 @@ func (s *defaultOpenAIWSStateStore) DeleteResponseAccount(ctx context.Context, g
 	cacheCtx, cancel := withOpenAIWSStateStoreRedisTimeout(ctx)
 	defer cancel()
 	return s.cache.DeleteSessionAccountID(cacheCtx, groupID, openAIWSResponseAccountCacheKey(id))
+}
+
+func (s *defaultOpenAIWSStateStore) DeleteResponseAccountsByGroup(ctx context.Context, groupID int64) error {
+	if s == nil {
+		return nil
+	}
+	mapPrefix := fmt.Sprintf("%d:", groupID)
+	s.responseToAccountMu.Lock()
+	for key := range s.responseToAccount {
+		if strings.HasPrefix(key, mapPrefix) {
+			delete(s.responseToAccount, key)
+		}
+	}
+	s.responseToAccountMu.Unlock()
+
+	deleter, ok := s.cache.(gatewayGroupPrefixStickyDeleter)
+	if !ok {
+		return nil
+	}
+	cacheCtx, cancel := withOpenAIWSStateStoreRedisTimeout(ctx)
+	defer cancel()
+	return deleter.DeleteSessionAccountIDsByGroupPrefix(cacheCtx, groupID, openAIWSResponseAccountCachePrefix)
 }
 
 func (s *defaultOpenAIWSStateStore) BindResponseConn(responseID, connID string, ttl time.Duration) {

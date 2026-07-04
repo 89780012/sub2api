@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -16,6 +17,14 @@ import (
 type openAILegacySessionHashContextKey struct{}
 
 var openAILegacySessionHashKey = openAILegacySessionHashContextKey{}
+
+type gatewayGroupPrefixStickyDeleter interface {
+	DeleteSessionAccountIDsByGroupPrefix(ctx context.Context, groupID int64, sessionHashPrefix string) error
+}
+
+type OpenAIStickyBindingClearer interface {
+	ClearOpenAIStickyBindingsForGroup(ctx context.Context, groupID int64)
+}
 
 var (
 	openAIStickyLegacyReadFallbackTotal atomic.Int64
@@ -218,4 +227,22 @@ func (s *OpenAIGatewayService) deleteStickySessionAccountID(ctx context.Context,
 		_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), legacyKey)
 	}
 	return err
+}
+
+func (s *OpenAIGatewayService) ClearOpenAIStickyBindingsForGroup(ctx context.Context, groupID int64) {
+	if s == nil || groupID < 0 {
+		return
+	}
+	if store := s.getOpenAIWSStateStore(); store != nil {
+		if err := store.DeleteResponseAccountsByGroup(ctx, groupID); err != nil {
+			slog.Warn("openai response sticky clear failed", "group_id", groupID, "error", err)
+		}
+	}
+	deleter, ok := s.cache.(gatewayGroupPrefixStickyDeleter)
+	if !ok {
+		return
+	}
+	if err := deleter.DeleteSessionAccountIDsByGroupPrefix(ctx, groupID, "openai:"); err != nil {
+		slog.Warn("openai session sticky clear failed", "group_id", groupID, "error", err)
+	}
 }

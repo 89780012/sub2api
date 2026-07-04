@@ -21,6 +21,10 @@ type groupPrimaryCandidate struct {
 	Account *Account
 }
 
+type groupPrimarySelectionUpdater interface {
+	Update(ctx context.Context, group *Group) error
+}
+
 func (s *GatewayService) getGroupPrimaryAccount(ctx context.Context, groupID *int64) *Group {
 	if s == nil || s.groupRepo == nil || groupID == nil || *groupID <= 0 {
 		return nil
@@ -118,23 +122,23 @@ func (g *Group) isFailoverCandidateCoolingDown(now time.Time) bool {
 
 func maybePromoteGroupPrimaryCandidate(
 	ctx context.Context,
-	repo GroupRepository,
+	repo groupPrimarySelectionUpdater,
 	group *Group,
 	accountID int64,
-) {
+) bool {
 	if repo == nil || group == nil || accountID <= 0 {
-		return
+		return false
 	}
 	if group.ActivePrimaryAccountID == nil || *group.ActivePrimaryAccountID != accountID {
-		return
+		return false
 	}
 	if strings.TrimSpace(group.ActivePrimarySource) != groupPrimarySourceFailoverCandidate {
-		return
+		return false
 	}
 	if group.ActivePrimarySwitchedAt != nil && group.shouldBypassPrimaryCooldown(*group.ActivePrimarySwitchedAt) {
-		return
+		return false
 	}
-	persistGroupPrimarySelection(
+	return persistGroupPrimarySelection(
 		ctx,
 		repo,
 		group,
@@ -146,14 +150,14 @@ func maybePromoteGroupPrimaryCandidate(
 
 func persistGroupPrimarySelection(
 	ctx context.Context,
-	repo GroupRepository,
+	repo groupPrimarySelectionUpdater,
 	group *Group,
 	accountID int64,
 	source string,
 	reason string,
-) {
+) bool {
 	if repo == nil || group == nil || accountID <= 0 {
-		return
+		return false
 	}
 	shouldTakeOverManual := group.EffectivePrimaryAccountMode() == GroupPrimaryAccountModeManual &&
 		group.PrimaryAllowManualAutoReplace &&
@@ -166,7 +170,7 @@ func persistGroupPrimarySelection(
 		strings.TrimSpace(group.ActivePrimarySource) == source &&
 		strings.TrimSpace(group.ActivePrimaryReason) == reason &&
 		(!shouldTakeOverManual || (group.ManualPrimaryAccountID == nil && group.EffectivePrimaryAccountMode() == GroupPrimaryAccountModeAuto)) {
-		return
+		return false
 	}
 	now := time.Now()
 	group.ActivePrimaryAccountID = &accountID
@@ -185,7 +189,9 @@ func persistGroupPrimarySelection(
 			"reason", reason,
 			"error", err,
 		)
+		return false
 	}
+	return currentID != accountID
 }
 
 func attachPrimaryTrace(trace *UsageScheduleTrace, group *Group, hit bool, bypassReason string) {
@@ -219,7 +225,7 @@ func (s *GatewayService) persistPrimaryPromotionFromSelection(
 		if group.ActivePrimarySwitchedAt != nil && group.shouldBypassPrimaryCooldown(*group.ActivePrimarySwitchedAt) {
 			return
 		}
-		persistGroupPrimarySelection(
+		_ = persistGroupPrimarySelection(
 			ctx,
 			s.groupRepo,
 			group,
@@ -251,5 +257,5 @@ func (s *GatewayService) promotePrimaryCandidateIfReady(ctx context.Context, gro
 	if s == nil || group == nil || accountID <= 0 {
 		return
 	}
-	maybePromoteGroupPrimaryCandidate(ctx, s.groupRepo, group, accountID)
+	_ = maybePromoteGroupPrimaryCandidate(ctx, s.groupRepo, group, accountID)
 }

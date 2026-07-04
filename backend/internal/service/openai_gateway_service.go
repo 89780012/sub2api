@@ -446,14 +446,16 @@ func (s *OpenAIGatewayService) persistPrimaryPromotionFromSelection(
 		if group.ActivePrimarySwitchedAt != nil && group.shouldBypassPrimaryCooldown(*group.ActivePrimarySwitchedAt) {
 			return
 		}
-		persistGroupPrimarySelection(
+		if persistGroupPrimarySelection(
 			ctx,
 			s.groupRepo,
 			group,
 			selectedAccountID,
 			groupPrimarySourceFailoverPromoted,
 			groupPrimaryReasonFailoverStabilized,
-		)
+		) {
+			s.ClearOpenAIStickyBindingsForGroup(ctx, group.ID)
+		}
 		return
 	}
 	if activeID == selectedAccountID && activeSource == groupPrimarySourceFailoverPromoted {
@@ -471,6 +473,10 @@ func (s *OpenAIGatewayService) persistPrimaryPromotionFromSelection(
 			"reason", groupPrimaryReasonRetryExhausted,
 			"error", err,
 		)
+		return
+	}
+	if activeID != selectedAccountID {
+		s.ClearOpenAIStickyBindingsForGroup(ctx, group.ID)
 	}
 }
 
@@ -478,7 +484,9 @@ func (s *OpenAIGatewayService) promotePrimaryCandidateIfReady(ctx context.Contex
 	if s == nil || group == nil || accountID <= 0 {
 		return
 	}
-	maybePromoteGroupPrimaryCandidate(ctx, s.groupRepo, group, accountID)
+	if maybePromoteGroupPrimaryCandidate(ctx, s.groupRepo, group, accountID) {
+		s.ClearOpenAIStickyBindingsForGroup(ctx, group.ID)
+	}
 }
 
 // NewOpenAIGatewayService creates a new OpenAIGatewayService
