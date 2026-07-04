@@ -1,39 +1,32 @@
 # Frontend Development Guidelines
 
-> Best practices for frontend development in this project.
-
----
-
-## Overview
-
-This directory contains guidelines for frontend development. Fill in each file with your project's specific conventions.
-
----
+Source-backed conventions for the Vue frontend in `frontend/`.
 
 ## Guidelines Index
 
-| Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | To fill |
-| [Hook Guidelines](./hook-guidelines.md) | Custom hooks, data fetching patterns | To fill |
-| [State Management](./state-management.md) | Local state, global state, server state | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
+| Guide | Purpose | Status |
+|-------|---------|--------|
+| [Directory Structure](./directory-structure.md) | Where frontend code belongs and how modules are grouped | Complete |
+| [Component Guidelines](./component-guidelines.md) | Vue component, slot, styling, and responsive patterns | Complete |
+| [Hook Guidelines](./hook-guidelines.md) | Composable naming, cancellation, debounce, and cleanup patterns | Complete |
+| [State Management](./state-management.md) | Pinia stores, persistence, global UI state, and server state | Complete |
+| [Type Safety](./type-safety.md) | TypeScript contracts, API wrappers, and typed props/events | Complete |
+| [Quality Guidelines](./quality-guidelines.md) | Build, lint, tests, accessibility, and review checks | Complete |
 
----
+## Pre-Development Checklist
 
-## How to Fill These Guidelines
+Read these before frontend changes:
 
-For each guideline file:
+- Always read [Directory Structure](./directory-structure.md).
+- Read [Component Guidelines](./component-guidelines.md) for `.vue` components, layouts, tables, dialogs, forms, or visual states.
+- Read [Hook Guidelines](./hook-guidelines.md) before adding or changing composables.
+- Read [State Management](./state-management.md) for Pinia stores, persistence, app config, auth, settings, polling, or shared server data.
+- Read [Type Safety](./type-safety.md) for API wrappers, shared types, route meta, and request/response shapes.
+- Read [Quality Guidelines](./quality-guidelines.md) before testing or verification.
 
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
+## Main Verification Commands
 
-The goal is to help AI assistants and new team members understand how YOUR project works.
-
----
-
-**Language**: All documentation should be written in **English**.
+- `cd frontend && pnpm run typecheck`
+- `cd frontend && pnpm run lint:check`
+- `cd frontend && pnpm run test:run`
+- `cd frontend && pnpm run build`

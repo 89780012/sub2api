@@ -1,38 +1,30 @@
 # Backend Development Guidelines
 
-> Best practices for backend development in this project.
-
----
-
-## Overview
-
-This directory contains guidelines for backend development. Fill in each file with your project's specific conventions.
-
----
+Source-backed conventions for the Go backend in `backend/`.
 
 ## Guidelines Index
 
-| Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
-| [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | To fill |
+| Guide | Purpose | Status |
+|-------|---------|--------|
+| [Directory Structure](./directory-structure.md) | Where backend code belongs and how layers interact | Complete |
+| [Database Guidelines](./database-guidelines.md) | Ent schemas, repositories, SQL, and migrations | Complete |
+| [Error Handling](./error-handling.md) | Application errors and JSON response envelopes | Complete |
+| [Logging Guidelines](./logging-guidelines.md) | Zap/slog logging, access logs, redaction, and sink usage | Complete |
+| [Quality Guidelines](./quality-guidelines.md) | Tests, generation, review checks, and forbidden patterns | Complete |
 
----
+## Pre-Development Checklist
 
-## How to Fill These Guidelines
+Read these before backend changes:
 
-For each guideline file:
+- Always read [Directory Structure](./directory-structure.md).
+- Read [Database Guidelines](./database-guidelines.md) for Ent schemas, repositories, SQL, migrations, billing, quotas, auth, groups, accounts, or settings.
+- Read [Error Handling](./error-handling.md) for HTTP handlers, service errors, repository error translation, gateway streams, or API contract changes.
+- Read [Logging Guidelines](./logging-guidelines.md) for request logging, operational logs, background jobs, gateways, or security-sensitive data.
+- Read [Quality Guidelines](./quality-guidelines.md) before adding tests or running verification.
 
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
+## Main Verification Commands
 
-The goal is to help AI assistants and new team members understand how YOUR project works.
-
----
-
-**Language**: All documentation should be written in **English**.
+- `cd backend && go test ./...`
+- `cd backend && go test -tags=unit ./...`
+- `cd backend && go test -tags=integration ./...` when repository or migration behavior changes.
+- `cd backend && make generate` after editing `backend/ent/schema` or Wire providers.
