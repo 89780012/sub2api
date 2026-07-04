@@ -554,7 +554,7 @@ const recentScheduleLines = computed<string[]>(() => {
     primaryMeta.value?.active_primary_account_id ||
     primaryMeta.value?.manual_primary_account_id ||
     null
-  const primaryLabel = accountLabel(primaryCandidateID, candidates)
+  const primaryLabel = trace.primary_candidate_name || accountLabel(primaryCandidateID, candidates)
   const shouldShowPrimaryAttempt = Boolean(primaryLabel && (
     trace.primary_hit ||
     trace.primary_bypass_reason ||

@@ -16,15 +16,18 @@ const (
 	groupPrimaryReasonRetryExhausted     = "same_account_retry_exhausted"
 	groupPrimaryReasonFailoverStabilized = "failover_stabilized"
 
-	groupPrimaryBypassReasonUnavailable               = "primary_unavailable"
-	groupPrimaryBypassReasonNotConfigured             = "primary_not_configured"
-	groupPrimaryBypassReasonExcludedAfterFailover     = "primary_excluded_after_failover"
-	groupPrimaryBypassReasonUnschedulableOrNotFound   = "primary_unschedulable_or_not_found"
-	groupPrimaryBypassReasonModelOrCapabilityMismatch = "primary_model_or_capability_mismatch"
-	groupPrimaryBypassReasonRuntimeBlocked            = "primary_runtime_blocked"
-	groupPrimaryBypassReasonGroupMismatch             = "primary_group_mismatch"
-	groupPrimaryBypassReasonChannelRestricted         = "primary_channel_restricted"
-	groupPrimaryBypassReasonSlotBusy                  = "primary_slot_busy"
+	groupPrimaryBypassReasonUnavailable                = "primary_unavailable"
+	groupPrimaryBypassReasonNotConfigured              = "primary_not_configured"
+	groupPrimaryBypassReasonExcludedAfterFailover      = "primary_excluded_after_failover"
+	groupPrimaryBypassReasonUnschedulableOrNotFound    = "primary_unschedulable_or_not_found"
+	groupPrimaryBypassReasonModelOrCapabilityMismatch  = "primary_model_or_capability_mismatch"
+	groupPrimaryBypassReasonModelMismatch              = "primary_model_mismatch"
+	groupPrimaryBypassReasonEndpointCapabilityMismatch = "primary_endpoint_capability_mismatch"
+	groupPrimaryBypassReasonCompactUnsupported         = "primary_compact_unsupported"
+	groupPrimaryBypassReasonRuntimeBlocked             = "primary_runtime_blocked"
+	groupPrimaryBypassReasonGroupMismatch              = "primary_group_mismatch"
+	groupPrimaryBypassReasonChannelRestricted          = "primary_channel_restricted"
+	groupPrimaryBypassReasonSlotBusy                   = "primary_slot_busy"
 )
 
 type groupPrimaryCandidate struct {

@@ -674,7 +674,7 @@ const scheduleDecisionLines = (row: AdminUsageLog | null): string[] => {
 
   const candidates = trace.candidates || []
   const selectedLabel = scheduleAccountLabel(row, trace.selected_account_id || row.account_id, candidates) || '-'
-  const primaryLabel = scheduleAccountLabel(row, trace.primary_candidate_id, candidates)
+  const primaryLabel = trace.primary_candidate_name || scheduleAccountLabel(row, trace.primary_candidate_id, candidates)
   const lines: string[] = []
 
   if (trace.layer === 'previous_response_id') {

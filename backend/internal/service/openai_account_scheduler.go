@@ -352,6 +352,7 @@ func (s *defaultOpenAIAccountScheduler) Select(
 			decision.SelectedAccountType = selection.Account.Type
 			selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
 			attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
+			s.service.fillPrimaryTraceCandidateName(ctx, selection.ScheduleTrace, group)
 			s.service.promotePrimaryCandidateIfReady(ctx, group, selection.Account.ID)
 			return selection, decision, nil
 		} else if reason != "" {
@@ -371,6 +372,7 @@ func (s *defaultOpenAIAccountScheduler) Select(
 		selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
 		if primaryBypassReason != "" {
 			attachPrimaryTrace(selection.ScheduleTrace, group, false, primaryBypassReason)
+			s.service.fillPrimaryTraceCandidateName(ctx, selection.ScheduleTrace, group)
 		}
 		return selection, decision, nil
 	}
@@ -389,6 +391,7 @@ func (s *defaultOpenAIAccountScheduler) Select(
 			decision.SelectedAccountType = selection.Account.Type
 			selection.ScheduleTrace = decision.usageScheduleTrace(selection.Account)
 			attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
+			s.service.fillPrimaryTraceCandidateName(ctx, selection.ScheduleTrace, group)
 			s.service.promotePrimaryCandidateIfReady(ctx, group, selection.Account.ID)
 			return selection, decision, nil
 		} else if reason != "" {
@@ -420,6 +423,7 @@ func (s *defaultOpenAIAccountScheduler) Select(
 			primaryBypassReason = groupPrimaryBypassReasonUnavailable
 		}
 		attachPrimaryTrace(selection.ScheduleTrace, group, false, primaryBypassReason)
+		s.service.fillPrimaryTraceCandidateName(ctx, selection.ScheduleTrace, group)
 		s.service.persistPrimaryPromotionFromSelection(ctx, group, selection.Account.ID, hadExcludedFailures)
 	}
 	return selection, decision, nil
@@ -1639,6 +1643,7 @@ func (s *OpenAIGatewayService) ensureLegacyOpenAIScheduleTrace(
 	}
 	if primaryAccountID == selection.Account.ID {
 		attachPrimaryTrace(selection.ScheduleTrace, group, true, "")
+		s.fillPrimaryTraceCandidateName(ctx, selection.ScheduleTrace, group)
 		return
 	}
 
@@ -1656,6 +1661,7 @@ func (s *OpenAIGatewayService) ensureLegacyOpenAIScheduleTrace(
 		bypassReason = groupPrimaryBypassReasonUnavailable
 	}
 	attachPrimaryTrace(selection.ScheduleTrace, group, false, bypassReason)
+	s.fillPrimaryTraceCandidateName(ctx, selection.ScheduleTrace, group)
 }
 
 func cloneExcludedAccountIDs(excludedIDs map[int64]struct{}) map[int64]struct{} {

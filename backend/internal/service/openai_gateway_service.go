@@ -437,11 +437,11 @@ func (s *OpenAIGatewayService) inspectPrimaryAccountHit(
 	if err != nil || account == nil {
 		return nil, groupPrimaryBypassReasonUnschedulableOrNotFound
 	}
-	if !isOpenAIAccountEligibleForRequest(ctx, account, requestedModel, requireCompact, requiredCapability) {
-		return nil, groupPrimaryBypassReasonModelOrCapabilityMismatch
-	}
 	if s.isOpenAIAccountRuntimeBlocked(account) {
 		return nil, groupPrimaryBypassReasonRuntimeBlocked
+	}
+	if reason := openAIAccountRequestIneligibleReason(ctx, account, requestedModel, requireCompact, requiredCapability); reason != "" {
+		return nil, reason
 	}
 	account = s.recheckSelectedOpenAIAccountFromDB(ctx, account, requestedModel, requireCompact, requiredCapability)
 	if account == nil {
@@ -455,6 +455,42 @@ func (s *OpenAIGatewayService) inspectPrimaryAccountHit(
 		return nil, groupPrimaryBypassReasonChannelRestricted
 	}
 	return account, ""
+}
+
+func openAIAccountRequestIneligibleReason(ctx context.Context, account *Account, requestedModel string, requireCompact bool, requiredCapability OpenAIEndpointCapability) string {
+	if account == nil || !account.IsOpenAI() || !account.IsSchedulableForModelWithContext(ctx, requestedModel) {
+		return groupPrimaryBypassReasonUnschedulableOrNotFound
+	}
+	if paused, _ := shouldAutoPauseOpenAIAccountByQuota(ctx, account); paused {
+		return groupPrimaryBypassReasonRuntimeBlocked
+	}
+	if requestedModel != "" && !account.IsModelSupported(requestedModel) {
+		return groupPrimaryBypassReasonModelMismatch
+	}
+	if !account.SupportsOpenAIEndpointCapability(requiredCapability) {
+		return groupPrimaryBypassReasonEndpointCapabilityMismatch
+	}
+	if requireCompact && openAICompactSupportTier(account) == 0 {
+		return groupPrimaryBypassReasonCompactUnsupported
+	}
+	return ""
+}
+
+func (s *OpenAIGatewayService) fillPrimaryTraceCandidateName(ctx context.Context, trace *UsageScheduleTrace, group *Group) {
+	if s == nil || trace == nil || group == nil || strings.TrimSpace(trace.PrimaryCandidateName) != "" {
+		return
+	}
+	primaryAccountID := group.currentPreferredPrimaryAccountID()
+	if primaryAccountID <= 0 {
+		return
+	}
+	if trace.PrimaryCandidateID <= 0 {
+		trace.PrimaryCandidateID = primaryAccountID
+	}
+	account, err := s.getSchedulableAccount(ctx, primaryAccountID)
+	if err == nil && account != nil {
+		trace.PrimaryCandidateName = strings.TrimSpace(account.Name)
+	}
 }
 
 func (s *OpenAIGatewayService) applyLegacyOpenAISimpleTrace(
@@ -478,6 +514,7 @@ func (s *OpenAIGatewayService) applyLegacyOpenAISimpleTrace(
 		selection.ScheduleTrace.Layer = defaultLayer
 	}
 	selection.ScheduleTrace.WaitPlan = selection.WaitPlan != nil
+	s.fillPrimaryTraceCandidateName(ctx, selection.ScheduleTrace, group)
 
 	if group != nil {
 		primaryAccountID := group.currentPreferredPrimaryAccountID()
