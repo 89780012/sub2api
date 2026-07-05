@@ -3043,16 +3043,12 @@
       @success="loadGroups"
     />
 
-    <GroupQualityPanel
-      :show="showQualityPanelModal"
-      :group="qualityPanelGroup"
-      @close="showQualityPanelModal = false"
-    />
   </AppLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from "vue";
+import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useAppStore } from "@/stores/app";
 import { useOnboardingStore } from "@/stores/onboarding";
@@ -3071,7 +3067,6 @@ import PlatformIcon from "@/components/common/PlatformIcon.vue";
 import Icon from "@/components/icons/Icon.vue";
 import GroupRateMultipliersModal from "@/components/admin/group/GroupRateMultipliersModal.vue";
 import GroupRPMOverridesModal from "@/components/admin/group/GroupRPMOverridesModal.vue";
-import GroupQualityPanel from "@/components/admin/group/GroupQualityPanel.vue";
 import GroupCapacityBadge from "@/components/common/GroupCapacityBadge.vue";
 import { VueDraggable } from "vue-draggable-plus";
 import { createStableObjectKeyResolver } from "@/utils/stableObjectKey";
@@ -3096,6 +3091,7 @@ import { createModelsListCandidatesTracker } from "./groupsModelsListCandidates"
 import { normalizeSupportedModelScopesForPlatform } from "./groupsSupportedModelScopes";
 
 const { t } = useI18n();
+const router = useRouter();
 const appStore = useAppStore();
 const onboardingStore = useOnboardingStore();
 
@@ -3324,8 +3320,6 @@ const showRateMultipliersModal = ref(false);
 const rateMultipliersGroup = ref<AdminGroup | null>(null);
 const showRPMOverridesModal = ref(false);
 const rpmOverridesGroup = ref<AdminGroup | null>(null);
-const showQualityPanelModal = ref(false);
-const qualityPanelGroup = ref<AdminGroup | null>(null);
 const sortableGroups = ref<AdminGroup[]>([]);
 const createMessagesDispatchDefaults = createDefaultMessagesDispatchFormState();
 const editMessagesDispatchDefaults = createDefaultMessagesDispatchFormState();
@@ -4217,8 +4211,7 @@ const handleRPMOverrides = (group: AdminGroup) => {
 };
 
 const handleQualityPanel = (group: AdminGroup) => {
-  qualityPanelGroup.value = group;
-  showQualityPanelModal.value = true;
+  router.push({ name: "AdminGroupQuality", query: { group_id: group.id } });
 };
 
 const handleDelete = (group: AdminGroup) => {

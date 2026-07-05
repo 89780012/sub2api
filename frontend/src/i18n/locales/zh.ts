@@ -387,6 +387,7 @@ export default {
     profile: '个人资料',
     users: '用户管理',
     groups: '分组管理',
+    groupQuality: '质量面板',
     channels: '渠道管理',
     availableChannels: '可用渠道',
     subscriptions: '订阅管理',
@@ -2285,6 +2286,10 @@ export default {
       qualityPanel: {
         button: '质量面板',
         title: '分组账号质量面板',
+        pageDescription: '选择一个分组，以紧凑卡片查看账号调度、质量、风险和外部余额情况。',
+        selectGroup: '选择分组',
+        loadingGroups: '正在加载分组...',
+        noGroupSelected: '请选择一个分组查看账号质量。',
         description: '先看分组内真实调度顺序，再看质量、扣分和恢复是怎么把它排成这样的。',
         selectionHint: '这个面板现在按后台真实调度顺序展示：先比优先级，再比质量，前面条件接近时再看最近使用情况。',
         summary: '共 {total} 个账号，已知 {known} 个，未知 {unknown} 个',

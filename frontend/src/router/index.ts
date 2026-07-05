@@ -427,6 +427,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/admin/group-quality',
+    name: 'AdminGroupQuality',
+    component: () => import('@/views/admin/GroupQualityView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Group Account Quality',
+      titleKey: 'admin.groups.qualityPanel.title',
+      descriptionKey: 'admin.groups.qualityPanel.pageDescription'
+    }
+  },
+  {
     path: '/admin/channels',
     redirect: '/admin/channels/pricing'
   },
@@ -844,6 +856,7 @@ router.beforeEach(async (to, _from, next) => {
   if (authStore.isSimpleMode) {
     const restrictedPaths = [
       '/admin/groups',
+      '/admin/group-quality',
       '/admin/subscriptions',
       '/admin/redeem',
       '/subscriptions',

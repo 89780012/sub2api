@@ -387,6 +387,7 @@ export default {
     profile: 'Profile',
     users: 'Users',
     groups: 'Groups',
+    groupQuality: 'Quality Panel',
     channels: 'Channels',
     availableChannels: 'Available Channels',
     subscriptions: 'Subscriptions',
@@ -2190,6 +2191,10 @@ export default {
       qualityPanel: {
         button: 'Quality Panel',
         title: 'Group Account Quality Panel',
+        pageDescription: 'Select a group and review each account in compact cards for scheduling, quality, risk, and external balance.',
+        selectGroup: 'Select group',
+        loadingGroups: 'Loading groups...',
+        noGroupSelected: 'Select a group to view account quality.',
         description: 'See the real in-group scheduling order first, then inspect how quality, penalty, and recovery produced it.',
         selectionHint: 'This panel now follows the backend scheduler order: priority first, then quality, then last-used fallback when earlier factors are tied.',
         summary: '{total} accounts, {known} known, {unknown} unknown',

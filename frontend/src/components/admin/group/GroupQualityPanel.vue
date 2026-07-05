@@ -1,5 +1,9 @@
 <template>
-  <BaseDialog :show="show" :title="t('admin.groups.qualityPanel.title')" width="extra-extra-wide" @close="emit('close')">
+  <component
+    :is="embedded ? 'div' : BaseDialog"
+    v-bind="embedded ? { class: 'space-y-4' } : { show, title: t('admin.groups.qualityPanel.title'), width: 'extra-extra-wide' }"
+    @close="emit('close')"
+  >
     <div v-if="group" class="space-y-4">
       <div class="flex flex-wrap items-center gap-3 rounded-lg bg-gray-50 px-4 py-2.5 text-sm dark:bg-dark-700">
         <span class="inline-flex items-center gap-1.5" :class="platformColorClass">
@@ -141,11 +145,11 @@
           </div>
         </div>
 
-        <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-dark-600">
-          <div class="max-h-[65vh] overflow-auto">
-            <div class="divide-y divide-gray-100 dark:divide-dark-600">
-              <section v-for="item in sortedItems" :key="item.account_id" class="px-4 py-4 hover:bg-gray-50 dark:hover:bg-dark-700/30">
-                <div class="grid gap-4 xl:grid-cols-[minmax(0,2.2fr)_minmax(190px,0.95fr)_minmax(240px,1.1fr)_minmax(220px,1fr)_auto]">
+        <div class="rounded-lg border border-gray-200 bg-gray-50/70 p-3 dark:border-dark-600 dark:bg-dark-900/40">
+          <div :class="embedded ? 'overflow-visible' : 'max-h-[65vh] overflow-auto pr-1'">
+            <div class="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+              <section v-for="item in sortedItems" :key="item.account_id" class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition hover:border-gray-300 dark:border-dark-600 dark:bg-dark-800 dark:hover:border-dark-500">
+                <div class="grid gap-3">
                   <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
                       <span class="truncate font-medium text-gray-900 dark:text-white">{{ item.account_name }}</span>
@@ -395,7 +399,7 @@
         </div>
       </template>
     </div>
-  </BaseDialog>
+  </component>
 </template>
 
 <script setup lang="ts">
@@ -410,10 +414,13 @@ import Icon from '@/components/icons/Icon.vue'
 import ExternalBalanceCell from '@/components/admin/account/ExternalBalanceCell.vue'
 import { formatRateMultiplier } from '@/utils/format'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   show: boolean
   group: AdminGroup | null
-}>()
+  embedded?: boolean
+}>(), {
+  embedded: false
+})
 
 const emit = defineEmits<{
   close: []
@@ -723,11 +730,20 @@ const switchToAuto = async () => {
   }
 }
 
-watch(() => [props.show, props.group?.id], ([show, groupID]) => {
-  if (show && groupID) {
+watch(() => [props.show, props.embedded, props.group?.id], ([show, embedded, groupID]) => {
+  if ((show || embedded) && groupID) {
     loadQuality()
+    return
   }
-})
+  if (!groupID) {
+    items.value = []
+    primaryMeta.value = null
+    expandedAccountIds.value = []
+    totalCount.value = 0
+    knownCount.value = 0
+    unknownCount.value = 0
+  }
+}, { immediate: true })
 
 const toggleExpanded = (accountID: number) => {
   if (expandedAccountIds.value.includes(accountID)) {
