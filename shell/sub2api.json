@@ -1,0 +1,229 @@
+{
+  "sites": [
+    {
+      "name": "junliai",
+      "base_url": "https://openapi.junliai.com",
+      "data": {
+        "account_balance": 48.56278916,
+        "account": {
+          "id": 5051,
+          "email": "89780012@qq.com",
+          "role": "user",
+          "status": "active",
+          "balance": 48.56278916,
+          "total_recharged": 220,
+          "concurrency": 500,
+          "rpm_limit": 0
+        },
+        "keys": [
+          {
+            "id": 261113,
+            "name": "test",
+            "key": "sk-fd84c78cad4a4511439e3cd8f696e94647dfa040a7fd77aeb380ce36b76ea53b",
+            "masked_key": "sk-fd84c...b76ea53b",
+            "status": "active",
+            "group_id": 52,
+            "group_name": "【GPT】福利Pro 0.08",
+            "rate_multiplier": 0.08,
+            "quota": 0,
+            "quota_used": 0
+          },
+          {
+            "id": 261050,
+            "name": "plus-0.065x",
+            "key": "sk-c8b080ee4778af1bf56d01230419a1744d87703812d320b9ffba0b9f35641c3d",
+            "masked_key": "sk-c8b08...35641c3d",
+            "status": "active",
+            "group_id": 10,
+            "group_name": "【GPT】福利分组",
+            "rate_multiplier": 0.06,
+            "quota": 0,
+            "quota_used": 0
+          },
+          {
+            "id": 261036,
+            "name": "plus",
+            "key": "sk-63c18638eb10b62da680e0885510f49fc0540b38e1a723bbbb26b5b4b67a09f3",
+            "masked_key": "sk-63c18...b67a09f3",
+            "status": "active",
+            "group_id": 3,
+            "group_name": "【GPT】Plus分组",
+            "rate_multiplier": 0.1,
+            "quota": 0,
+            "quota_used": 0
+          }
+        ],
+        "groups": [
+          {
+            "id": 2,
+            "name": "【Claude】反重力",
+            "platform": "anthropic",
+            "rate_multiplier": 0.45,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 3,
+            "name": "【GPT】Plus分组",
+            "platform": "openai",
+            "rate_multiplier": 0.1,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 10,
+            "name": "【GPT】福利分组",
+            "platform": "openai",
+            "rate_multiplier": 0.06,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 22,
+            "name": "【GPT】Pro分组",
+            "platform": "openai",
+            "rate_multiplier": 0.18,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 27,
+            "name": "【Claude】cc max分组",
+            "platform": "anthropic",
+            "rate_multiplier": 1,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 36,
+            "name": "【GPT】image2生图稳定版",
+            "platform": "openai",
+            "rate_multiplier": 0.01,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 37,
+            "name": "【Claude】ccmax 特价",
+            "platform": "anthropic",
+            "rate_multiplier": 0.8,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 39,
+            "name": "【Claude】Kiro稳定版",
+            "platform": "anthropic",
+            "rate_multiplier": 0.15,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 40,
+            "name": "【开源】开源模型",
+            "platform": "openai",
+            "rate_multiplier": 5,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 43,
+            "name": "【claude】ccmax | web反代",
+            "platform": "anthropic",
+            "rate_multiplier": 0.55,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 51,
+            "name": "【GPT】高并发Pro分组",
+            "platform": "openai",
+            "rate_multiplier": 0.35,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 65,
+            "name": "【Gemini】反重力渠道",
+            "platform": "gemini",
+            "rate_multiplier": 0.35,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 73,
+            "name": "【Gork】Super号池",
+            "platform": "grok",
+            "rate_multiplier": 0.05,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 74,
+            "name": "【GPT】Free 号池",
+            "platform": "openai",
+            "rate_multiplier": 0.1,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          },
+          {
+            "id": 75,
+            "name": "【GPT】image2 web反代",
+            "platform": "openai",
+            "rate_multiplier": 0.01,
+            "subscription_type": "standard",
+            "status": "active",
+            "daily_limit_usd": 0,
+            "weekly_limit_usd": 0,
+            "monthly_limit_usd": 0
+          }
+        ],
+        "subscriptions": [],
+        "fetched_at": "2026-07-04T23:24:29+08:00"
+      }
+    }
+  ],
+  "fetched_at": "2026-07-04T23:24:25+08:00"
+}

@@ -1,0 +1,96 @@
+{
+  "sites": [
+    {
+      "name": "main",
+      "base_url": "https://ggniao.com",
+      "data": {
+        "user": {
+          "id": 316,
+          "username": "89780012@qq.com",
+          "display_name": "89780012@qq.com",
+          "group": "default",
+          "quota": 15592966,
+          "used_quota": 34407034,
+          "left_quota": -18814068
+        },
+        "keys": [
+          {
+            "id": 598,
+            "name": "cc",
+            "key": "1TGg**********jGWd",
+            "group": "Claude Kiro",
+            "group_ratio": 0.21,
+            "group_desc": "90%缓存，仅支持cc-cli或app有缓存，其余自测",
+            "status": 1,
+            "unlimited_quota": true,
+            "remain_quota": 0,
+            "used_quota": 0
+          },
+          {
+            "id": 266,
+            "name": "plus-备用-0.12x",
+            "key": "H6LM**********KdNN",
+            "group": "OpenAI Plus备用",
+            "group_ratio": 0.13,
+            "group_desc": "只做备用，贵",
+            "status": 1,
+            "unlimited_quota": true,
+            "remain_quota": 0,
+            "used_quota": 31526
+          },
+          {
+            "id": 265,
+            "name": "plus",
+            "key": "HvoT**********aind",
+            "group": "OpenAI 福利分组",
+            "group_ratio": 0.085,
+            "group_desc": "",
+            "status": 1,
+            "unlimited_quota": true,
+            "remain_quota": -32040395,
+            "used_quota": 34375505
+          }
+        ],
+        "group_map": {
+          "Claude Kiro": {
+            "desc": "90%缓存，仅支持cc-cli或app有缓存，其余自测",
+            "ratio": 0.21
+          },
+          "Claude 官转-1": {
+            "desc": "不限外接，纯血MAX号池，不要用酒馆聊骚和蒸馏，不然封号余额不退",
+            "ratio": 0.85
+          },
+          "OpenAI Plus备用": {
+            "desc": "只做备用，贵",
+            "ratio": 0.13
+          },
+          "OpenAI Pro1": {
+            "desc": "",
+            "ratio": 0.15
+          },
+          "OpenAI Pro2": {
+            "desc": "正价GPT Pro 20x池",
+            "ratio": 0.21
+          },
+          "OpenAI 渠道3": {
+            "desc": "OpenAI分组，pro号池",
+            "ratio": 0.35
+          },
+          "OpenAI 生图分组": {
+            "desc": "1k 0.08 2-4k 0.14 banana 0.15 pro 0.5",
+            "ratio": 1
+          },
+          "OpenAI 福利分组": {
+            "desc": "",
+            "ratio": 0.085
+          },
+          "default": {
+            "desc": "默认分组，不要用，搁置的",
+            "ratio": 1
+          }
+        }
+      }
+    }
+  ],
+  "fetched_at": "2026-07-04T23:46:16+08:00"
+}

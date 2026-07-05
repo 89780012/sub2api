@@ -11,6 +11,7 @@ Source-backed conventions for the Go backend in `backend/`.
 | [Error Handling](./error-handling.md) | Application errors and JSON response envelopes | Complete |
 | [Logging Guidelines](./logging-guidelines.md) | Zap/slog logging, access logs, redaction, and sink usage | Complete |
 | [Quality Guidelines](./quality-guidelines.md) | Tests, generation, review checks, and forbidden patterns | Complete |
+| [Tooling Guidelines](./tooling-guidelines.md) | Standalone Go utility CLIs, env contracts, and verification | Complete |
 
 ## Pre-Development Checklist
 
@@ -21,6 +22,7 @@ Read these before backend changes:
 - Read [Error Handling](./error-handling.md) for HTTP handlers, service errors, repository error translation, gateway streams, or API contract changes.
 - Read [Logging Guidelines](./logging-guidelines.md) for request logging, operational logs, background jobs, gateways, or security-sensitive data.
 - Read [Quality Guidelines](./quality-guidelines.md) before adding tests or running verification.
+- Read [Tooling Guidelines](./tooling-guidelines.md) before adding or changing standalone Go utilities under `shell/`.
 
 ## Main Verification Commands
 
