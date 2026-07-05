@@ -370,6 +370,20 @@ func AccountFromServiceShallow(a *service.Account) *Account {
 		}
 	}
 
+	if snap := a.ExternalBalanceSnapshot; snap != nil {
+		out.ExternalBalance = snap.Balance
+		out.ExternalSubscriptionBalance = snap.SubscriptionBalance
+		out.ExternalRateMultiplier = snap.RateMultiplier
+		fetchedAt := snap.FetchedAt
+		out.ExternalBalanceFetchedAt = &fetchedAt
+		out.ExternalBalanceMatchStatus = snap.MatchStatus
+		siteID := snap.SiteID
+		out.ExternalBalanceSiteID = &siteID
+		out.ExternalBalanceSiteName = snap.SiteName
+		out.ExternalBalanceKeyName = snap.KeyName
+		out.ExternalBalanceKeyLast4 = snap.KeyLast4
+	}
+
 	return out
 }
 

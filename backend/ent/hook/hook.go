@@ -33,6 +33,18 @@ func (f AccountFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AccountMutation", m)
 }
 
+// The AccountBalanceBindingFunc type is an adapter to allow the use of ordinary
+// function as AccountBalanceBinding mutator.
+type AccountBalanceBindingFunc func(context.Context, *ent.AccountBalanceBindingMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AccountBalanceBindingFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AccountBalanceBindingMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AccountBalanceBindingMutation", m)
+}
+
 // The AccountGroupFunc type is an adapter to allow the use of ordinary
 // function as AccountGroup mutator.
 type AccountGroupFunc func(context.Context, *ent.AccountGroupMutation) (ent.Value, error)
@@ -91,6 +103,30 @@ func (f AuthIdentityChannelFunc) Mutate(ctx context.Context, m ent.Mutation) (en
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AuthIdentityChannelMutation", m)
+}
+
+// The BalanceKeySnapshotFunc type is an adapter to allow the use of ordinary
+// function as BalanceKeySnapshot mutator.
+type BalanceKeySnapshotFunc func(context.Context, *ent.BalanceKeySnapshotMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BalanceKeySnapshotFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BalanceKeySnapshotMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BalanceKeySnapshotMutation", m)
+}
+
+// The BalanceSiteFunc type is an adapter to allow the use of ordinary
+// function as BalanceSite mutator.
+type BalanceSiteFunc func(context.Context, *ent.BalanceSiteMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BalanceSiteFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BalanceSiteMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BalanceSiteMutation", m)
 }
 
 // The ChannelMonitorFunc type is an adapter to allow the use of ordinary

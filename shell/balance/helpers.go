@@ -2,17 +2,16 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/Wei-Shaw/sub2api/pkg/balancefetch"
 )
 
 func encodeJSON(out any, w io.Writer) error {
@@ -23,19 +22,7 @@ func encodeJSON(out any, w io.Writer) error {
 }
 
 func normalizeBaseURL(raw string) (string, error) {
-	raw = strings.TrimRight(strings.TrimSpace(raw), "/")
-	if raw == "" {
-		return "", fmt.Errorf("missing URL")
-	}
-
-	parsed, err := url.Parse(raw)
-	if err != nil {
-		return "", err
-	}
-	if parsed.Scheme == "" || parsed.Host == "" {
-		return "", fmt.Errorf("URL must include scheme and host")
-	}
-	return raw, nil
+	return balancefetch.NormalizeBaseURL(raw)
 }
 
 func firstEnv(keys ...string) string {
@@ -220,99 +207,4 @@ func validateDotEnvValueSuffix(suffix string) error {
 		return nil
 	}
 	return fmt.Errorf("unexpected trailing content %q", suffix)
-}
-
-func doJSON(client *http.Client, req *http.Request, reqBody any, out any) error {
-	if reqBody != nil {
-		b, err := json.Marshal(reqBody)
-		if err != nil {
-			return err
-		}
-		req.Body = io.NopCloser(bytes.NewReader(b))
-		req.ContentLength = int64(len(b))
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	raw, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("http %d", resp.StatusCode)
-	}
-	if err := json.Unmarshal(raw, out); err != nil {
-		return fmt.Errorf("decode response: %w", err)
-	}
-	return nil
-}
-
-func maskKey(key string) string {
-	if len(key) <= 16 {
-		return key
-	}
-	return key[:8] + "..." + key[len(key)-8:]
-}
-
-func floatPtr(v float64) *float64 {
-	return &v
-}
-
-func intPtr(v int) *int {
-	return &v
-}
-
-func quotaBalance(limit, used, remain float64, unlimited bool) *balance {
-	return &balance{
-		Unit:      "quota",
-		Limit:     floatPtr(limit),
-		Used:      floatPtr(used),
-		Remain:    floatPtr(remain),
-		Unlimited: unlimited,
-	}
-}
-
-func newAPIAccountBalance(rawQuota int64) *balance {
-	return &balance{
-		Unit:   "balance",
-		Remain: floatPtr(float64(rawQuota) / 500000),
-	}
-}
-
-func usdBalance(limit, used float64) *balance {
-	remain := limit - used
-	if remain < 0 {
-		remain = 0
-	}
-	return &balance{
-		Unit:   "usd",
-		Limit:  floatPtr(limit),
-		Used:   floatPtr(used),
-		Remain: floatPtr(remain),
-	}
-}
-
-func accountUSDBalance(remain float64) *balance {
-	return &balance{
-		Unit:   "usd",
-		Remain: floatPtr(remain),
-	}
-}
-
-func makeSubscriptionWindow(limit, used float64) *subscriptionWindow {
-	remain := limit - used
-	if remain < 0 {
-		remain = 0
-	}
-	return &subscriptionWindow{
-		Unit:   "usd",
-		Limit:  limit,
-		Used:   used,
-		Remain: remain,
-	}
 }

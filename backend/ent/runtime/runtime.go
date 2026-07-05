@@ -6,12 +6,15 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/ent/account"
+	"github.com/Wei-Shaw/sub2api/ent/accountbalancebinding"
 	"github.com/Wei-Shaw/sub2api/ent/accountgroup"
 	"github.com/Wei-Shaw/sub2api/ent/announcement"
 	"github.com/Wei-Shaw/sub2api/ent/announcementread"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	"github.com/Wei-Shaw/sub2api/ent/authidentitychannel"
+	"github.com/Wei-Shaw/sub2api/ent/balancekeysnapshot"
+	"github.com/Wei-Shaw/sub2api/ent/balancesite"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitor"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitordailyrollup"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
@@ -252,6 +255,31 @@ func init() {
 	accountDescSessionWindowStatus := accountFields[25].Descriptor()
 	// account.SessionWindowStatusValidator is a validator for the "session_window_status" field. It is called by the builders before save.
 	account.SessionWindowStatusValidator = accountDescSessionWindowStatus.Validators[0].(func(string) error)
+	accountbalancebindingMixin := schema.AccountBalanceBinding{}.Mixin()
+	accountbalancebindingMixinFields0 := accountbalancebindingMixin[0].Fields()
+	_ = accountbalancebindingMixinFields0
+	accountbalancebindingFields := schema.AccountBalanceBinding{}.Fields()
+	_ = accountbalancebindingFields
+	// accountbalancebindingDescCreatedAt is the schema descriptor for created_at field.
+	accountbalancebindingDescCreatedAt := accountbalancebindingMixinFields0[0].Descriptor()
+	// accountbalancebinding.DefaultCreatedAt holds the default value on creation for the created_at field.
+	accountbalancebinding.DefaultCreatedAt = accountbalancebindingDescCreatedAt.Default.(func() time.Time)
+	// accountbalancebindingDescUpdatedAt is the schema descriptor for updated_at field.
+	accountbalancebindingDescUpdatedAt := accountbalancebindingMixinFields0[1].Descriptor()
+	// accountbalancebinding.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	accountbalancebinding.DefaultUpdatedAt = accountbalancebindingDescUpdatedAt.Default.(func() time.Time)
+	// accountbalancebinding.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	accountbalancebinding.UpdateDefaultUpdatedAt = accountbalancebindingDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// accountbalancebindingDescExternalKeyID is the schema descriptor for external_key_id field.
+	accountbalancebindingDescExternalKeyID := accountbalancebindingFields[2].Descriptor()
+	// accountbalancebinding.ExternalKeyIDValidator is a validator for the "external_key_id" field. It is called by the builders before save.
+	accountbalancebinding.ExternalKeyIDValidator = accountbalancebindingDescExternalKeyID.Validators[0].(func(string) error)
+	// accountbalancebindingDescKeyLast4 is the schema descriptor for key_last4 field.
+	accountbalancebindingDescKeyLast4 := accountbalancebindingFields[3].Descriptor()
+	// accountbalancebinding.DefaultKeyLast4 holds the default value on creation for the key_last4 field.
+	accountbalancebinding.DefaultKeyLast4 = accountbalancebindingDescKeyLast4.Default.(string)
+	// accountbalancebinding.KeyLast4Validator is a validator for the "key_last4" field. It is called by the builders before save.
+	accountbalancebinding.KeyLast4Validator = accountbalancebindingDescKeyLast4.Validators[0].(func(string) error)
 	accountgroupFields := schema.AccountGroup{}.Fields()
 	_ = accountgroupFields
 	// accountgroupDescPriority is the schema descriptor for priority field.
@@ -432,6 +460,154 @@ func init() {
 	authidentitychannelDescMetadata := authidentitychannelFields[6].Descriptor()
 	// authidentitychannel.DefaultMetadata holds the default value on creation for the metadata field.
 	authidentitychannel.DefaultMetadata = authidentitychannelDescMetadata.Default.(func() map[string]interface{})
+	balancekeysnapshotMixin := schema.BalanceKeySnapshot{}.Mixin()
+	balancekeysnapshotMixinFields0 := balancekeysnapshotMixin[0].Fields()
+	_ = balancekeysnapshotMixinFields0
+	balancekeysnapshotFields := schema.BalanceKeySnapshot{}.Fields()
+	_ = balancekeysnapshotFields
+	// balancekeysnapshotDescCreatedAt is the schema descriptor for created_at field.
+	balancekeysnapshotDescCreatedAt := balancekeysnapshotMixinFields0[0].Descriptor()
+	// balancekeysnapshot.DefaultCreatedAt holds the default value on creation for the created_at field.
+	balancekeysnapshot.DefaultCreatedAt = balancekeysnapshotDescCreatedAt.Default.(func() time.Time)
+	// balancekeysnapshotDescUpdatedAt is the schema descriptor for updated_at field.
+	balancekeysnapshotDescUpdatedAt := balancekeysnapshotMixinFields0[1].Descriptor()
+	// balancekeysnapshot.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	balancekeysnapshot.DefaultUpdatedAt = balancekeysnapshotDescUpdatedAt.Default.(func() time.Time)
+	// balancekeysnapshot.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	balancekeysnapshot.UpdateDefaultUpdatedAt = balancekeysnapshotDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// balancekeysnapshotDescExternalKeyID is the schema descriptor for external_key_id field.
+	balancekeysnapshotDescExternalKeyID := balancekeysnapshotFields[1].Descriptor()
+	// balancekeysnapshot.DefaultExternalKeyID holds the default value on creation for the external_key_id field.
+	balancekeysnapshot.DefaultExternalKeyID = balancekeysnapshotDescExternalKeyID.Default.(string)
+	// balancekeysnapshot.ExternalKeyIDValidator is a validator for the "external_key_id" field. It is called by the builders before save.
+	balancekeysnapshot.ExternalKeyIDValidator = balancekeysnapshotDescExternalKeyID.Validators[0].(func(string) error)
+	// balancekeysnapshotDescMaskedKey is the schema descriptor for masked_key field.
+	balancekeysnapshotDescMaskedKey := balancekeysnapshotFields[2].Descriptor()
+	// balancekeysnapshot.DefaultMaskedKey holds the default value on creation for the masked_key field.
+	balancekeysnapshot.DefaultMaskedKey = balancekeysnapshotDescMaskedKey.Default.(string)
+	// balancekeysnapshot.MaskedKeyValidator is a validator for the "masked_key" field. It is called by the builders before save.
+	balancekeysnapshot.MaskedKeyValidator = balancekeysnapshotDescMaskedKey.Validators[0].(func(string) error)
+	// balancekeysnapshotDescKeyLast4 is the schema descriptor for key_last4 field.
+	balancekeysnapshotDescKeyLast4 := balancekeysnapshotFields[3].Descriptor()
+	// balancekeysnapshot.DefaultKeyLast4 holds the default value on creation for the key_last4 field.
+	balancekeysnapshot.DefaultKeyLast4 = balancekeysnapshotDescKeyLast4.Default.(string)
+	// balancekeysnapshot.KeyLast4Validator is a validator for the "key_last4" field. It is called by the builders before save.
+	balancekeysnapshot.KeyLast4Validator = balancekeysnapshotDescKeyLast4.Validators[0].(func(string) error)
+	// balancekeysnapshotDescKeyName is the schema descriptor for key_name field.
+	balancekeysnapshotDescKeyName := balancekeysnapshotFields[6].Descriptor()
+	// balancekeysnapshot.DefaultKeyName holds the default value on creation for the key_name field.
+	balancekeysnapshot.DefaultKeyName = balancekeysnapshotDescKeyName.Default.(string)
+	// balancekeysnapshot.KeyNameValidator is a validator for the "key_name" field. It is called by the builders before save.
+	balancekeysnapshot.KeyNameValidator = balancekeysnapshotDescKeyName.Validators[0].(func(string) error)
+	// balancekeysnapshotDescStatus is the schema descriptor for status field.
+	balancekeysnapshotDescStatus := balancekeysnapshotFields[7].Descriptor()
+	// balancekeysnapshot.DefaultStatus holds the default value on creation for the status field.
+	balancekeysnapshot.DefaultStatus = balancekeysnapshotDescStatus.Default.(string)
+	// balancekeysnapshot.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	balancekeysnapshot.StatusValidator = balancekeysnapshotDescStatus.Validators[0].(func(string) error)
+	// balancekeysnapshotDescGroupID is the schema descriptor for group_id field.
+	balancekeysnapshotDescGroupID := balancekeysnapshotFields[8].Descriptor()
+	// balancekeysnapshot.DefaultGroupID holds the default value on creation for the group_id field.
+	balancekeysnapshot.DefaultGroupID = balancekeysnapshotDescGroupID.Default.(string)
+	// balancekeysnapshot.GroupIDValidator is a validator for the "group_id" field. It is called by the builders before save.
+	balancekeysnapshot.GroupIDValidator = balancekeysnapshotDescGroupID.Validators[0].(func(string) error)
+	// balancekeysnapshotDescGroupName is the schema descriptor for group_name field.
+	balancekeysnapshotDescGroupName := balancekeysnapshotFields[9].Descriptor()
+	// balancekeysnapshot.DefaultGroupName holds the default value on creation for the group_name field.
+	balancekeysnapshot.DefaultGroupName = balancekeysnapshotDescGroupName.Default.(string)
+	// balancekeysnapshot.GroupNameValidator is a validator for the "group_name" field. It is called by the builders before save.
+	balancekeysnapshot.GroupNameValidator = balancekeysnapshotDescGroupName.Validators[0].(func(string) error)
+	// balancekeysnapshotDescBalance is the schema descriptor for balance field.
+	balancekeysnapshotDescBalance := balancekeysnapshotFields[10].Descriptor()
+	// balancekeysnapshot.DefaultBalance holds the default value on creation for the balance field.
+	balancekeysnapshot.DefaultBalance = balancekeysnapshotDescBalance.Default.(func() map[string]interface{})
+	// balancekeysnapshotDescSubscriptionBalance is the schema descriptor for subscription_balance field.
+	balancekeysnapshotDescSubscriptionBalance := balancekeysnapshotFields[11].Descriptor()
+	// balancekeysnapshot.DefaultSubscriptionBalance holds the default value on creation for the subscription_balance field.
+	balancekeysnapshot.DefaultSubscriptionBalance = balancekeysnapshotDescSubscriptionBalance.Default.(func() map[string]interface{})
+	balancesiteMixin := schema.BalanceSite{}.Mixin()
+	balancesiteMixinFields0 := balancesiteMixin[0].Fields()
+	_ = balancesiteMixinFields0
+	balancesiteFields := schema.BalanceSite{}.Fields()
+	_ = balancesiteFields
+	// balancesiteDescCreatedAt is the schema descriptor for created_at field.
+	balancesiteDescCreatedAt := balancesiteMixinFields0[0].Descriptor()
+	// balancesite.DefaultCreatedAt holds the default value on creation for the created_at field.
+	balancesite.DefaultCreatedAt = balancesiteDescCreatedAt.Default.(func() time.Time)
+	// balancesiteDescUpdatedAt is the schema descriptor for updated_at field.
+	balancesiteDescUpdatedAt := balancesiteMixinFields0[1].Descriptor()
+	// balancesite.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	balancesite.DefaultUpdatedAt = balancesiteDescUpdatedAt.Default.(func() time.Time)
+	// balancesite.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	balancesite.UpdateDefaultUpdatedAt = balancesiteDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// balancesiteDescName is the schema descriptor for name field.
+	balancesiteDescName := balancesiteFields[1].Descriptor()
+	// balancesite.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	balancesite.NameValidator = func() func(string) error {
+		validators := balancesiteDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// balancesiteDescBaseURL is the schema descriptor for base_url field.
+	balancesiteDescBaseURL := balancesiteFields[2].Descriptor()
+	// balancesite.BaseURLValidator is a validator for the "base_url" field. It is called by the builders before save.
+	balancesite.BaseURLValidator = func() func(string) error {
+		validators := balancesiteDescBaseURL.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(base_url string) error {
+			for _, fn := range fns {
+				if err := fn(base_url); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// balancesiteDescUsername is the schema descriptor for username field.
+	balancesiteDescUsername := balancesiteFields[3].Descriptor()
+	// balancesite.DefaultUsername holds the default value on creation for the username field.
+	balancesite.DefaultUsername = balancesiteDescUsername.Default.(string)
+	// balancesite.UsernameValidator is a validator for the "username" field. It is called by the builders before save.
+	balancesite.UsernameValidator = balancesiteDescUsername.Validators[0].(func(string) error)
+	// balancesiteDescEmail is the schema descriptor for email field.
+	balancesiteDescEmail := balancesiteFields[4].Descriptor()
+	// balancesite.DefaultEmail holds the default value on creation for the email field.
+	balancesite.DefaultEmail = balancesiteDescEmail.Default.(string)
+	// balancesite.EmailValidator is a validator for the "email" field. It is called by the builders before save.
+	balancesite.EmailValidator = balancesiteDescEmail.Validators[0].(func(string) error)
+	// balancesiteDescPasswordEncrypted is the schema descriptor for password_encrypted field.
+	balancesiteDescPasswordEncrypted := balancesiteFields[5].Descriptor()
+	// balancesite.PasswordEncryptedValidator is a validator for the "password_encrypted" field. It is called by the builders before save.
+	balancesite.PasswordEncryptedValidator = balancesiteDescPasswordEncrypted.Validators[0].(func(string) error)
+	// balancesiteDescEnabled is the schema descriptor for enabled field.
+	balancesiteDescEnabled := balancesiteFields[6].Descriptor()
+	// balancesite.DefaultEnabled holds the default value on creation for the enabled field.
+	balancesite.DefaultEnabled = balancesiteDescEnabled.Default.(bool)
+	// balancesiteDescRefreshIntervalMinutes is the schema descriptor for refresh_interval_minutes field.
+	balancesiteDescRefreshIntervalMinutes := balancesiteFields[7].Descriptor()
+	// balancesite.DefaultRefreshIntervalMinutes holds the default value on creation for the refresh_interval_minutes field.
+	balancesite.DefaultRefreshIntervalMinutes = balancesiteDescRefreshIntervalMinutes.Default.(int)
+	// balancesite.RefreshIntervalMinutesValidator is a validator for the "refresh_interval_minutes" field. It is called by the builders before save.
+	balancesite.RefreshIntervalMinutesValidator = balancesiteDescRefreshIntervalMinutes.Validators[0].(func(int) error)
+	// balancesiteDescLastRefreshStatus is the schema descriptor for last_refresh_status field.
+	balancesiteDescLastRefreshStatus := balancesiteFields[9].Descriptor()
+	// balancesite.DefaultLastRefreshStatus holds the default value on creation for the last_refresh_status field.
+	balancesite.DefaultLastRefreshStatus = balancesiteDescLastRefreshStatus.Default.(string)
+	// balancesite.LastRefreshStatusValidator is a validator for the "last_refresh_status" field. It is called by the builders before save.
+	balancesite.LastRefreshStatusValidator = balancesiteDescLastRefreshStatus.Validators[0].(func(string) error)
 	channelmonitorMixin := schema.ChannelMonitor{}.Mixin()
 	channelmonitorMixinFields0 := channelmonitorMixin[0].Fields()
 	_ = channelmonitorMixinFields0

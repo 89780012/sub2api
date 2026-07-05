@@ -266,6 +266,16 @@ type Account struct {
 
 	GroupIDs []int64  `json:"group_ids,omitempty"`
 	Groups   []*Group `json:"groups,omitempty"`
+
+	ExternalBalance             map[string]any `json:"external_balance,omitempty"`
+	ExternalSubscriptionBalance map[string]any `json:"external_subscription_balance,omitempty"`
+	ExternalRateMultiplier      *float64       `json:"external_rate_multiplier,omitempty"`
+	ExternalBalanceFetchedAt    *time.Time     `json:"external_balance_fetched_at,omitempty"`
+	ExternalBalanceMatchStatus  string         `json:"external_balance_match_status,omitempty"`
+	ExternalBalanceSiteID       *int64         `json:"external_balance_site_id,omitempty"`
+	ExternalBalanceSiteName     string         `json:"external_balance_site_name,omitempty"`
+	ExternalBalanceKeyName      string         `json:"external_balance_key_name,omitempty"`
+	ExternalBalanceKeyLast4     string         `json:"external_balance_key_last4,omitempty"`
 }
 
 type AccountGroup struct {

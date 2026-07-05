@@ -635,6 +635,15 @@ export interface GroupAccountQualityItem {
   pool_mode_retry_status_codes?: number[]
   primary_eligible: boolean
   primary_ineligible_reason?: string
+  external_balance?: ExternalBalanceAmount | null
+  external_subscription_balance?: ExternalSubscriptionBalance | null
+  external_rate_multiplier?: number | null
+  external_balance_fetched_at?: string | null
+  external_balance_match_status?: ExternalBalanceMatchStatus
+  external_balance_site_id?: number | null
+  external_balance_site_name?: string
+  external_balance_key_name?: string
+  external_balance_key_last4?: string
 }
 
 export interface GroupAccountQualityResponse {
@@ -925,6 +934,101 @@ export interface TempUnschedulableStatus {
   state?: TempUnschedulableState
 }
 
+export type BalanceSitePlatform = 'newapi' | 'sub2api'
+export type ExternalBalanceMatchStatus = 'unmatched' | 'matched' | 'ambiguous' | 'manual' | string
+
+export interface ExternalBalanceAmount {
+  unit: string
+  limit?: number | null
+  used?: number | null
+  remain?: number | null
+  unlimited?: boolean
+}
+
+export interface ExternalSubscriptionWindow {
+  unit: string
+  limit: number
+  used: number
+  remain: number
+}
+
+export interface ExternalSubscriptionBalance {
+  id?: string
+  status?: string
+  group_id?: string
+  group_name?: string
+  rate_multiplier?: number | null
+  starts_at?: string
+  expires_at?: string
+  daily?: ExternalSubscriptionWindow | null
+  weekly?: ExternalSubscriptionWindow | null
+  monthly?: ExternalSubscriptionWindow | null
+}
+
+export interface BalanceSite {
+  id: number
+  platform: BalanceSitePlatform
+  name: string
+  base_url: string
+  username?: string
+  email?: string
+  password_configured: boolean
+  enabled: boolean
+  refresh_interval_minutes: number
+  last_refresh_at?: string | null
+  last_refresh_status: string
+  last_refresh_error?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface BalanceSitePayload {
+  platform: BalanceSitePlatform
+  name: string
+  base_url: string
+  username?: string
+  email?: string
+  password?: string
+  enabled?: boolean
+  refresh_interval_minutes?: number
+}
+
+export interface BalanceSnapshot {
+  id: number
+  site_id: number
+  site_name?: string
+  site_platform?: string
+  external_key_id: string
+  masked_key: string
+  key_last4: string
+  account_id?: number | null
+  match_status: ExternalBalanceMatchStatus
+  key_name?: string
+  status?: string
+  group_id?: string
+  group_name?: string
+  balance?: ExternalBalanceAmount | null
+  subscription_balance?: ExternalSubscriptionBalance | null
+  rate_multiplier?: number | null
+  fetched_at: string
+  created_at: string
+  updated_at: string
+}
+
+export interface BalanceRefreshResult {
+  site_id: number
+  status: string
+  error?: string
+  snapshot_count: number
+  refreshed_at?: string | null
+}
+
+export interface BalanceBindingPayload {
+  site_id: number
+  external_key_id?: string | null
+  key_last4?: string
+}
+
 export interface Account {
   id: number
   name: string
@@ -960,6 +1064,16 @@ export interface Account {
   proxy?: Proxy
   group_ids?: number[] // Groups this account belongs to
   groups?: Group[] // Preloaded group objects
+
+  external_balance?: ExternalBalanceAmount | null
+  external_subscription_balance?: ExternalSubscriptionBalance | null
+  external_rate_multiplier?: number | null
+  external_balance_fetched_at?: string | null
+  external_balance_match_status?: ExternalBalanceMatchStatus
+  external_balance_site_id?: number | null
+  external_balance_site_name?: string
+  external_balance_key_name?: string
+  external_balance_key_last4?: string
 
   // Rate limit & scheduling fields
   schedulable: boolean

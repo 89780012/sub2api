@@ -1,6 +1,7 @@
-package main
+package balancefetch
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/cookiejar"
@@ -62,26 +63,26 @@ type newAPIGroupsResponse struct {
 	Data    map[string]newAPIGroupInfo `json:"data"`
 }
 
-func fetchNewAPISite(site siteConfig) (*unifiedSite, error) {
+func fetchNewAPISite(ctx context.Context, site siteConfig) (*unifiedSite, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, fmt.Errorf("init cookie jar: %w", err)
 	}
 	client := &http.Client{Jar: jar, Timeout: 20 * time.Second}
 
-	userID, err := newAPILogin(client, site)
+	userID, err := newAPILogin(ctx, client, site)
 	if err != nil {
 		return nil, fmt.Errorf("login: %w", err)
 	}
-	userSelf, err := newAPIGetUserSelf(client, site.BaseURL, userID)
+	userSelf, err := newAPIGetUserSelf(ctx, client, site.BaseURL, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get user self: %w", err)
 	}
-	groups, err := newAPIGetGroups(client, site.BaseURL, userID)
+	groups, err := newAPIGetGroups(ctx, client, site.BaseURL, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get groups: %w", err)
 	}
-	tokens, err := newAPIGetTokens(client, site.BaseURL, userID)
+	tokens, err := newAPIGetTokens(ctx, client, site.BaseURL, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get tokens: %w", err)
 	}
@@ -89,9 +90,9 @@ func fetchNewAPISite(site siteConfig) (*unifiedSite, error) {
 	return normalizeNewAPI(site, userSelf, groups, tokens), nil
 }
 
-func newAPILogin(client *http.Client, site siteConfig) (int, error) {
+func newAPILogin(ctx context.Context, client *http.Client, site siteConfig) (int, error) {
 	var resp newAPILoginResponse
-	req, err := http.NewRequest(http.MethodPost, site.BaseURL+"/api/user/login?turnstile=", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, site.BaseURL+"/api/user/login?turnstile=", nil)
 	if err != nil {
 		return 0, err
 	}
@@ -105,9 +106,9 @@ func newAPILogin(client *http.Client, site siteConfig) (int, error) {
 	return resp.Data.ID, nil
 }
 
-func newAPIGetUserSelf(client *http.Client, baseURL string, userID int) (*newAPIUserSelfResponse, error) {
+func newAPIGetUserSelf(ctx context.Context, client *http.Client, baseURL string, userID int) (*newAPIUserSelfResponse, error) {
 	var resp newAPIUserSelfResponse
-	req, err := http.NewRequest(http.MethodGet, baseURL+"/api/user/self", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/user/self", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -121,9 +122,9 @@ func newAPIGetUserSelf(client *http.Client, baseURL string, userID int) (*newAPI
 	return &resp, nil
 }
 
-func newAPIGetGroups(client *http.Client, baseURL string, userID int) (*newAPIGroupsResponse, error) {
+func newAPIGetGroups(ctx context.Context, client *http.Client, baseURL string, userID int) (*newAPIGroupsResponse, error) {
 	var resp newAPIGroupsResponse
-	req, err := http.NewRequest(http.MethodGet, baseURL+"/api/user/self/groups", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/user/self/groups", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -137,9 +138,9 @@ func newAPIGetGroups(client *http.Client, baseURL string, userID int) (*newAPIGr
 	return &resp, nil
 }
 
-func newAPIGetTokens(client *http.Client, baseURL string, userID int) (*newAPITokenResponse, error) {
+func newAPIGetTokens(ctx context.Context, client *http.Client, baseURL string, userID int) (*newAPITokenResponse, error) {
 	var resp newAPITokenResponse
-	req, err := http.NewRequest(http.MethodGet, baseURL+"/api/token/?p=1&size=20", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/token/?p=1&size=20", nil)
 	if err != nil {
 		return nil, err
 	}

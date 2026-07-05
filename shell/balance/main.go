@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"time"
+
+	"github.com/Wei-Shaw/sub2api/pkg/balancefetch"
 )
 
 func main() {
@@ -23,39 +25,32 @@ func run() error {
 		return fmt.Errorf("load site config failed: %w", err)
 	}
 
-	out := unifiedOutput{
-		Sites:     make([]unifiedSite, 0, len(sites)),
-		FetchedAt: time.Now().Format(time.RFC3339),
+	out, err := balancefetch.FetchSitesContext(context.Background(), toFetcherConfigs(sites))
+	if err != nil {
+		return err
 	}
-	multiSite := len(sites) > 1
-
-	for _, site := range sites {
-		result, err := fetchConfiguredSite(site)
-		if err != nil {
-			if !multiSite {
-				return fmt.Errorf("fetch %s site failed: %w", site.Platform, err)
-			}
-			out.Sites = append(out.Sites, unifiedSite{
-				Platform: site.Platform,
-				Name:     site.Name,
-				BaseURL:  site.BaseURL,
-				Error:    err.Error(),
-			})
-			continue
-		}
-		out.Sites = append(out.Sites, *result)
-	}
-
 	return encodeJSON(out, os.Stdout)
 }
 
 func fetchConfiguredSite(site siteConfig) (*unifiedSite, error) {
-	switch site.Platform {
-	case platformNewAPI:
-		return fetchNewAPISite(site)
-	case platformSub2API:
-		return fetchSub2APISite(site)
-	default:
-		return nil, fmt.Errorf("unsupported platform %q", site.Platform)
+	return balancefetch.FetchConfiguredSiteContext(context.Background(), toFetcherConfig(site))
+}
+
+func toFetcherConfigs(sites []siteConfig) []balancefetch.SiteConfig {
+	configs := make([]balancefetch.SiteConfig, 0, len(sites))
+	for _, site := range sites {
+		configs = append(configs, toFetcherConfig(site))
+	}
+	return configs
+}
+
+func toFetcherConfig(site siteConfig) balancefetch.SiteConfig {
+	return balancefetch.SiteConfig{
+		Platform: balancefetch.Platform(site.Platform),
+		Name:     site.Name,
+		BaseURL:  site.BaseURL,
+		Username: site.Username,
+		Email:    site.Email,
+		Password: site.Password,
 	}
 }

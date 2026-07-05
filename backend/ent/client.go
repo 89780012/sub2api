@@ -16,12 +16,15 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/Wei-Shaw/sub2api/ent/account"
+	"github.com/Wei-Shaw/sub2api/ent/accountbalancebinding"
 	"github.com/Wei-Shaw/sub2api/ent/accountgroup"
 	"github.com/Wei-Shaw/sub2api/ent/announcement"
 	"github.com/Wei-Shaw/sub2api/ent/announcementread"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	"github.com/Wei-Shaw/sub2api/ent/authidentitychannel"
+	"github.com/Wei-Shaw/sub2api/ent/balancekeysnapshot"
+	"github.com/Wei-Shaw/sub2api/ent/balancesite"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitor"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitordailyrollup"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
@@ -63,6 +66,8 @@ type Client struct {
 	APIKey *APIKeyClient
 	// Account is the client for interacting with the Account builders.
 	Account *AccountClient
+	// AccountBalanceBinding is the client for interacting with the AccountBalanceBinding builders.
+	AccountBalanceBinding *AccountBalanceBindingClient
 	// AccountGroup is the client for interacting with the AccountGroup builders.
 	AccountGroup *AccountGroupClient
 	// Announcement is the client for interacting with the Announcement builders.
@@ -73,6 +78,10 @@ type Client struct {
 	AuthIdentity *AuthIdentityClient
 	// AuthIdentityChannel is the client for interacting with the AuthIdentityChannel builders.
 	AuthIdentityChannel *AuthIdentityChannelClient
+	// BalanceKeySnapshot is the client for interacting with the BalanceKeySnapshot builders.
+	BalanceKeySnapshot *BalanceKeySnapshotClient
+	// BalanceSite is the client for interacting with the BalanceSite builders.
+	BalanceSite *BalanceSiteClient
 	// ChannelMonitor is the client for interacting with the ChannelMonitor builders.
 	ChannelMonitor *ChannelMonitorClient
 	// ChannelMonitorDailyRollup is the client for interacting with the ChannelMonitorDailyRollup builders.
@@ -142,11 +151,14 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.APIKey = NewAPIKeyClient(c.config)
 	c.Account = NewAccountClient(c.config)
+	c.AccountBalanceBinding = NewAccountBalanceBindingClient(c.config)
 	c.AccountGroup = NewAccountGroupClient(c.config)
 	c.Announcement = NewAnnouncementClient(c.config)
 	c.AnnouncementRead = NewAnnouncementReadClient(c.config)
 	c.AuthIdentity = NewAuthIdentityClient(c.config)
 	c.AuthIdentityChannel = NewAuthIdentityChannelClient(c.config)
+	c.BalanceKeySnapshot = NewBalanceKeySnapshotClient(c.config)
+	c.BalanceSite = NewBalanceSiteClient(c.config)
 	c.ChannelMonitor = NewChannelMonitorClient(c.config)
 	c.ChannelMonitorDailyRollup = NewChannelMonitorDailyRollupClient(c.config)
 	c.ChannelMonitorHistory = NewChannelMonitorHistoryClient(c.config)
@@ -269,11 +281,14 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		config:                        cfg,
 		APIKey:                        NewAPIKeyClient(cfg),
 		Account:                       NewAccountClient(cfg),
+		AccountBalanceBinding:         NewAccountBalanceBindingClient(cfg),
 		AccountGroup:                  NewAccountGroupClient(cfg),
 		Announcement:                  NewAnnouncementClient(cfg),
 		AnnouncementRead:              NewAnnouncementReadClient(cfg),
 		AuthIdentity:                  NewAuthIdentityClient(cfg),
 		AuthIdentityChannel:           NewAuthIdentityChannelClient(cfg),
+		BalanceKeySnapshot:            NewBalanceKeySnapshotClient(cfg),
+		BalanceSite:                   NewBalanceSiteClient(cfg),
 		ChannelMonitor:                NewChannelMonitorClient(cfg),
 		ChannelMonitorDailyRollup:     NewChannelMonitorDailyRollupClient(cfg),
 		ChannelMonitorHistory:         NewChannelMonitorHistoryClient(cfg),
@@ -323,11 +338,14 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		config:                        cfg,
 		APIKey:                        NewAPIKeyClient(cfg),
 		Account:                       NewAccountClient(cfg),
+		AccountBalanceBinding:         NewAccountBalanceBindingClient(cfg),
 		AccountGroup:                  NewAccountGroupClient(cfg),
 		Announcement:                  NewAnnouncementClient(cfg),
 		AnnouncementRead:              NewAnnouncementReadClient(cfg),
 		AuthIdentity:                  NewAuthIdentityClient(cfg),
 		AuthIdentityChannel:           NewAuthIdentityChannelClient(cfg),
+		BalanceKeySnapshot:            NewBalanceKeySnapshotClient(cfg),
+		BalanceSite:                   NewBalanceSiteClient(cfg),
 		ChannelMonitor:                NewChannelMonitorClient(cfg),
 		ChannelMonitorDailyRollup:     NewChannelMonitorDailyRollupClient(cfg),
 		ChannelMonitorHistory:         NewChannelMonitorHistoryClient(cfg),
@@ -385,8 +403,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.APIKey, c.Account, c.AccountGroup, c.Announcement, c.AnnouncementRead,
-		c.AuthIdentity, c.AuthIdentityChannel, c.ChannelMonitor,
+		c.APIKey, c.Account, c.AccountBalanceBinding, c.AccountGroup, c.Announcement,
+		c.AnnouncementRead, c.AuthIdentity, c.AuthIdentityChannel,
+		c.BalanceKeySnapshot, c.BalanceSite, c.ChannelMonitor,
 		c.ChannelMonitorDailyRollup, c.ChannelMonitorHistory,
 		c.ChannelMonitorRequestTemplate, c.ErrorPassthroughRule, c.Group,
 		c.IdempotencyRecord, c.IdentityAdoptionDecision, c.PaymentAuditLog,
@@ -404,8 +423,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.APIKey, c.Account, c.AccountGroup, c.Announcement, c.AnnouncementRead,
-		c.AuthIdentity, c.AuthIdentityChannel, c.ChannelMonitor,
+		c.APIKey, c.Account, c.AccountBalanceBinding, c.AccountGroup, c.Announcement,
+		c.AnnouncementRead, c.AuthIdentity, c.AuthIdentityChannel,
+		c.BalanceKeySnapshot, c.BalanceSite, c.ChannelMonitor,
 		c.ChannelMonitorDailyRollup, c.ChannelMonitorHistory,
 		c.ChannelMonitorRequestTemplate, c.ErrorPassthroughRule, c.Group,
 		c.IdempotencyRecord, c.IdentityAdoptionDecision, c.PaymentAuditLog,
@@ -426,6 +446,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.APIKey.mutate(ctx, m)
 	case *AccountMutation:
 		return c.Account.mutate(ctx, m)
+	case *AccountBalanceBindingMutation:
+		return c.AccountBalanceBinding.mutate(ctx, m)
 	case *AccountGroupMutation:
 		return c.AccountGroup.mutate(ctx, m)
 	case *AnnouncementMutation:
@@ -436,6 +458,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.AuthIdentity.mutate(ctx, m)
 	case *AuthIdentityChannelMutation:
 		return c.AuthIdentityChannel.mutate(ctx, m)
+	case *BalanceKeySnapshotMutation:
+		return c.BalanceKeySnapshot.mutate(ctx, m)
+	case *BalanceSiteMutation:
+		return c.BalanceSite.mutate(ctx, m)
 	case *ChannelMonitorMutation:
 		return c.ChannelMonitor.mutate(ctx, m)
 	case *ChannelMonitorDailyRollupMutation:
@@ -876,6 +902,171 @@ func (c *AccountClient) mutate(ctx context.Context, m *AccountMutation) (Value, 
 		return (&AccountDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Account mutation op: %q", m.Op())
+	}
+}
+
+// AccountBalanceBindingClient is a client for the AccountBalanceBinding schema.
+type AccountBalanceBindingClient struct {
+	config
+}
+
+// NewAccountBalanceBindingClient returns a client for the AccountBalanceBinding from the given config.
+func NewAccountBalanceBindingClient(c config) *AccountBalanceBindingClient {
+	return &AccountBalanceBindingClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `accountbalancebinding.Hooks(f(g(h())))`.
+func (c *AccountBalanceBindingClient) Use(hooks ...Hook) {
+	c.hooks.AccountBalanceBinding = append(c.hooks.AccountBalanceBinding, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `accountbalancebinding.Intercept(f(g(h())))`.
+func (c *AccountBalanceBindingClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AccountBalanceBinding = append(c.inters.AccountBalanceBinding, interceptors...)
+}
+
+// Create returns a builder for creating a AccountBalanceBinding entity.
+func (c *AccountBalanceBindingClient) Create() *AccountBalanceBindingCreate {
+	mutation := newAccountBalanceBindingMutation(c.config, OpCreate)
+	return &AccountBalanceBindingCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AccountBalanceBinding entities.
+func (c *AccountBalanceBindingClient) CreateBulk(builders ...*AccountBalanceBindingCreate) *AccountBalanceBindingCreateBulk {
+	return &AccountBalanceBindingCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AccountBalanceBindingClient) MapCreateBulk(slice any, setFunc func(*AccountBalanceBindingCreate, int)) *AccountBalanceBindingCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AccountBalanceBindingCreateBulk{err: fmt.Errorf("calling to AccountBalanceBindingClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AccountBalanceBindingCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AccountBalanceBindingCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AccountBalanceBinding.
+func (c *AccountBalanceBindingClient) Update() *AccountBalanceBindingUpdate {
+	mutation := newAccountBalanceBindingMutation(c.config, OpUpdate)
+	return &AccountBalanceBindingUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AccountBalanceBindingClient) UpdateOne(_m *AccountBalanceBinding) *AccountBalanceBindingUpdateOne {
+	mutation := newAccountBalanceBindingMutation(c.config, OpUpdateOne, withAccountBalanceBinding(_m))
+	return &AccountBalanceBindingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AccountBalanceBindingClient) UpdateOneID(id int64) *AccountBalanceBindingUpdateOne {
+	mutation := newAccountBalanceBindingMutation(c.config, OpUpdateOne, withAccountBalanceBindingID(id))
+	return &AccountBalanceBindingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AccountBalanceBinding.
+func (c *AccountBalanceBindingClient) Delete() *AccountBalanceBindingDelete {
+	mutation := newAccountBalanceBindingMutation(c.config, OpDelete)
+	return &AccountBalanceBindingDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AccountBalanceBindingClient) DeleteOne(_m *AccountBalanceBinding) *AccountBalanceBindingDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AccountBalanceBindingClient) DeleteOneID(id int64) *AccountBalanceBindingDeleteOne {
+	builder := c.Delete().Where(accountbalancebinding.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AccountBalanceBindingDeleteOne{builder}
+}
+
+// Query returns a query builder for AccountBalanceBinding.
+func (c *AccountBalanceBindingClient) Query() *AccountBalanceBindingQuery {
+	return &AccountBalanceBindingQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAccountBalanceBinding},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AccountBalanceBinding entity by its id.
+func (c *AccountBalanceBindingClient) Get(ctx context.Context, id int64) (*AccountBalanceBinding, error) {
+	return c.Query().Where(accountbalancebinding.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AccountBalanceBindingClient) GetX(ctx context.Context, id int64) *AccountBalanceBinding {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAccount queries the account edge of a AccountBalanceBinding.
+func (c *AccountBalanceBindingClient) QueryAccount(_m *AccountBalanceBinding) *AccountQuery {
+	query := (&AccountClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(accountbalancebinding.Table, accountbalancebinding.FieldID, id),
+			sqlgraph.To(account.Table, account.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, accountbalancebinding.AccountTable, accountbalancebinding.AccountColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QuerySite queries the site edge of a AccountBalanceBinding.
+func (c *AccountBalanceBindingClient) QuerySite(_m *AccountBalanceBinding) *BalanceSiteQuery {
+	query := (&BalanceSiteClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(accountbalancebinding.Table, accountbalancebinding.FieldID, id),
+			sqlgraph.To(balancesite.Table, balancesite.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, accountbalancebinding.SiteTable, accountbalancebinding.SiteColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AccountBalanceBindingClient) Hooks() []Hook {
+	return c.hooks.AccountBalanceBinding
+}
+
+// Interceptors returns the client interceptors.
+func (c *AccountBalanceBindingClient) Interceptors() []Interceptor {
+	return c.inters.AccountBalanceBinding
+}
+
+func (c *AccountBalanceBindingClient) mutate(ctx context.Context, m *AccountBalanceBindingMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AccountBalanceBindingCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AccountBalanceBindingUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AccountBalanceBindingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AccountBalanceBindingDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AccountBalanceBinding mutation op: %q", m.Op())
 	}
 }
 
@@ -1636,6 +1827,336 @@ func (c *AuthIdentityChannelClient) mutate(ctx context.Context, m *AuthIdentityC
 		return (&AuthIdentityChannelDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown AuthIdentityChannel mutation op: %q", m.Op())
+	}
+}
+
+// BalanceKeySnapshotClient is a client for the BalanceKeySnapshot schema.
+type BalanceKeySnapshotClient struct {
+	config
+}
+
+// NewBalanceKeySnapshotClient returns a client for the BalanceKeySnapshot from the given config.
+func NewBalanceKeySnapshotClient(c config) *BalanceKeySnapshotClient {
+	return &BalanceKeySnapshotClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `balancekeysnapshot.Hooks(f(g(h())))`.
+func (c *BalanceKeySnapshotClient) Use(hooks ...Hook) {
+	c.hooks.BalanceKeySnapshot = append(c.hooks.BalanceKeySnapshot, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `balancekeysnapshot.Intercept(f(g(h())))`.
+func (c *BalanceKeySnapshotClient) Intercept(interceptors ...Interceptor) {
+	c.inters.BalanceKeySnapshot = append(c.inters.BalanceKeySnapshot, interceptors...)
+}
+
+// Create returns a builder for creating a BalanceKeySnapshot entity.
+func (c *BalanceKeySnapshotClient) Create() *BalanceKeySnapshotCreate {
+	mutation := newBalanceKeySnapshotMutation(c.config, OpCreate)
+	return &BalanceKeySnapshotCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of BalanceKeySnapshot entities.
+func (c *BalanceKeySnapshotClient) CreateBulk(builders ...*BalanceKeySnapshotCreate) *BalanceKeySnapshotCreateBulk {
+	return &BalanceKeySnapshotCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *BalanceKeySnapshotClient) MapCreateBulk(slice any, setFunc func(*BalanceKeySnapshotCreate, int)) *BalanceKeySnapshotCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &BalanceKeySnapshotCreateBulk{err: fmt.Errorf("calling to BalanceKeySnapshotClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*BalanceKeySnapshotCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &BalanceKeySnapshotCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for BalanceKeySnapshot.
+func (c *BalanceKeySnapshotClient) Update() *BalanceKeySnapshotUpdate {
+	mutation := newBalanceKeySnapshotMutation(c.config, OpUpdate)
+	return &BalanceKeySnapshotUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *BalanceKeySnapshotClient) UpdateOne(_m *BalanceKeySnapshot) *BalanceKeySnapshotUpdateOne {
+	mutation := newBalanceKeySnapshotMutation(c.config, OpUpdateOne, withBalanceKeySnapshot(_m))
+	return &BalanceKeySnapshotUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *BalanceKeySnapshotClient) UpdateOneID(id int64) *BalanceKeySnapshotUpdateOne {
+	mutation := newBalanceKeySnapshotMutation(c.config, OpUpdateOne, withBalanceKeySnapshotID(id))
+	return &BalanceKeySnapshotUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for BalanceKeySnapshot.
+func (c *BalanceKeySnapshotClient) Delete() *BalanceKeySnapshotDelete {
+	mutation := newBalanceKeySnapshotMutation(c.config, OpDelete)
+	return &BalanceKeySnapshotDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *BalanceKeySnapshotClient) DeleteOne(_m *BalanceKeySnapshot) *BalanceKeySnapshotDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *BalanceKeySnapshotClient) DeleteOneID(id int64) *BalanceKeySnapshotDeleteOne {
+	builder := c.Delete().Where(balancekeysnapshot.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &BalanceKeySnapshotDeleteOne{builder}
+}
+
+// Query returns a query builder for BalanceKeySnapshot.
+func (c *BalanceKeySnapshotClient) Query() *BalanceKeySnapshotQuery {
+	return &BalanceKeySnapshotQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeBalanceKeySnapshot},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a BalanceKeySnapshot entity by its id.
+func (c *BalanceKeySnapshotClient) Get(ctx context.Context, id int64) (*BalanceKeySnapshot, error) {
+	return c.Query().Where(balancekeysnapshot.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *BalanceKeySnapshotClient) GetX(ctx context.Context, id int64) *BalanceKeySnapshot {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QuerySite queries the site edge of a BalanceKeySnapshot.
+func (c *BalanceKeySnapshotClient) QuerySite(_m *BalanceKeySnapshot) *BalanceSiteQuery {
+	query := (&BalanceSiteClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(balancekeysnapshot.Table, balancekeysnapshot.FieldID, id),
+			sqlgraph.To(balancesite.Table, balancesite.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, balancekeysnapshot.SiteTable, balancekeysnapshot.SiteColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAccount queries the account edge of a BalanceKeySnapshot.
+func (c *BalanceKeySnapshotClient) QueryAccount(_m *BalanceKeySnapshot) *AccountQuery {
+	query := (&AccountClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(balancekeysnapshot.Table, balancekeysnapshot.FieldID, id),
+			sqlgraph.To(account.Table, account.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, balancekeysnapshot.AccountTable, balancekeysnapshot.AccountColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *BalanceKeySnapshotClient) Hooks() []Hook {
+	return c.hooks.BalanceKeySnapshot
+}
+
+// Interceptors returns the client interceptors.
+func (c *BalanceKeySnapshotClient) Interceptors() []Interceptor {
+	return c.inters.BalanceKeySnapshot
+}
+
+func (c *BalanceKeySnapshotClient) mutate(ctx context.Context, m *BalanceKeySnapshotMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&BalanceKeySnapshotCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&BalanceKeySnapshotUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&BalanceKeySnapshotUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&BalanceKeySnapshotDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown BalanceKeySnapshot mutation op: %q", m.Op())
+	}
+}
+
+// BalanceSiteClient is a client for the BalanceSite schema.
+type BalanceSiteClient struct {
+	config
+}
+
+// NewBalanceSiteClient returns a client for the BalanceSite from the given config.
+func NewBalanceSiteClient(c config) *BalanceSiteClient {
+	return &BalanceSiteClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `balancesite.Hooks(f(g(h())))`.
+func (c *BalanceSiteClient) Use(hooks ...Hook) {
+	c.hooks.BalanceSite = append(c.hooks.BalanceSite, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `balancesite.Intercept(f(g(h())))`.
+func (c *BalanceSiteClient) Intercept(interceptors ...Interceptor) {
+	c.inters.BalanceSite = append(c.inters.BalanceSite, interceptors...)
+}
+
+// Create returns a builder for creating a BalanceSite entity.
+func (c *BalanceSiteClient) Create() *BalanceSiteCreate {
+	mutation := newBalanceSiteMutation(c.config, OpCreate)
+	return &BalanceSiteCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of BalanceSite entities.
+func (c *BalanceSiteClient) CreateBulk(builders ...*BalanceSiteCreate) *BalanceSiteCreateBulk {
+	return &BalanceSiteCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *BalanceSiteClient) MapCreateBulk(slice any, setFunc func(*BalanceSiteCreate, int)) *BalanceSiteCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &BalanceSiteCreateBulk{err: fmt.Errorf("calling to BalanceSiteClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*BalanceSiteCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &BalanceSiteCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for BalanceSite.
+func (c *BalanceSiteClient) Update() *BalanceSiteUpdate {
+	mutation := newBalanceSiteMutation(c.config, OpUpdate)
+	return &BalanceSiteUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *BalanceSiteClient) UpdateOne(_m *BalanceSite) *BalanceSiteUpdateOne {
+	mutation := newBalanceSiteMutation(c.config, OpUpdateOne, withBalanceSite(_m))
+	return &BalanceSiteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *BalanceSiteClient) UpdateOneID(id int64) *BalanceSiteUpdateOne {
+	mutation := newBalanceSiteMutation(c.config, OpUpdateOne, withBalanceSiteID(id))
+	return &BalanceSiteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for BalanceSite.
+func (c *BalanceSiteClient) Delete() *BalanceSiteDelete {
+	mutation := newBalanceSiteMutation(c.config, OpDelete)
+	return &BalanceSiteDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *BalanceSiteClient) DeleteOne(_m *BalanceSite) *BalanceSiteDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *BalanceSiteClient) DeleteOneID(id int64) *BalanceSiteDeleteOne {
+	builder := c.Delete().Where(balancesite.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &BalanceSiteDeleteOne{builder}
+}
+
+// Query returns a query builder for BalanceSite.
+func (c *BalanceSiteClient) Query() *BalanceSiteQuery {
+	return &BalanceSiteQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeBalanceSite},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a BalanceSite entity by its id.
+func (c *BalanceSiteClient) Get(ctx context.Context, id int64) (*BalanceSite, error) {
+	return c.Query().Where(balancesite.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *BalanceSiteClient) GetX(ctx context.Context, id int64) *BalanceSite {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QuerySnapshots queries the snapshots edge of a BalanceSite.
+func (c *BalanceSiteClient) QuerySnapshots(_m *BalanceSite) *BalanceKeySnapshotQuery {
+	query := (&BalanceKeySnapshotClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(balancesite.Table, balancesite.FieldID, id),
+			sqlgraph.To(balancekeysnapshot.Table, balancekeysnapshot.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, balancesite.SnapshotsTable, balancesite.SnapshotsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryBindings queries the bindings edge of a BalanceSite.
+func (c *BalanceSiteClient) QueryBindings(_m *BalanceSite) *AccountBalanceBindingQuery {
+	query := (&AccountBalanceBindingClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(balancesite.Table, balancesite.FieldID, id),
+			sqlgraph.To(accountbalancebinding.Table, accountbalancebinding.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, balancesite.BindingsTable, balancesite.BindingsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *BalanceSiteClient) Hooks() []Hook {
+	return c.hooks.BalanceSite
+}
+
+// Interceptors returns the client interceptors.
+func (c *BalanceSiteClient) Interceptors() []Interceptor {
+	return c.inters.BalanceSite
+}
+
+func (c *BalanceSiteClient) mutate(ctx context.Context, m *BalanceSiteMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&BalanceSiteCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&BalanceSiteUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&BalanceSiteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&BalanceSiteDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown BalanceSite mutation op: %q", m.Op())
 	}
 }
 
@@ -6209,26 +6730,26 @@ func (c *UserSubscriptionClient) mutate(ctx context.Context, m *UserSubscription
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		APIKey, Account, AccountGroup, Announcement, AnnouncementRead, AuthIdentity,
-		AuthIdentityChannel, ChannelMonitor, ChannelMonitorDailyRollup,
-		ChannelMonitorHistory, ChannelMonitorRequestTemplate, ErrorPassthroughRule,
-		Group, IdempotencyRecord, IdentityAdoptionDecision, PaymentAuditLog,
-		PaymentOrder, PaymentProviderInstance, PendingAuthSession, PromoCode,
-		PromoCodeUsage, Proxy, RedeemCode, SecuritySecret, Setting, SubscriptionPlan,
-		TLSFingerprintProfile, UsageCleanupTask, UsageLog, User, UserAllowedGroup,
-		UserAttributeDefinition, UserAttributeValue, UserPlatformQuota,
-		UserSubscription []ent.Hook
+		APIKey, Account, AccountBalanceBinding, AccountGroup, Announcement,
+		AnnouncementRead, AuthIdentity, AuthIdentityChannel, BalanceKeySnapshot,
+		BalanceSite, ChannelMonitor, ChannelMonitorDailyRollup, ChannelMonitorHistory,
+		ChannelMonitorRequestTemplate, ErrorPassthroughRule, Group, IdempotencyRecord,
+		IdentityAdoptionDecision, PaymentAuditLog, PaymentOrder,
+		PaymentProviderInstance, PendingAuthSession, PromoCode, PromoCodeUsage, Proxy,
+		RedeemCode, SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
+		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
+		UserAttributeValue, UserPlatformQuota, UserSubscription []ent.Hook
 	}
 	inters struct {
-		APIKey, Account, AccountGroup, Announcement, AnnouncementRead, AuthIdentity,
-		AuthIdentityChannel, ChannelMonitor, ChannelMonitorDailyRollup,
-		ChannelMonitorHistory, ChannelMonitorRequestTemplate, ErrorPassthroughRule,
-		Group, IdempotencyRecord, IdentityAdoptionDecision, PaymentAuditLog,
-		PaymentOrder, PaymentProviderInstance, PendingAuthSession, PromoCode,
-		PromoCodeUsage, Proxy, RedeemCode, SecuritySecret, Setting, SubscriptionPlan,
-		TLSFingerprintProfile, UsageCleanupTask, UsageLog, User, UserAllowedGroup,
-		UserAttributeDefinition, UserAttributeValue, UserPlatformQuota,
-		UserSubscription []ent.Interceptor
+		APIKey, Account, AccountBalanceBinding, AccountGroup, Announcement,
+		AnnouncementRead, AuthIdentity, AuthIdentityChannel, BalanceKeySnapshot,
+		BalanceSite, ChannelMonitor, ChannelMonitorDailyRollup, ChannelMonitorHistory,
+		ChannelMonitorRequestTemplate, ErrorPassthroughRule, Group, IdempotencyRecord,
+		IdentityAdoptionDecision, PaymentAuditLog, PaymentOrder,
+		PaymentProviderInstance, PendingAuthSession, PromoCode, PromoCodeUsage, Proxy,
+		RedeemCode, SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
+		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
+		UserAttributeValue, UserPlatformQuota, UserSubscription []ent.Interceptor
 	}
 )
 

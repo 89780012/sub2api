@@ -1,6 +1,7 @@
-package main
+package balancefetch
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -76,26 +77,26 @@ type sub2APISubscriptionItem struct {
 	Group           sub2APIGroup `json:"group"`
 }
 
-func fetchSub2APISite(site siteConfig) (*unifiedSite, error) {
+func fetchSub2APISite(ctx context.Context, site siteConfig) (*unifiedSite, error) {
 	client := &http.Client{Timeout: 30 * time.Second}
 
-	token, err := sub2APILogin(client, site)
+	token, err := sub2APILogin(ctx, client, site)
 	if err != nil {
 		return nil, fmt.Errorf("login: %w", err)
 	}
-	me, err := sub2APIGetMe(client, site.BaseURL, token)
+	me, err := sub2APIGetMe(ctx, client, site.BaseURL, token)
 	if err != nil {
 		return nil, fmt.Errorf("get account: %w", err)
 	}
-	keys, err := sub2APIGetKeys(client, site.BaseURL, token)
+	keys, err := sub2APIGetKeys(ctx, client, site.BaseURL, token)
 	if err != nil {
 		return nil, fmt.Errorf("get keys: %w", err)
 	}
-	groups, err := sub2APIGetGroups(client, site.BaseURL, token)
+	groups, err := sub2APIGetGroups(ctx, client, site.BaseURL, token)
 	if err != nil {
 		return nil, fmt.Errorf("get groups: %w", err)
 	}
-	subs, err := sub2APIGetSubscriptions(client, site.BaseURL, token)
+	subs, err := sub2APIGetSubscriptions(ctx, client, site.BaseURL, token)
 	if err != nil {
 		return nil, fmt.Errorf("get subscriptions: %w", err)
 	}
@@ -103,8 +104,8 @@ func fetchSub2APISite(site siteConfig) (*unifiedSite, error) {
 	return normalizeSub2API(site, me, keys, groups, subs), nil
 }
 
-func sub2APILogin(client *http.Client, site siteConfig) (string, error) {
-	data, err := doSub2JSON[sub2APILoginData](client, site.BaseURL, http.MethodPost, "/api/v1/auth/login", "", sub2APILoginRequest{
+func sub2APILogin(ctx context.Context, client *http.Client, site siteConfig) (string, error) {
+	data, err := doSub2JSON[sub2APILoginData](ctx, client, site.BaseURL, http.MethodPost, "/api/v1/auth/login", "", sub2APILoginRequest{
 		Email:    site.Email,
 		Password: site.Password,
 	})
@@ -117,37 +118,37 @@ func sub2APILogin(client *http.Client, site siteConfig) (string, error) {
 	return data.AccessToken, nil
 }
 
-func sub2APIGetMe(client *http.Client, baseURL, token string) (*sub2APIMeData, error) {
+func sub2APIGetMe(ctx context.Context, client *http.Client, baseURL, token string) (*sub2APIMeData, error) {
 	path := "/api/v1/auth/me?timezone=" + url.QueryEscape(timezone)
-	data, err := doSub2JSON[sub2APIMeData](client, baseURL, http.MethodGet, path, token, nil)
+	data, err := doSub2JSON[sub2APIMeData](ctx, client, baseURL, http.MethodGet, path, token, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &data, nil
 }
 
-func sub2APIGetKeys(client *http.Client, baseURL, token string) (*sub2APIKeysData, error) {
+func sub2APIGetKeys(ctx context.Context, client *http.Client, baseURL, token string) (*sub2APIKeysData, error) {
 	path := "/api/v1/keys?page=1&page_size=100&sort_by=created_at&sort_order=desc&timezone=" + url.QueryEscape(timezone)
-	data, err := doSub2JSON[sub2APIKeysData](client, baseURL, http.MethodGet, path, token, nil)
+	data, err := doSub2JSON[sub2APIKeysData](ctx, client, baseURL, http.MethodGet, path, token, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &data, nil
 }
 
-func sub2APIGetGroups(client *http.Client, baseURL, token string) ([]sub2APIGroup, error) {
+func sub2APIGetGroups(ctx context.Context, client *http.Client, baseURL, token string) ([]sub2APIGroup, error) {
 	path := "/api/v1/groups/available?timezone=" + url.QueryEscape(timezone)
-	return doSub2JSON[[]sub2APIGroup](client, baseURL, http.MethodGet, path, token, nil)
+	return doSub2JSON[[]sub2APIGroup](ctx, client, baseURL, http.MethodGet, path, token, nil)
 }
 
-func sub2APIGetSubscriptions(client *http.Client, baseURL, token string) ([]sub2APISubscriptionItem, error) {
+func sub2APIGetSubscriptions(ctx context.Context, client *http.Client, baseURL, token string) ([]sub2APISubscriptionItem, error) {
 	path := "/api/v1/subscriptions/active?timezone=" + url.QueryEscape(timezone)
-	return doSub2JSON[[]sub2APISubscriptionItem](client, baseURL, http.MethodGet, path, token, nil)
+	return doSub2JSON[[]sub2APISubscriptionItem](ctx, client, baseURL, http.MethodGet, path, token, nil)
 }
 
-func doSub2JSON[T any](client *http.Client, baseURL, method, path, token string, reqBody any) (T, error) {
+func doSub2JSON[T any](ctx context.Context, client *http.Client, baseURL, method, path, token string, reqBody any) (T, error) {
 	var zero T
-	req, err := http.NewRequest(method, baseURL+path, nil)
+	req, err := http.NewRequestWithContext(ctx, method, baseURL+path, nil)
 	if err != nil {
 		return zero, err
 	}

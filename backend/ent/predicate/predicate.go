@@ -12,6 +12,9 @@ type APIKey func(*sql.Selector)
 // Account is the predicate function for account builders.
 type Account func(*sql.Selector)
 
+// AccountBalanceBinding is the predicate function for accountbalancebinding builders.
+type AccountBalanceBinding func(*sql.Selector)
+
 // AccountGroup is the predicate function for accountgroup builders.
 type AccountGroup func(*sql.Selector)
 
@@ -26,6 +29,12 @@ type AuthIdentity func(*sql.Selector)
 
 // AuthIdentityChannel is the predicate function for authidentitychannel builders.
 type AuthIdentityChannel func(*sql.Selector)
+
+// BalanceKeySnapshot is the predicate function for balancekeysnapshot builders.
+type BalanceKeySnapshot func(*sql.Selector)
+
+// BalanceSite is the predicate function for balancesite builders.
+type BalanceSite func(*sql.Selector)
 
 // ChannelMonitor is the predicate function for channelmonitor builders.
 type ChannelMonitor func(*sql.Selector)

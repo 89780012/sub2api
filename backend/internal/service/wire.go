@@ -593,6 +593,7 @@ var ProviderSet = wire.NewSet(
 	ProvideBalanceNotifyService,
 	ProvideChannelMonitorService,
 	ProvideChannelMonitorRunner,
+	ProvideBalanceSnapshotService,
 	NewChannelMonitorRequestTemplateService,
 	ProvideUserPlatformQuotaUsageFlusher,
 )
@@ -650,4 +651,10 @@ func ProvideChannelMonitorRunner(svc *ChannelMonitorService, settingService *Set
 	svc.SetScheduler(r)
 	r.Start()
 	return r
+}
+
+func ProvideBalanceSnapshotService(repo BalanceSnapshotRepository, accountRepo AccountRepository, encryptor SecretEncryptor) *BalanceSnapshotService {
+	svc := NewBalanceSnapshotService(repo, accountRepo, encryptor)
+	svc.Start()
+	return svc
 }

@@ -207,6 +207,44 @@ var (
 			},
 		},
 	}
+	// AccountBalanceBindingsColumns holds the columns for the "account_balance_bindings" table.
+	AccountBalanceBindingsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "external_key_id", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "key_last4", Type: field.TypeString, Size: 16, Default: ""},
+		{Name: "match_mode", Type: field.TypeEnum, Enums: []string{"auto", "manual"}, Default: "manual"},
+		{Name: "account_id", Type: field.TypeInt64},
+		{Name: "site_id", Type: field.TypeInt64},
+	}
+	// AccountBalanceBindingsTable holds the schema information for the "account_balance_bindings" table.
+	AccountBalanceBindingsTable = &schema.Table{
+		Name:       "account_balance_bindings",
+		Columns:    AccountBalanceBindingsColumns,
+		PrimaryKey: []*schema.Column{AccountBalanceBindingsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "account_balance_bindings_accounts_account",
+				Columns:    []*schema.Column{AccountBalanceBindingsColumns[6]},
+				RefColumns: []*schema.Column{AccountsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "account_balance_bindings_balance_sites_bindings",
+				Columns:    []*schema.Column{AccountBalanceBindingsColumns[7]},
+				RefColumns: []*schema.Column{BalanceSitesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "accountbalancebinding_site_id_key_last4",
+				Unique:  false,
+				Columns: []*schema.Column{AccountBalanceBindingsColumns[7], AccountBalanceBindingsColumns[4]},
+			},
+		},
+	}
 	// AccountGroupsColumns holds the columns for the "account_groups" table.
 	AccountGroupsColumns = []*schema.Column{
 		{Name: "priority", Type: field.TypeInt, Default: 50},
@@ -419,6 +457,98 @@ var (
 				Name:    "authidentitychannel_identity_id",
 				Unique:  false,
 				Columns: []*schema.Column{AuthIdentityChannelsColumns[9]},
+			},
+		},
+	}
+	// BalanceKeySnapshotsColumns holds the columns for the "balance_key_snapshots" table.
+	BalanceKeySnapshotsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "external_key_id", Type: field.TypeString, Size: 255, Default: ""},
+		{Name: "masked_key", Type: field.TypeString, Size: 255, Default: ""},
+		{Name: "key_last4", Type: field.TypeString, Size: 16, Default: ""},
+		{Name: "match_status", Type: field.TypeEnum, Enums: []string{"unmatched", "matched", "ambiguous", "manual"}, Default: "unmatched"},
+		{Name: "key_name", Type: field.TypeString, Size: 255, Default: ""},
+		{Name: "status", Type: field.TypeString, Size: 50, Default: ""},
+		{Name: "group_id", Type: field.TypeString, Size: 255, Default: ""},
+		{Name: "group_name", Type: field.TypeString, Size: 255, Default: ""},
+		{Name: "balance", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "subscription_balance", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "rate_multiplier", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(10,4)"}},
+		{Name: "fetched_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "account_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "site_id", Type: field.TypeInt64},
+	}
+	// BalanceKeySnapshotsTable holds the schema information for the "balance_key_snapshots" table.
+	BalanceKeySnapshotsTable = &schema.Table{
+		Name:       "balance_key_snapshots",
+		Columns:    BalanceKeySnapshotsColumns,
+		PrimaryKey: []*schema.Column{BalanceKeySnapshotsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "balance_key_snapshots_accounts_account",
+				Columns:    []*schema.Column{BalanceKeySnapshotsColumns[15]},
+				RefColumns: []*schema.Column{AccountsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "balance_key_snapshots_balance_sites_snapshots",
+				Columns:    []*schema.Column{BalanceKeySnapshotsColumns[16]},
+				RefColumns: []*schema.Column{BalanceSitesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "balancekeysnapshot_site_id_external_key_id",
+				Unique:  false,
+				Columns: []*schema.Column{BalanceKeySnapshotsColumns[16], BalanceKeySnapshotsColumns[3]},
+			},
+			{
+				Name:    "balancekeysnapshot_key_last4",
+				Unique:  false,
+				Columns: []*schema.Column{BalanceKeySnapshotsColumns[5]},
+			},
+			{
+				Name:    "balancekeysnapshot_account_id_fetched_at",
+				Unique:  false,
+				Columns: []*schema.Column{BalanceKeySnapshotsColumns[15], BalanceKeySnapshotsColumns[14]},
+			},
+		},
+	}
+	// BalanceSitesColumns holds the columns for the "balance_sites" table.
+	BalanceSitesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "platform", Type: field.TypeEnum, Enums: []string{"newapi", "sub2api"}},
+		{Name: "name", Type: field.TypeString, Size: 100},
+		{Name: "base_url", Type: field.TypeString, Size: 500},
+		{Name: "username", Type: field.TypeString, Size: 255, Default: ""},
+		{Name: "email", Type: field.TypeString, Size: 255, Default: ""},
+		{Name: "password_encrypted", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "refresh_interval_minutes", Type: field.TypeInt, Default: 180},
+		{Name: "last_refresh_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "last_refresh_status", Type: field.TypeString, Size: 20, Default: ""},
+		{Name: "last_refresh_error", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+	}
+	// BalanceSitesTable holds the schema information for the "balance_sites" table.
+	BalanceSitesTable = &schema.Table{
+		Name:       "balance_sites",
+		Columns:    BalanceSitesColumns,
+		PrimaryKey: []*schema.Column{BalanceSitesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "balancesite_enabled_last_refresh_at",
+				Unique:  false,
+				Columns: []*schema.Column{BalanceSitesColumns[9], BalanceSitesColumns[11]},
+			},
+			{
+				Name:    "balancesite_platform",
+				Unique:  false,
+				Columns: []*schema.Column{BalanceSitesColumns[3]},
 			},
 		},
 	}
@@ -1784,11 +1914,14 @@ var (
 	Tables = []*schema.Table{
 		APIKeysTable,
 		AccountsTable,
+		AccountBalanceBindingsTable,
 		AccountGroupsTable,
 		AnnouncementsTable,
 		AnnouncementReadsTable,
 		AuthIdentitiesTable,
 		AuthIdentityChannelsTable,
+		BalanceKeySnapshotsTable,
+		BalanceSitesTable,
 		ChannelMonitorsTable,
 		ChannelMonitorDailyRollupsTable,
 		ChannelMonitorHistoriesTable,
@@ -1830,6 +1963,11 @@ func init() {
 	AccountsTable.Annotation = &entsql.Annotation{
 		Table: "accounts",
 	}
+	AccountBalanceBindingsTable.ForeignKeys[0].RefTable = AccountsTable
+	AccountBalanceBindingsTable.ForeignKeys[1].RefTable = BalanceSitesTable
+	AccountBalanceBindingsTable.Annotation = &entsql.Annotation{
+		Table: "account_balance_bindings",
+	}
 	AccountGroupsTable.ForeignKeys[0].RefTable = AccountsTable
 	AccountGroupsTable.ForeignKeys[1].RefTable = GroupsTable
 	AccountGroupsTable.Annotation = &entsql.Annotation{
@@ -1850,6 +1988,14 @@ func init() {
 	AuthIdentityChannelsTable.ForeignKeys[0].RefTable = AuthIdentitiesTable
 	AuthIdentityChannelsTable.Annotation = &entsql.Annotation{
 		Table: "auth_identity_channels",
+	}
+	BalanceKeySnapshotsTable.ForeignKeys[0].RefTable = AccountsTable
+	BalanceKeySnapshotsTable.ForeignKeys[1].RefTable = BalanceSitesTable
+	BalanceKeySnapshotsTable.Annotation = &entsql.Annotation{
+		Table: "balance_key_snapshots",
+	}
+	BalanceSitesTable.Annotation = &entsql.Annotation{
+		Table: "balance_sites",
 	}
 	ChannelMonitorsTable.ForeignKeys[0].RefTable = ChannelMonitorRequestTemplatesTable
 	ChannelMonitorsTable.Annotation = &entsql.Annotation{

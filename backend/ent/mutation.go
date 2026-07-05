@@ -13,12 +13,15 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/Wei-Shaw/sub2api/ent/account"
+	"github.com/Wei-Shaw/sub2api/ent/accountbalancebinding"
 	"github.com/Wei-Shaw/sub2api/ent/accountgroup"
 	"github.com/Wei-Shaw/sub2api/ent/announcement"
 	"github.com/Wei-Shaw/sub2api/ent/announcementread"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	"github.com/Wei-Shaw/sub2api/ent/authidentitychannel"
+	"github.com/Wei-Shaw/sub2api/ent/balancekeysnapshot"
+	"github.com/Wei-Shaw/sub2api/ent/balancesite"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitor"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitordailyrollup"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
@@ -62,11 +65,14 @@ const (
 	// Node types.
 	TypeAPIKey                        = "APIKey"
 	TypeAccount                       = "Account"
+	TypeAccountBalanceBinding         = "AccountBalanceBinding"
 	TypeAccountGroup                  = "AccountGroup"
 	TypeAnnouncement                  = "Announcement"
 	TypeAnnouncementRead              = "AnnouncementRead"
 	TypeAuthIdentity                  = "AuthIdentity"
 	TypeAuthIdentityChannel           = "AuthIdentityChannel"
+	TypeBalanceKeySnapshot            = "BalanceKeySnapshot"
+	TypeBalanceSite                   = "BalanceSite"
 	TypeChannelMonitor                = "ChannelMonitor"
 	TypeChannelMonitorDailyRollup     = "ChannelMonitorDailyRollup"
 	TypeChannelMonitorHistory         = "ChannelMonitorHistory"
@@ -4808,6 +4814,781 @@ func (m *AccountMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Account edge %s", name)
 }
 
+// AccountBalanceBindingMutation represents an operation that mutates the AccountBalanceBinding nodes in the graph.
+type AccountBalanceBindingMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *int64
+	created_at      *time.Time
+	updated_at      *time.Time
+	external_key_id *string
+	key_last4       *string
+	match_mode      *accountbalancebinding.MatchMode
+	clearedFields   map[string]struct{}
+	account         *int64
+	clearedaccount  bool
+	site            *int64
+	clearedsite     bool
+	done            bool
+	oldValue        func(context.Context) (*AccountBalanceBinding, error)
+	predicates      []predicate.AccountBalanceBinding
+}
+
+var _ ent.Mutation = (*AccountBalanceBindingMutation)(nil)
+
+// accountbalancebindingOption allows management of the mutation configuration using functional options.
+type accountbalancebindingOption func(*AccountBalanceBindingMutation)
+
+// newAccountBalanceBindingMutation creates new mutation for the AccountBalanceBinding entity.
+func newAccountBalanceBindingMutation(c config, op Op, opts ...accountbalancebindingOption) *AccountBalanceBindingMutation {
+	m := &AccountBalanceBindingMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAccountBalanceBinding,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAccountBalanceBindingID sets the ID field of the mutation.
+func withAccountBalanceBindingID(id int64) accountbalancebindingOption {
+	return func(m *AccountBalanceBindingMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AccountBalanceBinding
+		)
+		m.oldValue = func(ctx context.Context) (*AccountBalanceBinding, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AccountBalanceBinding.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAccountBalanceBinding sets the old AccountBalanceBinding of the mutation.
+func withAccountBalanceBinding(node *AccountBalanceBinding) accountbalancebindingOption {
+	return func(m *AccountBalanceBindingMutation) {
+		m.oldValue = func(context.Context) (*AccountBalanceBinding, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AccountBalanceBindingMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AccountBalanceBindingMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AccountBalanceBindingMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AccountBalanceBindingMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AccountBalanceBinding.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AccountBalanceBindingMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AccountBalanceBindingMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AccountBalanceBinding entity.
+// If the AccountBalanceBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountBalanceBindingMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AccountBalanceBindingMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AccountBalanceBindingMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AccountBalanceBindingMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AccountBalanceBinding entity.
+// If the AccountBalanceBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountBalanceBindingMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AccountBalanceBindingMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetAccountID sets the "account_id" field.
+func (m *AccountBalanceBindingMutation) SetAccountID(i int64) {
+	m.account = &i
+}
+
+// AccountID returns the value of the "account_id" field in the mutation.
+func (m *AccountBalanceBindingMutation) AccountID() (r int64, exists bool) {
+	v := m.account
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountID returns the old "account_id" field's value of the AccountBalanceBinding entity.
+// If the AccountBalanceBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountBalanceBindingMutation) OldAccountID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountID: %w", err)
+	}
+	return oldValue.AccountID, nil
+}
+
+// ResetAccountID resets all changes to the "account_id" field.
+func (m *AccountBalanceBindingMutation) ResetAccountID() {
+	m.account = nil
+}
+
+// SetSiteID sets the "site_id" field.
+func (m *AccountBalanceBindingMutation) SetSiteID(i int64) {
+	m.site = &i
+}
+
+// SiteID returns the value of the "site_id" field in the mutation.
+func (m *AccountBalanceBindingMutation) SiteID() (r int64, exists bool) {
+	v := m.site
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSiteID returns the old "site_id" field's value of the AccountBalanceBinding entity.
+// If the AccountBalanceBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountBalanceBindingMutation) OldSiteID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSiteID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSiteID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSiteID: %w", err)
+	}
+	return oldValue.SiteID, nil
+}
+
+// ResetSiteID resets all changes to the "site_id" field.
+func (m *AccountBalanceBindingMutation) ResetSiteID() {
+	m.site = nil
+}
+
+// SetExternalKeyID sets the "external_key_id" field.
+func (m *AccountBalanceBindingMutation) SetExternalKeyID(s string) {
+	m.external_key_id = &s
+}
+
+// ExternalKeyID returns the value of the "external_key_id" field in the mutation.
+func (m *AccountBalanceBindingMutation) ExternalKeyID() (r string, exists bool) {
+	v := m.external_key_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExternalKeyID returns the old "external_key_id" field's value of the AccountBalanceBinding entity.
+// If the AccountBalanceBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountBalanceBindingMutation) OldExternalKeyID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExternalKeyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExternalKeyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExternalKeyID: %w", err)
+	}
+	return oldValue.ExternalKeyID, nil
+}
+
+// ClearExternalKeyID clears the value of the "external_key_id" field.
+func (m *AccountBalanceBindingMutation) ClearExternalKeyID() {
+	m.external_key_id = nil
+	m.clearedFields[accountbalancebinding.FieldExternalKeyID] = struct{}{}
+}
+
+// ExternalKeyIDCleared returns if the "external_key_id" field was cleared in this mutation.
+func (m *AccountBalanceBindingMutation) ExternalKeyIDCleared() bool {
+	_, ok := m.clearedFields[accountbalancebinding.FieldExternalKeyID]
+	return ok
+}
+
+// ResetExternalKeyID resets all changes to the "external_key_id" field.
+func (m *AccountBalanceBindingMutation) ResetExternalKeyID() {
+	m.external_key_id = nil
+	delete(m.clearedFields, accountbalancebinding.FieldExternalKeyID)
+}
+
+// SetKeyLast4 sets the "key_last4" field.
+func (m *AccountBalanceBindingMutation) SetKeyLast4(s string) {
+	m.key_last4 = &s
+}
+
+// KeyLast4 returns the value of the "key_last4" field in the mutation.
+func (m *AccountBalanceBindingMutation) KeyLast4() (r string, exists bool) {
+	v := m.key_last4
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKeyLast4 returns the old "key_last4" field's value of the AccountBalanceBinding entity.
+// If the AccountBalanceBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountBalanceBindingMutation) OldKeyLast4(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKeyLast4 is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKeyLast4 requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKeyLast4: %w", err)
+	}
+	return oldValue.KeyLast4, nil
+}
+
+// ResetKeyLast4 resets all changes to the "key_last4" field.
+func (m *AccountBalanceBindingMutation) ResetKeyLast4() {
+	m.key_last4 = nil
+}
+
+// SetMatchMode sets the "match_mode" field.
+func (m *AccountBalanceBindingMutation) SetMatchMode(am accountbalancebinding.MatchMode) {
+	m.match_mode = &am
+}
+
+// MatchMode returns the value of the "match_mode" field in the mutation.
+func (m *AccountBalanceBindingMutation) MatchMode() (r accountbalancebinding.MatchMode, exists bool) {
+	v := m.match_mode
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMatchMode returns the old "match_mode" field's value of the AccountBalanceBinding entity.
+// If the AccountBalanceBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountBalanceBindingMutation) OldMatchMode(ctx context.Context) (v accountbalancebinding.MatchMode, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMatchMode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMatchMode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMatchMode: %w", err)
+	}
+	return oldValue.MatchMode, nil
+}
+
+// ResetMatchMode resets all changes to the "match_mode" field.
+func (m *AccountBalanceBindingMutation) ResetMatchMode() {
+	m.match_mode = nil
+}
+
+// ClearAccount clears the "account" edge to the Account entity.
+func (m *AccountBalanceBindingMutation) ClearAccount() {
+	m.clearedaccount = true
+	m.clearedFields[accountbalancebinding.FieldAccountID] = struct{}{}
+}
+
+// AccountCleared reports if the "account" edge to the Account entity was cleared.
+func (m *AccountBalanceBindingMutation) AccountCleared() bool {
+	return m.clearedaccount
+}
+
+// AccountIDs returns the "account" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AccountID instead. It exists only for internal usage by the builders.
+func (m *AccountBalanceBindingMutation) AccountIDs() (ids []int64) {
+	if id := m.account; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAccount resets all changes to the "account" edge.
+func (m *AccountBalanceBindingMutation) ResetAccount() {
+	m.account = nil
+	m.clearedaccount = false
+}
+
+// ClearSite clears the "site" edge to the BalanceSite entity.
+func (m *AccountBalanceBindingMutation) ClearSite() {
+	m.clearedsite = true
+	m.clearedFields[accountbalancebinding.FieldSiteID] = struct{}{}
+}
+
+// SiteCleared reports if the "site" edge to the BalanceSite entity was cleared.
+func (m *AccountBalanceBindingMutation) SiteCleared() bool {
+	return m.clearedsite
+}
+
+// SiteIDs returns the "site" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// SiteID instead. It exists only for internal usage by the builders.
+func (m *AccountBalanceBindingMutation) SiteIDs() (ids []int64) {
+	if id := m.site; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetSite resets all changes to the "site" edge.
+func (m *AccountBalanceBindingMutation) ResetSite() {
+	m.site = nil
+	m.clearedsite = false
+}
+
+// Where appends a list predicates to the AccountBalanceBindingMutation builder.
+func (m *AccountBalanceBindingMutation) Where(ps ...predicate.AccountBalanceBinding) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AccountBalanceBindingMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AccountBalanceBindingMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AccountBalanceBinding, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AccountBalanceBindingMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AccountBalanceBindingMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AccountBalanceBinding).
+func (m *AccountBalanceBindingMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AccountBalanceBindingMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.created_at != nil {
+		fields = append(fields, accountbalancebinding.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, accountbalancebinding.FieldUpdatedAt)
+	}
+	if m.account != nil {
+		fields = append(fields, accountbalancebinding.FieldAccountID)
+	}
+	if m.site != nil {
+		fields = append(fields, accountbalancebinding.FieldSiteID)
+	}
+	if m.external_key_id != nil {
+		fields = append(fields, accountbalancebinding.FieldExternalKeyID)
+	}
+	if m.key_last4 != nil {
+		fields = append(fields, accountbalancebinding.FieldKeyLast4)
+	}
+	if m.match_mode != nil {
+		fields = append(fields, accountbalancebinding.FieldMatchMode)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AccountBalanceBindingMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case accountbalancebinding.FieldCreatedAt:
+		return m.CreatedAt()
+	case accountbalancebinding.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case accountbalancebinding.FieldAccountID:
+		return m.AccountID()
+	case accountbalancebinding.FieldSiteID:
+		return m.SiteID()
+	case accountbalancebinding.FieldExternalKeyID:
+		return m.ExternalKeyID()
+	case accountbalancebinding.FieldKeyLast4:
+		return m.KeyLast4()
+	case accountbalancebinding.FieldMatchMode:
+		return m.MatchMode()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AccountBalanceBindingMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case accountbalancebinding.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case accountbalancebinding.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case accountbalancebinding.FieldAccountID:
+		return m.OldAccountID(ctx)
+	case accountbalancebinding.FieldSiteID:
+		return m.OldSiteID(ctx)
+	case accountbalancebinding.FieldExternalKeyID:
+		return m.OldExternalKeyID(ctx)
+	case accountbalancebinding.FieldKeyLast4:
+		return m.OldKeyLast4(ctx)
+	case accountbalancebinding.FieldMatchMode:
+		return m.OldMatchMode(ctx)
+	}
+	return nil, fmt.Errorf("unknown AccountBalanceBinding field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AccountBalanceBindingMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case accountbalancebinding.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case accountbalancebinding.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case accountbalancebinding.FieldAccountID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountID(v)
+		return nil
+	case accountbalancebinding.FieldSiteID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSiteID(v)
+		return nil
+	case accountbalancebinding.FieldExternalKeyID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExternalKeyID(v)
+		return nil
+	case accountbalancebinding.FieldKeyLast4:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKeyLast4(v)
+		return nil
+	case accountbalancebinding.FieldMatchMode:
+		v, ok := value.(accountbalancebinding.MatchMode)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMatchMode(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AccountBalanceBinding field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AccountBalanceBindingMutation) AddedFields() []string {
+	var fields []string
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AccountBalanceBindingMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AccountBalanceBindingMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown AccountBalanceBinding numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AccountBalanceBindingMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(accountbalancebinding.FieldExternalKeyID) {
+		fields = append(fields, accountbalancebinding.FieldExternalKeyID)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AccountBalanceBindingMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AccountBalanceBindingMutation) ClearField(name string) error {
+	switch name {
+	case accountbalancebinding.FieldExternalKeyID:
+		m.ClearExternalKeyID()
+		return nil
+	}
+	return fmt.Errorf("unknown AccountBalanceBinding nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AccountBalanceBindingMutation) ResetField(name string) error {
+	switch name {
+	case accountbalancebinding.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case accountbalancebinding.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case accountbalancebinding.FieldAccountID:
+		m.ResetAccountID()
+		return nil
+	case accountbalancebinding.FieldSiteID:
+		m.ResetSiteID()
+		return nil
+	case accountbalancebinding.FieldExternalKeyID:
+		m.ResetExternalKeyID()
+		return nil
+	case accountbalancebinding.FieldKeyLast4:
+		m.ResetKeyLast4()
+		return nil
+	case accountbalancebinding.FieldMatchMode:
+		m.ResetMatchMode()
+		return nil
+	}
+	return fmt.Errorf("unknown AccountBalanceBinding field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AccountBalanceBindingMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.account != nil {
+		edges = append(edges, accountbalancebinding.EdgeAccount)
+	}
+	if m.site != nil {
+		edges = append(edges, accountbalancebinding.EdgeSite)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AccountBalanceBindingMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case accountbalancebinding.EdgeAccount:
+		if id := m.account; id != nil {
+			return []ent.Value{*id}
+		}
+	case accountbalancebinding.EdgeSite:
+		if id := m.site; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AccountBalanceBindingMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AccountBalanceBindingMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AccountBalanceBindingMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedaccount {
+		edges = append(edges, accountbalancebinding.EdgeAccount)
+	}
+	if m.clearedsite {
+		edges = append(edges, accountbalancebinding.EdgeSite)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AccountBalanceBindingMutation) EdgeCleared(name string) bool {
+	switch name {
+	case accountbalancebinding.EdgeAccount:
+		return m.clearedaccount
+	case accountbalancebinding.EdgeSite:
+		return m.clearedsite
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AccountBalanceBindingMutation) ClearEdge(name string) error {
+	switch name {
+	case accountbalancebinding.EdgeAccount:
+		m.ClearAccount()
+		return nil
+	case accountbalancebinding.EdgeSite:
+		m.ClearSite()
+		return nil
+	}
+	return fmt.Errorf("unknown AccountBalanceBinding unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AccountBalanceBindingMutation) ResetEdge(name string) error {
+	switch name {
+	case accountbalancebinding.EdgeAccount:
+		m.ResetAccount()
+		return nil
+	case accountbalancebinding.EdgeSite:
+		m.ResetSite()
+		return nil
+	}
+	return fmt.Errorf("unknown AccountBalanceBinding edge %s", name)
+}
+
 // AccountGroupMutation represents an operation that mutates the AccountGroup nodes in the graph.
 type AccountGroupMutation struct {
 	config
@@ -8849,6 +9630,2547 @@ func (m *AuthIdentityChannelMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown AuthIdentityChannel edge %s", name)
+}
+
+// BalanceKeySnapshotMutation represents an operation that mutates the BalanceKeySnapshot nodes in the graph.
+type BalanceKeySnapshotMutation struct {
+	config
+	op                   Op
+	typ                  string
+	id                   *int64
+	created_at           *time.Time
+	updated_at           *time.Time
+	external_key_id      *string
+	masked_key           *string
+	key_last4            *string
+	match_status         *balancekeysnapshot.MatchStatus
+	key_name             *string
+	status               *string
+	group_id             *string
+	group_name           *string
+	balance              *map[string]interface{}
+	subscription_balance *map[string]interface{}
+	rate_multiplier      *float64
+	addrate_multiplier   *float64
+	fetched_at           *time.Time
+	clearedFields        map[string]struct{}
+	site                 *int64
+	clearedsite          bool
+	account              *int64
+	clearedaccount       bool
+	done                 bool
+	oldValue             func(context.Context) (*BalanceKeySnapshot, error)
+	predicates           []predicate.BalanceKeySnapshot
+}
+
+var _ ent.Mutation = (*BalanceKeySnapshotMutation)(nil)
+
+// balancekeysnapshotOption allows management of the mutation configuration using functional options.
+type balancekeysnapshotOption func(*BalanceKeySnapshotMutation)
+
+// newBalanceKeySnapshotMutation creates new mutation for the BalanceKeySnapshot entity.
+func newBalanceKeySnapshotMutation(c config, op Op, opts ...balancekeysnapshotOption) *BalanceKeySnapshotMutation {
+	m := &BalanceKeySnapshotMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeBalanceKeySnapshot,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withBalanceKeySnapshotID sets the ID field of the mutation.
+func withBalanceKeySnapshotID(id int64) balancekeysnapshotOption {
+	return func(m *BalanceKeySnapshotMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *BalanceKeySnapshot
+		)
+		m.oldValue = func(ctx context.Context) (*BalanceKeySnapshot, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().BalanceKeySnapshot.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withBalanceKeySnapshot sets the old BalanceKeySnapshot of the mutation.
+func withBalanceKeySnapshot(node *BalanceKeySnapshot) balancekeysnapshotOption {
+	return func(m *BalanceKeySnapshotMutation) {
+		m.oldValue = func(context.Context) (*BalanceKeySnapshot, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m BalanceKeySnapshotMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m BalanceKeySnapshotMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *BalanceKeySnapshotMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *BalanceKeySnapshotMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().BalanceKeySnapshot.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *BalanceKeySnapshotMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *BalanceKeySnapshotMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *BalanceKeySnapshotMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *BalanceKeySnapshotMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *BalanceKeySnapshotMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *BalanceKeySnapshotMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetSiteID sets the "site_id" field.
+func (m *BalanceKeySnapshotMutation) SetSiteID(i int64) {
+	m.site = &i
+}
+
+// SiteID returns the value of the "site_id" field in the mutation.
+func (m *BalanceKeySnapshotMutation) SiteID() (r int64, exists bool) {
+	v := m.site
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSiteID returns the old "site_id" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldSiteID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSiteID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSiteID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSiteID: %w", err)
+	}
+	return oldValue.SiteID, nil
+}
+
+// ResetSiteID resets all changes to the "site_id" field.
+func (m *BalanceKeySnapshotMutation) ResetSiteID() {
+	m.site = nil
+}
+
+// SetExternalKeyID sets the "external_key_id" field.
+func (m *BalanceKeySnapshotMutation) SetExternalKeyID(s string) {
+	m.external_key_id = &s
+}
+
+// ExternalKeyID returns the value of the "external_key_id" field in the mutation.
+func (m *BalanceKeySnapshotMutation) ExternalKeyID() (r string, exists bool) {
+	v := m.external_key_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExternalKeyID returns the old "external_key_id" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldExternalKeyID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExternalKeyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExternalKeyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExternalKeyID: %w", err)
+	}
+	return oldValue.ExternalKeyID, nil
+}
+
+// ResetExternalKeyID resets all changes to the "external_key_id" field.
+func (m *BalanceKeySnapshotMutation) ResetExternalKeyID() {
+	m.external_key_id = nil
+}
+
+// SetMaskedKey sets the "masked_key" field.
+func (m *BalanceKeySnapshotMutation) SetMaskedKey(s string) {
+	m.masked_key = &s
+}
+
+// MaskedKey returns the value of the "masked_key" field in the mutation.
+func (m *BalanceKeySnapshotMutation) MaskedKey() (r string, exists bool) {
+	v := m.masked_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMaskedKey returns the old "masked_key" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldMaskedKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMaskedKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMaskedKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMaskedKey: %w", err)
+	}
+	return oldValue.MaskedKey, nil
+}
+
+// ResetMaskedKey resets all changes to the "masked_key" field.
+func (m *BalanceKeySnapshotMutation) ResetMaskedKey() {
+	m.masked_key = nil
+}
+
+// SetKeyLast4 sets the "key_last4" field.
+func (m *BalanceKeySnapshotMutation) SetKeyLast4(s string) {
+	m.key_last4 = &s
+}
+
+// KeyLast4 returns the value of the "key_last4" field in the mutation.
+func (m *BalanceKeySnapshotMutation) KeyLast4() (r string, exists bool) {
+	v := m.key_last4
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKeyLast4 returns the old "key_last4" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldKeyLast4(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKeyLast4 is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKeyLast4 requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKeyLast4: %w", err)
+	}
+	return oldValue.KeyLast4, nil
+}
+
+// ResetKeyLast4 resets all changes to the "key_last4" field.
+func (m *BalanceKeySnapshotMutation) ResetKeyLast4() {
+	m.key_last4 = nil
+}
+
+// SetAccountID sets the "account_id" field.
+func (m *BalanceKeySnapshotMutation) SetAccountID(i int64) {
+	m.account = &i
+}
+
+// AccountID returns the value of the "account_id" field in the mutation.
+func (m *BalanceKeySnapshotMutation) AccountID() (r int64, exists bool) {
+	v := m.account
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountID returns the old "account_id" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldAccountID(ctx context.Context) (v *int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountID: %w", err)
+	}
+	return oldValue.AccountID, nil
+}
+
+// ClearAccountID clears the value of the "account_id" field.
+func (m *BalanceKeySnapshotMutation) ClearAccountID() {
+	m.account = nil
+	m.clearedFields[balancekeysnapshot.FieldAccountID] = struct{}{}
+}
+
+// AccountIDCleared returns if the "account_id" field was cleared in this mutation.
+func (m *BalanceKeySnapshotMutation) AccountIDCleared() bool {
+	_, ok := m.clearedFields[balancekeysnapshot.FieldAccountID]
+	return ok
+}
+
+// ResetAccountID resets all changes to the "account_id" field.
+func (m *BalanceKeySnapshotMutation) ResetAccountID() {
+	m.account = nil
+	delete(m.clearedFields, balancekeysnapshot.FieldAccountID)
+}
+
+// SetMatchStatus sets the "match_status" field.
+func (m *BalanceKeySnapshotMutation) SetMatchStatus(bs balancekeysnapshot.MatchStatus) {
+	m.match_status = &bs
+}
+
+// MatchStatus returns the value of the "match_status" field in the mutation.
+func (m *BalanceKeySnapshotMutation) MatchStatus() (r balancekeysnapshot.MatchStatus, exists bool) {
+	v := m.match_status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMatchStatus returns the old "match_status" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldMatchStatus(ctx context.Context) (v balancekeysnapshot.MatchStatus, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMatchStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMatchStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMatchStatus: %w", err)
+	}
+	return oldValue.MatchStatus, nil
+}
+
+// ResetMatchStatus resets all changes to the "match_status" field.
+func (m *BalanceKeySnapshotMutation) ResetMatchStatus() {
+	m.match_status = nil
+}
+
+// SetKeyName sets the "key_name" field.
+func (m *BalanceKeySnapshotMutation) SetKeyName(s string) {
+	m.key_name = &s
+}
+
+// KeyName returns the value of the "key_name" field in the mutation.
+func (m *BalanceKeySnapshotMutation) KeyName() (r string, exists bool) {
+	v := m.key_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKeyName returns the old "key_name" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldKeyName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKeyName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKeyName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKeyName: %w", err)
+	}
+	return oldValue.KeyName, nil
+}
+
+// ResetKeyName resets all changes to the "key_name" field.
+func (m *BalanceKeySnapshotMutation) ResetKeyName() {
+	m.key_name = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *BalanceKeySnapshotMutation) SetStatus(s string) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *BalanceKeySnapshotMutation) Status() (r string, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *BalanceKeySnapshotMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetGroupID sets the "group_id" field.
+func (m *BalanceKeySnapshotMutation) SetGroupID(s string) {
+	m.group_id = &s
+}
+
+// GroupID returns the value of the "group_id" field in the mutation.
+func (m *BalanceKeySnapshotMutation) GroupID() (r string, exists bool) {
+	v := m.group_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGroupID returns the old "group_id" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldGroupID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGroupID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGroupID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGroupID: %w", err)
+	}
+	return oldValue.GroupID, nil
+}
+
+// ResetGroupID resets all changes to the "group_id" field.
+func (m *BalanceKeySnapshotMutation) ResetGroupID() {
+	m.group_id = nil
+}
+
+// SetGroupName sets the "group_name" field.
+func (m *BalanceKeySnapshotMutation) SetGroupName(s string) {
+	m.group_name = &s
+}
+
+// GroupName returns the value of the "group_name" field in the mutation.
+func (m *BalanceKeySnapshotMutation) GroupName() (r string, exists bool) {
+	v := m.group_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGroupName returns the old "group_name" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldGroupName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGroupName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGroupName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGroupName: %w", err)
+	}
+	return oldValue.GroupName, nil
+}
+
+// ResetGroupName resets all changes to the "group_name" field.
+func (m *BalanceKeySnapshotMutation) ResetGroupName() {
+	m.group_name = nil
+}
+
+// SetBalance sets the "balance" field.
+func (m *BalanceKeySnapshotMutation) SetBalance(value map[string]interface{}) {
+	m.balance = &value
+}
+
+// Balance returns the value of the "balance" field in the mutation.
+func (m *BalanceKeySnapshotMutation) Balance() (r map[string]interface{}, exists bool) {
+	v := m.balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBalance returns the old "balance" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldBalance(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBalance is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBalance requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBalance: %w", err)
+	}
+	return oldValue.Balance, nil
+}
+
+// ResetBalance resets all changes to the "balance" field.
+func (m *BalanceKeySnapshotMutation) ResetBalance() {
+	m.balance = nil
+}
+
+// SetSubscriptionBalance sets the "subscription_balance" field.
+func (m *BalanceKeySnapshotMutation) SetSubscriptionBalance(value map[string]interface{}) {
+	m.subscription_balance = &value
+}
+
+// SubscriptionBalance returns the value of the "subscription_balance" field in the mutation.
+func (m *BalanceKeySnapshotMutation) SubscriptionBalance() (r map[string]interface{}, exists bool) {
+	v := m.subscription_balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubscriptionBalance returns the old "subscription_balance" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldSubscriptionBalance(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubscriptionBalance is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubscriptionBalance requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubscriptionBalance: %w", err)
+	}
+	return oldValue.SubscriptionBalance, nil
+}
+
+// ResetSubscriptionBalance resets all changes to the "subscription_balance" field.
+func (m *BalanceKeySnapshotMutation) ResetSubscriptionBalance() {
+	m.subscription_balance = nil
+}
+
+// SetRateMultiplier sets the "rate_multiplier" field.
+func (m *BalanceKeySnapshotMutation) SetRateMultiplier(f float64) {
+	m.rate_multiplier = &f
+	m.addrate_multiplier = nil
+}
+
+// RateMultiplier returns the value of the "rate_multiplier" field in the mutation.
+func (m *BalanceKeySnapshotMutation) RateMultiplier() (r float64, exists bool) {
+	v := m.rate_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRateMultiplier returns the old "rate_multiplier" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldRateMultiplier(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRateMultiplier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRateMultiplier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRateMultiplier: %w", err)
+	}
+	return oldValue.RateMultiplier, nil
+}
+
+// AddRateMultiplier adds f to the "rate_multiplier" field.
+func (m *BalanceKeySnapshotMutation) AddRateMultiplier(f float64) {
+	if m.addrate_multiplier != nil {
+		*m.addrate_multiplier += f
+	} else {
+		m.addrate_multiplier = &f
+	}
+}
+
+// AddedRateMultiplier returns the value that was added to the "rate_multiplier" field in this mutation.
+func (m *BalanceKeySnapshotMutation) AddedRateMultiplier() (r float64, exists bool) {
+	v := m.addrate_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearRateMultiplier clears the value of the "rate_multiplier" field.
+func (m *BalanceKeySnapshotMutation) ClearRateMultiplier() {
+	m.rate_multiplier = nil
+	m.addrate_multiplier = nil
+	m.clearedFields[balancekeysnapshot.FieldRateMultiplier] = struct{}{}
+}
+
+// RateMultiplierCleared returns if the "rate_multiplier" field was cleared in this mutation.
+func (m *BalanceKeySnapshotMutation) RateMultiplierCleared() bool {
+	_, ok := m.clearedFields[balancekeysnapshot.FieldRateMultiplier]
+	return ok
+}
+
+// ResetRateMultiplier resets all changes to the "rate_multiplier" field.
+func (m *BalanceKeySnapshotMutation) ResetRateMultiplier() {
+	m.rate_multiplier = nil
+	m.addrate_multiplier = nil
+	delete(m.clearedFields, balancekeysnapshot.FieldRateMultiplier)
+}
+
+// SetFetchedAt sets the "fetched_at" field.
+func (m *BalanceKeySnapshotMutation) SetFetchedAt(t time.Time) {
+	m.fetched_at = &t
+}
+
+// FetchedAt returns the value of the "fetched_at" field in the mutation.
+func (m *BalanceKeySnapshotMutation) FetchedAt() (r time.Time, exists bool) {
+	v := m.fetched_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFetchedAt returns the old "fetched_at" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldFetchedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFetchedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFetchedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFetchedAt: %w", err)
+	}
+	return oldValue.FetchedAt, nil
+}
+
+// ResetFetchedAt resets all changes to the "fetched_at" field.
+func (m *BalanceKeySnapshotMutation) ResetFetchedAt() {
+	m.fetched_at = nil
+}
+
+// ClearSite clears the "site" edge to the BalanceSite entity.
+func (m *BalanceKeySnapshotMutation) ClearSite() {
+	m.clearedsite = true
+	m.clearedFields[balancekeysnapshot.FieldSiteID] = struct{}{}
+}
+
+// SiteCleared reports if the "site" edge to the BalanceSite entity was cleared.
+func (m *BalanceKeySnapshotMutation) SiteCleared() bool {
+	return m.clearedsite
+}
+
+// SiteIDs returns the "site" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// SiteID instead. It exists only for internal usage by the builders.
+func (m *BalanceKeySnapshotMutation) SiteIDs() (ids []int64) {
+	if id := m.site; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetSite resets all changes to the "site" edge.
+func (m *BalanceKeySnapshotMutation) ResetSite() {
+	m.site = nil
+	m.clearedsite = false
+}
+
+// ClearAccount clears the "account" edge to the Account entity.
+func (m *BalanceKeySnapshotMutation) ClearAccount() {
+	m.clearedaccount = true
+	m.clearedFields[balancekeysnapshot.FieldAccountID] = struct{}{}
+}
+
+// AccountCleared reports if the "account" edge to the Account entity was cleared.
+func (m *BalanceKeySnapshotMutation) AccountCleared() bool {
+	return m.AccountIDCleared() || m.clearedaccount
+}
+
+// AccountIDs returns the "account" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AccountID instead. It exists only for internal usage by the builders.
+func (m *BalanceKeySnapshotMutation) AccountIDs() (ids []int64) {
+	if id := m.account; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAccount resets all changes to the "account" edge.
+func (m *BalanceKeySnapshotMutation) ResetAccount() {
+	m.account = nil
+	m.clearedaccount = false
+}
+
+// Where appends a list predicates to the BalanceKeySnapshotMutation builder.
+func (m *BalanceKeySnapshotMutation) Where(ps ...predicate.BalanceKeySnapshot) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the BalanceKeySnapshotMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *BalanceKeySnapshotMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.BalanceKeySnapshot, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *BalanceKeySnapshotMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *BalanceKeySnapshotMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (BalanceKeySnapshot).
+func (m *BalanceKeySnapshotMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *BalanceKeySnapshotMutation) Fields() []string {
+	fields := make([]string, 0, 16)
+	if m.created_at != nil {
+		fields = append(fields, balancekeysnapshot.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, balancekeysnapshot.FieldUpdatedAt)
+	}
+	if m.site != nil {
+		fields = append(fields, balancekeysnapshot.FieldSiteID)
+	}
+	if m.external_key_id != nil {
+		fields = append(fields, balancekeysnapshot.FieldExternalKeyID)
+	}
+	if m.masked_key != nil {
+		fields = append(fields, balancekeysnapshot.FieldMaskedKey)
+	}
+	if m.key_last4 != nil {
+		fields = append(fields, balancekeysnapshot.FieldKeyLast4)
+	}
+	if m.account != nil {
+		fields = append(fields, balancekeysnapshot.FieldAccountID)
+	}
+	if m.match_status != nil {
+		fields = append(fields, balancekeysnapshot.FieldMatchStatus)
+	}
+	if m.key_name != nil {
+		fields = append(fields, balancekeysnapshot.FieldKeyName)
+	}
+	if m.status != nil {
+		fields = append(fields, balancekeysnapshot.FieldStatus)
+	}
+	if m.group_id != nil {
+		fields = append(fields, balancekeysnapshot.FieldGroupID)
+	}
+	if m.group_name != nil {
+		fields = append(fields, balancekeysnapshot.FieldGroupName)
+	}
+	if m.balance != nil {
+		fields = append(fields, balancekeysnapshot.FieldBalance)
+	}
+	if m.subscription_balance != nil {
+		fields = append(fields, balancekeysnapshot.FieldSubscriptionBalance)
+	}
+	if m.rate_multiplier != nil {
+		fields = append(fields, balancekeysnapshot.FieldRateMultiplier)
+	}
+	if m.fetched_at != nil {
+		fields = append(fields, balancekeysnapshot.FieldFetchedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *BalanceKeySnapshotMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case balancekeysnapshot.FieldCreatedAt:
+		return m.CreatedAt()
+	case balancekeysnapshot.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case balancekeysnapshot.FieldSiteID:
+		return m.SiteID()
+	case balancekeysnapshot.FieldExternalKeyID:
+		return m.ExternalKeyID()
+	case balancekeysnapshot.FieldMaskedKey:
+		return m.MaskedKey()
+	case balancekeysnapshot.FieldKeyLast4:
+		return m.KeyLast4()
+	case balancekeysnapshot.FieldAccountID:
+		return m.AccountID()
+	case balancekeysnapshot.FieldMatchStatus:
+		return m.MatchStatus()
+	case balancekeysnapshot.FieldKeyName:
+		return m.KeyName()
+	case balancekeysnapshot.FieldStatus:
+		return m.Status()
+	case balancekeysnapshot.FieldGroupID:
+		return m.GroupID()
+	case balancekeysnapshot.FieldGroupName:
+		return m.GroupName()
+	case balancekeysnapshot.FieldBalance:
+		return m.Balance()
+	case balancekeysnapshot.FieldSubscriptionBalance:
+		return m.SubscriptionBalance()
+	case balancekeysnapshot.FieldRateMultiplier:
+		return m.RateMultiplier()
+	case balancekeysnapshot.FieldFetchedAt:
+		return m.FetchedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *BalanceKeySnapshotMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case balancekeysnapshot.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case balancekeysnapshot.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case balancekeysnapshot.FieldSiteID:
+		return m.OldSiteID(ctx)
+	case balancekeysnapshot.FieldExternalKeyID:
+		return m.OldExternalKeyID(ctx)
+	case balancekeysnapshot.FieldMaskedKey:
+		return m.OldMaskedKey(ctx)
+	case balancekeysnapshot.FieldKeyLast4:
+		return m.OldKeyLast4(ctx)
+	case balancekeysnapshot.FieldAccountID:
+		return m.OldAccountID(ctx)
+	case balancekeysnapshot.FieldMatchStatus:
+		return m.OldMatchStatus(ctx)
+	case balancekeysnapshot.FieldKeyName:
+		return m.OldKeyName(ctx)
+	case balancekeysnapshot.FieldStatus:
+		return m.OldStatus(ctx)
+	case balancekeysnapshot.FieldGroupID:
+		return m.OldGroupID(ctx)
+	case balancekeysnapshot.FieldGroupName:
+		return m.OldGroupName(ctx)
+	case balancekeysnapshot.FieldBalance:
+		return m.OldBalance(ctx)
+	case balancekeysnapshot.FieldSubscriptionBalance:
+		return m.OldSubscriptionBalance(ctx)
+	case balancekeysnapshot.FieldRateMultiplier:
+		return m.OldRateMultiplier(ctx)
+	case balancekeysnapshot.FieldFetchedAt:
+		return m.OldFetchedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown BalanceKeySnapshot field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *BalanceKeySnapshotMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case balancekeysnapshot.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case balancekeysnapshot.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case balancekeysnapshot.FieldSiteID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSiteID(v)
+		return nil
+	case balancekeysnapshot.FieldExternalKeyID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExternalKeyID(v)
+		return nil
+	case balancekeysnapshot.FieldMaskedKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMaskedKey(v)
+		return nil
+	case balancekeysnapshot.FieldKeyLast4:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKeyLast4(v)
+		return nil
+	case balancekeysnapshot.FieldAccountID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountID(v)
+		return nil
+	case balancekeysnapshot.FieldMatchStatus:
+		v, ok := value.(balancekeysnapshot.MatchStatus)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMatchStatus(v)
+		return nil
+	case balancekeysnapshot.FieldKeyName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKeyName(v)
+		return nil
+	case balancekeysnapshot.FieldStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case balancekeysnapshot.FieldGroupID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGroupID(v)
+		return nil
+	case balancekeysnapshot.FieldGroupName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGroupName(v)
+		return nil
+	case balancekeysnapshot.FieldBalance:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBalance(v)
+		return nil
+	case balancekeysnapshot.FieldSubscriptionBalance:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubscriptionBalance(v)
+		return nil
+	case balancekeysnapshot.FieldRateMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRateMultiplier(v)
+		return nil
+	case balancekeysnapshot.FieldFetchedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFetchedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown BalanceKeySnapshot field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *BalanceKeySnapshotMutation) AddedFields() []string {
+	var fields []string
+	if m.addrate_multiplier != nil {
+		fields = append(fields, balancekeysnapshot.FieldRateMultiplier)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *BalanceKeySnapshotMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case balancekeysnapshot.FieldRateMultiplier:
+		return m.AddedRateMultiplier()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *BalanceKeySnapshotMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case balancekeysnapshot.FieldRateMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRateMultiplier(v)
+		return nil
+	}
+	return fmt.Errorf("unknown BalanceKeySnapshot numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *BalanceKeySnapshotMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(balancekeysnapshot.FieldAccountID) {
+		fields = append(fields, balancekeysnapshot.FieldAccountID)
+	}
+	if m.FieldCleared(balancekeysnapshot.FieldRateMultiplier) {
+		fields = append(fields, balancekeysnapshot.FieldRateMultiplier)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *BalanceKeySnapshotMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *BalanceKeySnapshotMutation) ClearField(name string) error {
+	switch name {
+	case balancekeysnapshot.FieldAccountID:
+		m.ClearAccountID()
+		return nil
+	case balancekeysnapshot.FieldRateMultiplier:
+		m.ClearRateMultiplier()
+		return nil
+	}
+	return fmt.Errorf("unknown BalanceKeySnapshot nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *BalanceKeySnapshotMutation) ResetField(name string) error {
+	switch name {
+	case balancekeysnapshot.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case balancekeysnapshot.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case balancekeysnapshot.FieldSiteID:
+		m.ResetSiteID()
+		return nil
+	case balancekeysnapshot.FieldExternalKeyID:
+		m.ResetExternalKeyID()
+		return nil
+	case balancekeysnapshot.FieldMaskedKey:
+		m.ResetMaskedKey()
+		return nil
+	case balancekeysnapshot.FieldKeyLast4:
+		m.ResetKeyLast4()
+		return nil
+	case balancekeysnapshot.FieldAccountID:
+		m.ResetAccountID()
+		return nil
+	case balancekeysnapshot.FieldMatchStatus:
+		m.ResetMatchStatus()
+		return nil
+	case balancekeysnapshot.FieldKeyName:
+		m.ResetKeyName()
+		return nil
+	case balancekeysnapshot.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case balancekeysnapshot.FieldGroupID:
+		m.ResetGroupID()
+		return nil
+	case balancekeysnapshot.FieldGroupName:
+		m.ResetGroupName()
+		return nil
+	case balancekeysnapshot.FieldBalance:
+		m.ResetBalance()
+		return nil
+	case balancekeysnapshot.FieldSubscriptionBalance:
+		m.ResetSubscriptionBalance()
+		return nil
+	case balancekeysnapshot.FieldRateMultiplier:
+		m.ResetRateMultiplier()
+		return nil
+	case balancekeysnapshot.FieldFetchedAt:
+		m.ResetFetchedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown BalanceKeySnapshot field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *BalanceKeySnapshotMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.site != nil {
+		edges = append(edges, balancekeysnapshot.EdgeSite)
+	}
+	if m.account != nil {
+		edges = append(edges, balancekeysnapshot.EdgeAccount)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *BalanceKeySnapshotMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case balancekeysnapshot.EdgeSite:
+		if id := m.site; id != nil {
+			return []ent.Value{*id}
+		}
+	case balancekeysnapshot.EdgeAccount:
+		if id := m.account; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *BalanceKeySnapshotMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *BalanceKeySnapshotMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *BalanceKeySnapshotMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedsite {
+		edges = append(edges, balancekeysnapshot.EdgeSite)
+	}
+	if m.clearedaccount {
+		edges = append(edges, balancekeysnapshot.EdgeAccount)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *BalanceKeySnapshotMutation) EdgeCleared(name string) bool {
+	switch name {
+	case balancekeysnapshot.EdgeSite:
+		return m.clearedsite
+	case balancekeysnapshot.EdgeAccount:
+		return m.clearedaccount
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *BalanceKeySnapshotMutation) ClearEdge(name string) error {
+	switch name {
+	case balancekeysnapshot.EdgeSite:
+		m.ClearSite()
+		return nil
+	case balancekeysnapshot.EdgeAccount:
+		m.ClearAccount()
+		return nil
+	}
+	return fmt.Errorf("unknown BalanceKeySnapshot unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *BalanceKeySnapshotMutation) ResetEdge(name string) error {
+	switch name {
+	case balancekeysnapshot.EdgeSite:
+		m.ResetSite()
+		return nil
+	case balancekeysnapshot.EdgeAccount:
+		m.ResetAccount()
+		return nil
+	}
+	return fmt.Errorf("unknown BalanceKeySnapshot edge %s", name)
+}
+
+// BalanceSiteMutation represents an operation that mutates the BalanceSite nodes in the graph.
+type BalanceSiteMutation struct {
+	config
+	op                          Op
+	typ                         string
+	id                          *int64
+	created_at                  *time.Time
+	updated_at                  *time.Time
+	platform                    *balancesite.Platform
+	name                        *string
+	base_url                    *string
+	username                    *string
+	email                       *string
+	password_encrypted          *string
+	enabled                     *bool
+	refresh_interval_minutes    *int
+	addrefresh_interval_minutes *int
+	last_refresh_at             *time.Time
+	last_refresh_status         *string
+	last_refresh_error          *string
+	clearedFields               map[string]struct{}
+	snapshots                   map[int64]struct{}
+	removedsnapshots            map[int64]struct{}
+	clearedsnapshots            bool
+	bindings                    map[int64]struct{}
+	removedbindings             map[int64]struct{}
+	clearedbindings             bool
+	done                        bool
+	oldValue                    func(context.Context) (*BalanceSite, error)
+	predicates                  []predicate.BalanceSite
+}
+
+var _ ent.Mutation = (*BalanceSiteMutation)(nil)
+
+// balancesiteOption allows management of the mutation configuration using functional options.
+type balancesiteOption func(*BalanceSiteMutation)
+
+// newBalanceSiteMutation creates new mutation for the BalanceSite entity.
+func newBalanceSiteMutation(c config, op Op, opts ...balancesiteOption) *BalanceSiteMutation {
+	m := &BalanceSiteMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeBalanceSite,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withBalanceSiteID sets the ID field of the mutation.
+func withBalanceSiteID(id int64) balancesiteOption {
+	return func(m *BalanceSiteMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *BalanceSite
+		)
+		m.oldValue = func(ctx context.Context) (*BalanceSite, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().BalanceSite.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withBalanceSite sets the old BalanceSite of the mutation.
+func withBalanceSite(node *BalanceSite) balancesiteOption {
+	return func(m *BalanceSiteMutation) {
+		m.oldValue = func(context.Context) (*BalanceSite, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m BalanceSiteMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m BalanceSiteMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *BalanceSiteMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *BalanceSiteMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().BalanceSite.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *BalanceSiteMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *BalanceSiteMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *BalanceSiteMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *BalanceSiteMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *BalanceSiteMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *BalanceSiteMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetPlatform sets the "platform" field.
+func (m *BalanceSiteMutation) SetPlatform(b balancesite.Platform) {
+	m.platform = &b
+}
+
+// Platform returns the value of the "platform" field in the mutation.
+func (m *BalanceSiteMutation) Platform() (r balancesite.Platform, exists bool) {
+	v := m.platform
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPlatform returns the old "platform" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldPlatform(ctx context.Context) (v balancesite.Platform, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPlatform is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPlatform requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPlatform: %w", err)
+	}
+	return oldValue.Platform, nil
+}
+
+// ResetPlatform resets all changes to the "platform" field.
+func (m *BalanceSiteMutation) ResetPlatform() {
+	m.platform = nil
+}
+
+// SetName sets the "name" field.
+func (m *BalanceSiteMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *BalanceSiteMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *BalanceSiteMutation) ResetName() {
+	m.name = nil
+}
+
+// SetBaseURL sets the "base_url" field.
+func (m *BalanceSiteMutation) SetBaseURL(s string) {
+	m.base_url = &s
+}
+
+// BaseURL returns the value of the "base_url" field in the mutation.
+func (m *BalanceSiteMutation) BaseURL() (r string, exists bool) {
+	v := m.base_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBaseURL returns the old "base_url" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldBaseURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBaseURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBaseURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBaseURL: %w", err)
+	}
+	return oldValue.BaseURL, nil
+}
+
+// ResetBaseURL resets all changes to the "base_url" field.
+func (m *BalanceSiteMutation) ResetBaseURL() {
+	m.base_url = nil
+}
+
+// SetUsername sets the "username" field.
+func (m *BalanceSiteMutation) SetUsername(s string) {
+	m.username = &s
+}
+
+// Username returns the value of the "username" field in the mutation.
+func (m *BalanceSiteMutation) Username() (r string, exists bool) {
+	v := m.username
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUsername returns the old "username" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldUsername(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUsername is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUsername requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUsername: %w", err)
+	}
+	return oldValue.Username, nil
+}
+
+// ResetUsername resets all changes to the "username" field.
+func (m *BalanceSiteMutation) ResetUsername() {
+	m.username = nil
+}
+
+// SetEmail sets the "email" field.
+func (m *BalanceSiteMutation) SetEmail(s string) {
+	m.email = &s
+}
+
+// Email returns the value of the "email" field in the mutation.
+func (m *BalanceSiteMutation) Email() (r string, exists bool) {
+	v := m.email
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEmail returns the old "email" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldEmail(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEmail is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEmail requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEmail: %w", err)
+	}
+	return oldValue.Email, nil
+}
+
+// ResetEmail resets all changes to the "email" field.
+func (m *BalanceSiteMutation) ResetEmail() {
+	m.email = nil
+}
+
+// SetPasswordEncrypted sets the "password_encrypted" field.
+func (m *BalanceSiteMutation) SetPasswordEncrypted(s string) {
+	m.password_encrypted = &s
+}
+
+// PasswordEncrypted returns the value of the "password_encrypted" field in the mutation.
+func (m *BalanceSiteMutation) PasswordEncrypted() (r string, exists bool) {
+	v := m.password_encrypted
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPasswordEncrypted returns the old "password_encrypted" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldPasswordEncrypted(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPasswordEncrypted is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPasswordEncrypted requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPasswordEncrypted: %w", err)
+	}
+	return oldValue.PasswordEncrypted, nil
+}
+
+// ResetPasswordEncrypted resets all changes to the "password_encrypted" field.
+func (m *BalanceSiteMutation) ResetPasswordEncrypted() {
+	m.password_encrypted = nil
+}
+
+// SetEnabled sets the "enabled" field.
+func (m *BalanceSiteMutation) SetEnabled(b bool) {
+	m.enabled = &b
+}
+
+// Enabled returns the value of the "enabled" field in the mutation.
+func (m *BalanceSiteMutation) Enabled() (r bool, exists bool) {
+	v := m.enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnabled returns the old "enabled" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnabled: %w", err)
+	}
+	return oldValue.Enabled, nil
+}
+
+// ResetEnabled resets all changes to the "enabled" field.
+func (m *BalanceSiteMutation) ResetEnabled() {
+	m.enabled = nil
+}
+
+// SetRefreshIntervalMinutes sets the "refresh_interval_minutes" field.
+func (m *BalanceSiteMutation) SetRefreshIntervalMinutes(i int) {
+	m.refresh_interval_minutes = &i
+	m.addrefresh_interval_minutes = nil
+}
+
+// RefreshIntervalMinutes returns the value of the "refresh_interval_minutes" field in the mutation.
+func (m *BalanceSiteMutation) RefreshIntervalMinutes() (r int, exists bool) {
+	v := m.refresh_interval_minutes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRefreshIntervalMinutes returns the old "refresh_interval_minutes" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldRefreshIntervalMinutes(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRefreshIntervalMinutes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRefreshIntervalMinutes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRefreshIntervalMinutes: %w", err)
+	}
+	return oldValue.RefreshIntervalMinutes, nil
+}
+
+// AddRefreshIntervalMinutes adds i to the "refresh_interval_minutes" field.
+func (m *BalanceSiteMutation) AddRefreshIntervalMinutes(i int) {
+	if m.addrefresh_interval_minutes != nil {
+		*m.addrefresh_interval_minutes += i
+	} else {
+		m.addrefresh_interval_minutes = &i
+	}
+}
+
+// AddedRefreshIntervalMinutes returns the value that was added to the "refresh_interval_minutes" field in this mutation.
+func (m *BalanceSiteMutation) AddedRefreshIntervalMinutes() (r int, exists bool) {
+	v := m.addrefresh_interval_minutes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRefreshIntervalMinutes resets all changes to the "refresh_interval_minutes" field.
+func (m *BalanceSiteMutation) ResetRefreshIntervalMinutes() {
+	m.refresh_interval_minutes = nil
+	m.addrefresh_interval_minutes = nil
+}
+
+// SetLastRefreshAt sets the "last_refresh_at" field.
+func (m *BalanceSiteMutation) SetLastRefreshAt(t time.Time) {
+	m.last_refresh_at = &t
+}
+
+// LastRefreshAt returns the value of the "last_refresh_at" field in the mutation.
+func (m *BalanceSiteMutation) LastRefreshAt() (r time.Time, exists bool) {
+	v := m.last_refresh_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastRefreshAt returns the old "last_refresh_at" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldLastRefreshAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastRefreshAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastRefreshAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastRefreshAt: %w", err)
+	}
+	return oldValue.LastRefreshAt, nil
+}
+
+// ClearLastRefreshAt clears the value of the "last_refresh_at" field.
+func (m *BalanceSiteMutation) ClearLastRefreshAt() {
+	m.last_refresh_at = nil
+	m.clearedFields[balancesite.FieldLastRefreshAt] = struct{}{}
+}
+
+// LastRefreshAtCleared returns if the "last_refresh_at" field was cleared in this mutation.
+func (m *BalanceSiteMutation) LastRefreshAtCleared() bool {
+	_, ok := m.clearedFields[balancesite.FieldLastRefreshAt]
+	return ok
+}
+
+// ResetLastRefreshAt resets all changes to the "last_refresh_at" field.
+func (m *BalanceSiteMutation) ResetLastRefreshAt() {
+	m.last_refresh_at = nil
+	delete(m.clearedFields, balancesite.FieldLastRefreshAt)
+}
+
+// SetLastRefreshStatus sets the "last_refresh_status" field.
+func (m *BalanceSiteMutation) SetLastRefreshStatus(s string) {
+	m.last_refresh_status = &s
+}
+
+// LastRefreshStatus returns the value of the "last_refresh_status" field in the mutation.
+func (m *BalanceSiteMutation) LastRefreshStatus() (r string, exists bool) {
+	v := m.last_refresh_status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastRefreshStatus returns the old "last_refresh_status" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldLastRefreshStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastRefreshStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastRefreshStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastRefreshStatus: %w", err)
+	}
+	return oldValue.LastRefreshStatus, nil
+}
+
+// ResetLastRefreshStatus resets all changes to the "last_refresh_status" field.
+func (m *BalanceSiteMutation) ResetLastRefreshStatus() {
+	m.last_refresh_status = nil
+}
+
+// SetLastRefreshError sets the "last_refresh_error" field.
+func (m *BalanceSiteMutation) SetLastRefreshError(s string) {
+	m.last_refresh_error = &s
+}
+
+// LastRefreshError returns the value of the "last_refresh_error" field in the mutation.
+func (m *BalanceSiteMutation) LastRefreshError() (r string, exists bool) {
+	v := m.last_refresh_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastRefreshError returns the old "last_refresh_error" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldLastRefreshError(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastRefreshError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastRefreshError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastRefreshError: %w", err)
+	}
+	return oldValue.LastRefreshError, nil
+}
+
+// ClearLastRefreshError clears the value of the "last_refresh_error" field.
+func (m *BalanceSiteMutation) ClearLastRefreshError() {
+	m.last_refresh_error = nil
+	m.clearedFields[balancesite.FieldLastRefreshError] = struct{}{}
+}
+
+// LastRefreshErrorCleared returns if the "last_refresh_error" field was cleared in this mutation.
+func (m *BalanceSiteMutation) LastRefreshErrorCleared() bool {
+	_, ok := m.clearedFields[balancesite.FieldLastRefreshError]
+	return ok
+}
+
+// ResetLastRefreshError resets all changes to the "last_refresh_error" field.
+func (m *BalanceSiteMutation) ResetLastRefreshError() {
+	m.last_refresh_error = nil
+	delete(m.clearedFields, balancesite.FieldLastRefreshError)
+}
+
+// AddSnapshotIDs adds the "snapshots" edge to the BalanceKeySnapshot entity by ids.
+func (m *BalanceSiteMutation) AddSnapshotIDs(ids ...int64) {
+	if m.snapshots == nil {
+		m.snapshots = make(map[int64]struct{})
+	}
+	for i := range ids {
+		m.snapshots[ids[i]] = struct{}{}
+	}
+}
+
+// ClearSnapshots clears the "snapshots" edge to the BalanceKeySnapshot entity.
+func (m *BalanceSiteMutation) ClearSnapshots() {
+	m.clearedsnapshots = true
+}
+
+// SnapshotsCleared reports if the "snapshots" edge to the BalanceKeySnapshot entity was cleared.
+func (m *BalanceSiteMutation) SnapshotsCleared() bool {
+	return m.clearedsnapshots
+}
+
+// RemoveSnapshotIDs removes the "snapshots" edge to the BalanceKeySnapshot entity by IDs.
+func (m *BalanceSiteMutation) RemoveSnapshotIDs(ids ...int64) {
+	if m.removedsnapshots == nil {
+		m.removedsnapshots = make(map[int64]struct{})
+	}
+	for i := range ids {
+		delete(m.snapshots, ids[i])
+		m.removedsnapshots[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedSnapshots returns the removed IDs of the "snapshots" edge to the BalanceKeySnapshot entity.
+func (m *BalanceSiteMutation) RemovedSnapshotsIDs() (ids []int64) {
+	for id := range m.removedsnapshots {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// SnapshotsIDs returns the "snapshots" edge IDs in the mutation.
+func (m *BalanceSiteMutation) SnapshotsIDs() (ids []int64) {
+	for id := range m.snapshots {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetSnapshots resets all changes to the "snapshots" edge.
+func (m *BalanceSiteMutation) ResetSnapshots() {
+	m.snapshots = nil
+	m.clearedsnapshots = false
+	m.removedsnapshots = nil
+}
+
+// AddBindingIDs adds the "bindings" edge to the AccountBalanceBinding entity by ids.
+func (m *BalanceSiteMutation) AddBindingIDs(ids ...int64) {
+	if m.bindings == nil {
+		m.bindings = make(map[int64]struct{})
+	}
+	for i := range ids {
+		m.bindings[ids[i]] = struct{}{}
+	}
+}
+
+// ClearBindings clears the "bindings" edge to the AccountBalanceBinding entity.
+func (m *BalanceSiteMutation) ClearBindings() {
+	m.clearedbindings = true
+}
+
+// BindingsCleared reports if the "bindings" edge to the AccountBalanceBinding entity was cleared.
+func (m *BalanceSiteMutation) BindingsCleared() bool {
+	return m.clearedbindings
+}
+
+// RemoveBindingIDs removes the "bindings" edge to the AccountBalanceBinding entity by IDs.
+func (m *BalanceSiteMutation) RemoveBindingIDs(ids ...int64) {
+	if m.removedbindings == nil {
+		m.removedbindings = make(map[int64]struct{})
+	}
+	for i := range ids {
+		delete(m.bindings, ids[i])
+		m.removedbindings[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedBindings returns the removed IDs of the "bindings" edge to the AccountBalanceBinding entity.
+func (m *BalanceSiteMutation) RemovedBindingsIDs() (ids []int64) {
+	for id := range m.removedbindings {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// BindingsIDs returns the "bindings" edge IDs in the mutation.
+func (m *BalanceSiteMutation) BindingsIDs() (ids []int64) {
+	for id := range m.bindings {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetBindings resets all changes to the "bindings" edge.
+func (m *BalanceSiteMutation) ResetBindings() {
+	m.bindings = nil
+	m.clearedbindings = false
+	m.removedbindings = nil
+}
+
+// Where appends a list predicates to the BalanceSiteMutation builder.
+func (m *BalanceSiteMutation) Where(ps ...predicate.BalanceSite) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the BalanceSiteMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *BalanceSiteMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.BalanceSite, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *BalanceSiteMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *BalanceSiteMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (BalanceSite).
+func (m *BalanceSiteMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *BalanceSiteMutation) Fields() []string {
+	fields := make([]string, 0, 13)
+	if m.created_at != nil {
+		fields = append(fields, balancesite.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, balancesite.FieldUpdatedAt)
+	}
+	if m.platform != nil {
+		fields = append(fields, balancesite.FieldPlatform)
+	}
+	if m.name != nil {
+		fields = append(fields, balancesite.FieldName)
+	}
+	if m.base_url != nil {
+		fields = append(fields, balancesite.FieldBaseURL)
+	}
+	if m.username != nil {
+		fields = append(fields, balancesite.FieldUsername)
+	}
+	if m.email != nil {
+		fields = append(fields, balancesite.FieldEmail)
+	}
+	if m.password_encrypted != nil {
+		fields = append(fields, balancesite.FieldPasswordEncrypted)
+	}
+	if m.enabled != nil {
+		fields = append(fields, balancesite.FieldEnabled)
+	}
+	if m.refresh_interval_minutes != nil {
+		fields = append(fields, balancesite.FieldRefreshIntervalMinutes)
+	}
+	if m.last_refresh_at != nil {
+		fields = append(fields, balancesite.FieldLastRefreshAt)
+	}
+	if m.last_refresh_status != nil {
+		fields = append(fields, balancesite.FieldLastRefreshStatus)
+	}
+	if m.last_refresh_error != nil {
+		fields = append(fields, balancesite.FieldLastRefreshError)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *BalanceSiteMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case balancesite.FieldCreatedAt:
+		return m.CreatedAt()
+	case balancesite.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case balancesite.FieldPlatform:
+		return m.Platform()
+	case balancesite.FieldName:
+		return m.Name()
+	case balancesite.FieldBaseURL:
+		return m.BaseURL()
+	case balancesite.FieldUsername:
+		return m.Username()
+	case balancesite.FieldEmail:
+		return m.Email()
+	case balancesite.FieldPasswordEncrypted:
+		return m.PasswordEncrypted()
+	case balancesite.FieldEnabled:
+		return m.Enabled()
+	case balancesite.FieldRefreshIntervalMinutes:
+		return m.RefreshIntervalMinutes()
+	case balancesite.FieldLastRefreshAt:
+		return m.LastRefreshAt()
+	case balancesite.FieldLastRefreshStatus:
+		return m.LastRefreshStatus()
+	case balancesite.FieldLastRefreshError:
+		return m.LastRefreshError()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *BalanceSiteMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case balancesite.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case balancesite.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case balancesite.FieldPlatform:
+		return m.OldPlatform(ctx)
+	case balancesite.FieldName:
+		return m.OldName(ctx)
+	case balancesite.FieldBaseURL:
+		return m.OldBaseURL(ctx)
+	case balancesite.FieldUsername:
+		return m.OldUsername(ctx)
+	case balancesite.FieldEmail:
+		return m.OldEmail(ctx)
+	case balancesite.FieldPasswordEncrypted:
+		return m.OldPasswordEncrypted(ctx)
+	case balancesite.FieldEnabled:
+		return m.OldEnabled(ctx)
+	case balancesite.FieldRefreshIntervalMinutes:
+		return m.OldRefreshIntervalMinutes(ctx)
+	case balancesite.FieldLastRefreshAt:
+		return m.OldLastRefreshAt(ctx)
+	case balancesite.FieldLastRefreshStatus:
+		return m.OldLastRefreshStatus(ctx)
+	case balancesite.FieldLastRefreshError:
+		return m.OldLastRefreshError(ctx)
+	}
+	return nil, fmt.Errorf("unknown BalanceSite field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *BalanceSiteMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case balancesite.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case balancesite.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case balancesite.FieldPlatform:
+		v, ok := value.(balancesite.Platform)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPlatform(v)
+		return nil
+	case balancesite.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case balancesite.FieldBaseURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBaseURL(v)
+		return nil
+	case balancesite.FieldUsername:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUsername(v)
+		return nil
+	case balancesite.FieldEmail:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEmail(v)
+		return nil
+	case balancesite.FieldPasswordEncrypted:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPasswordEncrypted(v)
+		return nil
+	case balancesite.FieldEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnabled(v)
+		return nil
+	case balancesite.FieldRefreshIntervalMinutes:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRefreshIntervalMinutes(v)
+		return nil
+	case balancesite.FieldLastRefreshAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastRefreshAt(v)
+		return nil
+	case balancesite.FieldLastRefreshStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastRefreshStatus(v)
+		return nil
+	case balancesite.FieldLastRefreshError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastRefreshError(v)
+		return nil
+	}
+	return fmt.Errorf("unknown BalanceSite field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *BalanceSiteMutation) AddedFields() []string {
+	var fields []string
+	if m.addrefresh_interval_minutes != nil {
+		fields = append(fields, balancesite.FieldRefreshIntervalMinutes)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *BalanceSiteMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case balancesite.FieldRefreshIntervalMinutes:
+		return m.AddedRefreshIntervalMinutes()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *BalanceSiteMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case balancesite.FieldRefreshIntervalMinutes:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRefreshIntervalMinutes(v)
+		return nil
+	}
+	return fmt.Errorf("unknown BalanceSite numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *BalanceSiteMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(balancesite.FieldLastRefreshAt) {
+		fields = append(fields, balancesite.FieldLastRefreshAt)
+	}
+	if m.FieldCleared(balancesite.FieldLastRefreshError) {
+		fields = append(fields, balancesite.FieldLastRefreshError)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *BalanceSiteMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *BalanceSiteMutation) ClearField(name string) error {
+	switch name {
+	case balancesite.FieldLastRefreshAt:
+		m.ClearLastRefreshAt()
+		return nil
+	case balancesite.FieldLastRefreshError:
+		m.ClearLastRefreshError()
+		return nil
+	}
+	return fmt.Errorf("unknown BalanceSite nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *BalanceSiteMutation) ResetField(name string) error {
+	switch name {
+	case balancesite.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case balancesite.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case balancesite.FieldPlatform:
+		m.ResetPlatform()
+		return nil
+	case balancesite.FieldName:
+		m.ResetName()
+		return nil
+	case balancesite.FieldBaseURL:
+		m.ResetBaseURL()
+		return nil
+	case balancesite.FieldUsername:
+		m.ResetUsername()
+		return nil
+	case balancesite.FieldEmail:
+		m.ResetEmail()
+		return nil
+	case balancesite.FieldPasswordEncrypted:
+		m.ResetPasswordEncrypted()
+		return nil
+	case balancesite.FieldEnabled:
+		m.ResetEnabled()
+		return nil
+	case balancesite.FieldRefreshIntervalMinutes:
+		m.ResetRefreshIntervalMinutes()
+		return nil
+	case balancesite.FieldLastRefreshAt:
+		m.ResetLastRefreshAt()
+		return nil
+	case balancesite.FieldLastRefreshStatus:
+		m.ResetLastRefreshStatus()
+		return nil
+	case balancesite.FieldLastRefreshError:
+		m.ResetLastRefreshError()
+		return nil
+	}
+	return fmt.Errorf("unknown BalanceSite field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *BalanceSiteMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.snapshots != nil {
+		edges = append(edges, balancesite.EdgeSnapshots)
+	}
+	if m.bindings != nil {
+		edges = append(edges, balancesite.EdgeBindings)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *BalanceSiteMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case balancesite.EdgeSnapshots:
+		ids := make([]ent.Value, 0, len(m.snapshots))
+		for id := range m.snapshots {
+			ids = append(ids, id)
+		}
+		return ids
+	case balancesite.EdgeBindings:
+		ids := make([]ent.Value, 0, len(m.bindings))
+		for id := range m.bindings {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *BalanceSiteMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.removedsnapshots != nil {
+		edges = append(edges, balancesite.EdgeSnapshots)
+	}
+	if m.removedbindings != nil {
+		edges = append(edges, balancesite.EdgeBindings)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *BalanceSiteMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case balancesite.EdgeSnapshots:
+		ids := make([]ent.Value, 0, len(m.removedsnapshots))
+		for id := range m.removedsnapshots {
+			ids = append(ids, id)
+		}
+		return ids
+	case balancesite.EdgeBindings:
+		ids := make([]ent.Value, 0, len(m.removedbindings))
+		for id := range m.removedbindings {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *BalanceSiteMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedsnapshots {
+		edges = append(edges, balancesite.EdgeSnapshots)
+	}
+	if m.clearedbindings {
+		edges = append(edges, balancesite.EdgeBindings)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *BalanceSiteMutation) EdgeCleared(name string) bool {
+	switch name {
+	case balancesite.EdgeSnapshots:
+		return m.clearedsnapshots
+	case balancesite.EdgeBindings:
+		return m.clearedbindings
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *BalanceSiteMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown BalanceSite unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *BalanceSiteMutation) ResetEdge(name string) error {
+	switch name {
+	case balancesite.EdgeSnapshots:
+		m.ResetSnapshots()
+		return nil
+	case balancesite.EdgeBindings:
+		m.ResetBindings()
+		return nil
+	}
+	return fmt.Errorf("unknown BalanceSite edge %s", name)
 }
 
 // ChannelMonitorMutation represents an operation that mutates the ChannelMonitor nodes in the graph.

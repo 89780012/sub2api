@@ -205,6 +205,24 @@
                         <span class="ml-1">{{ rankReason(item) }}</span>
                       </div>
                     </div>
+                    <div v-if="item.external_balance || item.external_rate_multiplier != null || item.external_balance_match_status" class="mt-3">
+                      <div class="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {{ t('admin.groups.qualityPanel.columns.externalBalance') }}
+                      </div>
+                      <ExternalBalanceCell
+                        :balance="item.external_balance"
+                        :subscription-balance="item.external_subscription_balance"
+                        :match-status="item.external_balance_match_status"
+                        :site-name="item.external_balance_site_name"
+                        :key-name="item.external_balance_key_name"
+                        :key-last4="item.external_balance_key_last4"
+                        :fetched-at="item.external_balance_fetched_at"
+                      />
+                      <div v-if="typeof item.external_rate_multiplier === 'number'" class="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                        {{ t('admin.accounts.columns.upstreamRateMultiplier') }}:
+                        <span class="font-mono">{{ item.external_rate_multiplier.toFixed(2) }}x</span>
+                      </div>
+                    </div>
                   </div>
 
                   <div class="space-y-1">
@@ -388,6 +406,7 @@ import type { AdminGroup, GroupAccountQualityItem, UsageScheduleCandidateScore, 
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import PlatformIcon from '@/components/common/PlatformIcon.vue'
 import Icon from '@/components/icons/Icon.vue'
+import ExternalBalanceCell from '@/components/admin/account/ExternalBalanceCell.vue'
 
 const props = defineProps<{
   show: boolean

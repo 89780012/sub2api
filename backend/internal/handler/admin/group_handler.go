@@ -21,83 +21,93 @@ import (
 
 // GroupHandler handles admin group management
 type GroupHandler struct {
-	adminService         service.AdminService
-	dashboardService     *service.DashboardService
-	groupCapacityService *service.GroupCapacityService
-	accountQualityReader service.AccountQualityReader
-	usageService         *service.UsageService
+	adminService           service.AdminService
+	dashboardService       *service.DashboardService
+	groupCapacityService   *service.GroupCapacityService
+	accountQualityReader   service.AccountQualityReader
+	usageService           *service.UsageService
+	balanceSnapshotService *service.BalanceSnapshotService
 }
 
 type groupAccountQualityItem struct {
-	AccountID                int64      `json:"account_id"`
-	AccountName              string     `json:"account_name"`
-	Platform                 string     `json:"platform"`
-	AccountType              string     `json:"account_type"`
-	Status                   string     `json:"status"`
-	Schedulable              bool       `json:"schedulable"`
-	Priority                 int        `json:"priority"`
-	Concurrency              int        `json:"concurrency"`
-	GroupIDs                 []int64    `json:"group_ids,omitempty"`
-	LastUsedAt               *time.Time `json:"last_used_at,omitempty"`
-	UpdatedAt                time.Time  `json:"updated_at"`
-	QualityKnown             bool       `json:"quality_known"`
-	QualityScore             float64    `json:"quality_score"`
-	ScoreBreakdown           string     `json:"score_breakdown"`
-	WindowStart              *time.Time `json:"window_start,omitempty"`
-	WindowEnd                *time.Time `json:"window_end,omitempty"`
-	SnapshotUpdatedAt        *time.Time `json:"snapshot_updated_at,omitempty"`
-	TotalRequests            int64      `json:"total_requests"`
-	SuccessRequests          int64      `json:"success_requests"`
-	FailureRequests          int64      `json:"failure_requests"`
-	RecentSuccessRate        float64    `json:"recent_success_rate"`
-	ErrorRate                float64    `json:"error_rate"`
-	TTFTSampleCount          int64      `json:"ttft_sample_count"`
-	TTFTLE5sCount            int64      `json:"ttft_le_5s_count"`
-	TTFTLE10sCount           int64      `json:"ttft_le_10s_count"`
-	TTFTGT10sCount           int64      `json:"ttft_gt_10s_count"`
-	TTFTGT20sCount           int64      `json:"ttft_gt_20s_count"`
-	TTFTGT40sCount           int64      `json:"ttft_gt_40s_count"`
-	TTFTLE5sRate             float64    `json:"ttft_le_5s_rate"`
-	TTFTLE10sRate            float64    `json:"ttft_le_10s_rate"`
-	TTFTGT10sRate            float64    `json:"ttft_gt_10s_rate"`
-	TTFTGT20sRate            float64    `json:"ttft_gt_20s_rate"`
-	TTFTGT40sRate            float64    `json:"ttft_gt_40s_rate"`
-	SampleConfidence         float64    `json:"sample_confidence"`
-	NeutralBase              float64    `json:"neutral_base"`
-	SuccessComponent         float64    `json:"success_component"`
-	TTFT5sComponent          float64    `json:"ttft_5s_component"`
-	TTFT10sComponent         float64    `json:"ttft_10s_component"`
-	FastBonus                float64    `json:"fast_bonus"`
-	SlowPenalty              float64    `json:"slow_penalty"`
-	ErrorPenalty             float64    `json:"error_penalty"`
-	BaseQualityScore         float64    `json:"base_quality_score"`
-	EffectiveQualityScore    float64    `json:"effective_quality_score"`
-	TransientPenalty         float64    `json:"transient_penalty"`
-	RecoveryCredit           float64    `json:"recovery_credit"`
-	AppliedPenalty           float64    `json:"applied_penalty"`
-	SlowStreak               int64      `json:"slow_streak"`
-	ErrorStreak              int64      `json:"error_streak"`
-	RecoverySuccessStreak    int64      `json:"recovery_success_streak"`
-	RecoveryFastStreak       int64      `json:"recovery_fast_streak"`
-	AuxiliaryTotalRequests   int64      `json:"auxiliary_total_requests"`
-	AuxiliarySuccessRequests int64      `json:"auxiliary_success_requests"`
-	AuxiliaryFailureRequests int64      `json:"auxiliary_failure_requests"`
-	AuxiliaryTTFTSampleCount int64      `json:"auxiliary_ttft_sample_count"`
-	AuxiliaryTTFTLE5sCount   int64      `json:"auxiliary_ttft_le_5s_count"`
-	AuxiliaryTTFTLE10sCount  int64      `json:"auxiliary_ttft_le_10s_count"`
-	AuxiliaryTTFTGT10sCount  int64      `json:"auxiliary_ttft_gt_10s_count"`
-	AuxiliaryTTFTGT20sCount  int64      `json:"auxiliary_ttft_gt_20s_count"`
-	AuxiliaryTTFTGT40sCount  int64      `json:"auxiliary_ttft_gt_40s_count"`
-	AuxiliaryWeight          float64    `json:"auxiliary_weight"`
-	ScheduleRank             int        `json:"schedule_rank"`
-	ScheduleSortKey          string     `json:"schedule_sort_key"`
-	IsManualPrimary          bool       `json:"is_manual_primary"`
-	IsActivePrimary          bool       `json:"is_active_primary"`
-	IsPoolMode               bool       `json:"is_pool_mode"`
-	PoolModeRetryCount       int        `json:"pool_mode_retry_count"`
-	PoolModeRetryStatusCodes []int      `json:"pool_mode_retry_status_codes,omitempty"`
-	PrimaryEligible          bool       `json:"primary_eligible"`
-	PrimaryIneligibleReason  string     `json:"primary_ineligible_reason,omitempty"`
+	AccountID                   int64          `json:"account_id"`
+	AccountName                 string         `json:"account_name"`
+	Platform                    string         `json:"platform"`
+	AccountType                 string         `json:"account_type"`
+	Status                      string         `json:"status"`
+	Schedulable                 bool           `json:"schedulable"`
+	Priority                    int            `json:"priority"`
+	Concurrency                 int            `json:"concurrency"`
+	GroupIDs                    []int64        `json:"group_ids,omitempty"`
+	LastUsedAt                  *time.Time     `json:"last_used_at,omitempty"`
+	UpdatedAt                   time.Time      `json:"updated_at"`
+	QualityKnown                bool           `json:"quality_known"`
+	QualityScore                float64        `json:"quality_score"`
+	ScoreBreakdown              string         `json:"score_breakdown"`
+	WindowStart                 *time.Time     `json:"window_start,omitempty"`
+	WindowEnd                   *time.Time     `json:"window_end,omitempty"`
+	SnapshotUpdatedAt           *time.Time     `json:"snapshot_updated_at,omitempty"`
+	TotalRequests               int64          `json:"total_requests"`
+	SuccessRequests             int64          `json:"success_requests"`
+	FailureRequests             int64          `json:"failure_requests"`
+	RecentSuccessRate           float64        `json:"recent_success_rate"`
+	ErrorRate                   float64        `json:"error_rate"`
+	TTFTSampleCount             int64          `json:"ttft_sample_count"`
+	TTFTLE5sCount               int64          `json:"ttft_le_5s_count"`
+	TTFTLE10sCount              int64          `json:"ttft_le_10s_count"`
+	TTFTGT10sCount              int64          `json:"ttft_gt_10s_count"`
+	TTFTGT20sCount              int64          `json:"ttft_gt_20s_count"`
+	TTFTGT40sCount              int64          `json:"ttft_gt_40s_count"`
+	TTFTLE5sRate                float64        `json:"ttft_le_5s_rate"`
+	TTFTLE10sRate               float64        `json:"ttft_le_10s_rate"`
+	TTFTGT10sRate               float64        `json:"ttft_gt_10s_rate"`
+	TTFTGT20sRate               float64        `json:"ttft_gt_20s_rate"`
+	TTFTGT40sRate               float64        `json:"ttft_gt_40s_rate"`
+	SampleConfidence            float64        `json:"sample_confidence"`
+	NeutralBase                 float64        `json:"neutral_base"`
+	SuccessComponent            float64        `json:"success_component"`
+	TTFT5sComponent             float64        `json:"ttft_5s_component"`
+	TTFT10sComponent            float64        `json:"ttft_10s_component"`
+	FastBonus                   float64        `json:"fast_bonus"`
+	SlowPenalty                 float64        `json:"slow_penalty"`
+	ErrorPenalty                float64        `json:"error_penalty"`
+	BaseQualityScore            float64        `json:"base_quality_score"`
+	EffectiveQualityScore       float64        `json:"effective_quality_score"`
+	TransientPenalty            float64        `json:"transient_penalty"`
+	RecoveryCredit              float64        `json:"recovery_credit"`
+	AppliedPenalty              float64        `json:"applied_penalty"`
+	SlowStreak                  int64          `json:"slow_streak"`
+	ErrorStreak                 int64          `json:"error_streak"`
+	RecoverySuccessStreak       int64          `json:"recovery_success_streak"`
+	RecoveryFastStreak          int64          `json:"recovery_fast_streak"`
+	AuxiliaryTotalRequests      int64          `json:"auxiliary_total_requests"`
+	AuxiliarySuccessRequests    int64          `json:"auxiliary_success_requests"`
+	AuxiliaryFailureRequests    int64          `json:"auxiliary_failure_requests"`
+	AuxiliaryTTFTSampleCount    int64          `json:"auxiliary_ttft_sample_count"`
+	AuxiliaryTTFTLE5sCount      int64          `json:"auxiliary_ttft_le_5s_count"`
+	AuxiliaryTTFTLE10sCount     int64          `json:"auxiliary_ttft_le_10s_count"`
+	AuxiliaryTTFTGT10sCount     int64          `json:"auxiliary_ttft_gt_10s_count"`
+	AuxiliaryTTFTGT20sCount     int64          `json:"auxiliary_ttft_gt_20s_count"`
+	AuxiliaryTTFTGT40sCount     int64          `json:"auxiliary_ttft_gt_40s_count"`
+	AuxiliaryWeight             float64        `json:"auxiliary_weight"`
+	ScheduleRank                int            `json:"schedule_rank"`
+	ScheduleSortKey             string         `json:"schedule_sort_key"`
+	IsManualPrimary             bool           `json:"is_manual_primary"`
+	IsActivePrimary             bool           `json:"is_active_primary"`
+	IsPoolMode                  bool           `json:"is_pool_mode"`
+	PoolModeRetryCount          int            `json:"pool_mode_retry_count"`
+	PoolModeRetryStatusCodes    []int          `json:"pool_mode_retry_status_codes,omitempty"`
+	PrimaryEligible             bool           `json:"primary_eligible"`
+	PrimaryIneligibleReason     string         `json:"primary_ineligible_reason,omitempty"`
+	ExternalBalance             map[string]any `json:"external_balance,omitempty"`
+	ExternalSubscriptionBalance map[string]any `json:"external_subscription_balance,omitempty"`
+	ExternalRateMultiplier      *float64       `json:"external_rate_multiplier,omitempty"`
+	ExternalBalanceFetchedAt    *time.Time     `json:"external_balance_fetched_at,omitempty"`
+	ExternalBalanceMatchStatus  string         `json:"external_balance_match_status,omitempty"`
+	ExternalBalanceSiteID       *int64         `json:"external_balance_site_id,omitempty"`
+	ExternalBalanceSiteName     string         `json:"external_balance_site_name,omitempty"`
+	ExternalBalanceKeyName      string         `json:"external_balance_key_name,omitempty"`
+	ExternalBalanceKeyLast4     string         `json:"external_balance_key_last4,omitempty"`
 }
 
 type groupAccountQualityResponse struct {
@@ -177,6 +187,12 @@ func NewGroupHandler(adminService service.AdminService, dashboardService *servic
 		dashboardService:     dashboardService,
 		groupCapacityService: groupCapacityService,
 		usageService:         usageService,
+	}
+}
+
+func (h *GroupHandler) SetBalanceSnapshotService(balanceSnapshotService *service.BalanceSnapshotService) {
+	if h != nil {
+		h.balanceSnapshotService = balanceSnapshotService
 	}
 }
 
@@ -427,6 +443,14 @@ func (h *GroupHandler) GetAccountQuality(c *gin.Context) {
 			return
 		}
 	}
+	externalSnapshots := map[int64]*service.BalanceSnapshot{}
+	if h.balanceSnapshotService != nil && len(accountIDs) > 0 {
+		externalSnapshots, err = h.balanceSnapshotService.SnapshotsByAccountIDs(c.Request.Context(), accountIDs)
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
+	}
 
 	items := make([]groupAccountQualityItem, 0, len(accounts))
 	knownCount := 0
@@ -518,6 +542,19 @@ func (h *GroupHandler) GetAccountQuality(c *gin.Context) {
 			item.AuxiliaryTTFTGT20sCount = snapshot.AuxiliaryTTFTGT20sCount
 			item.AuxiliaryTTFTGT40sCount = snapshot.AuxiliaryTTFTGT40sCount
 			item.AuxiliaryWeight = snapshot.AuxiliaryWeight
+		}
+		if external := externalSnapshots[account.ID]; external != nil {
+			item.ExternalBalance = external.Balance
+			item.ExternalSubscriptionBalance = external.SubscriptionBalance
+			item.ExternalRateMultiplier = external.RateMultiplier
+			fetchedAt := external.FetchedAt
+			item.ExternalBalanceFetchedAt = &fetchedAt
+			item.ExternalBalanceMatchStatus = external.MatchStatus
+			siteID := external.SiteID
+			item.ExternalBalanceSiteID = &siteID
+			item.ExternalBalanceSiteName = external.SiteName
+			item.ExternalBalanceKeyName = external.KeyName
+			item.ExternalBalanceKeyLast4 = external.KeyLast4
 		}
 		items = append(items, item)
 	}

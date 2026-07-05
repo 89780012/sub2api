@@ -59,6 +59,8 @@ type Account struct {
 	GroupIDs      []int64
 	Groups        []*Group
 
+	ExternalBalanceSnapshot *BalanceSnapshot
+
 	// model_mapping 热路径缓存（非持久化字段）
 	modelMappingCache               map[string]string
 	modelMappingCacheReady          bool

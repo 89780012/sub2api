@@ -30,13 +30,6 @@ func TestLoadDotEnvFilePreservesExistingEnvironment(t *testing.T) {
 	assertEnv(t, "TEST_BALANCE_UNQUOTED", "value")
 }
 
-func TestMakeSubscriptionWindowClampsRemain(t *testing.T) {
-	window := makeSubscriptionWindow(10, 12)
-	if window.Remain != 0 {
-		t.Fatalf("remain = %v, want 0", window.Remain)
-	}
-}
-
 func assertEnv(t *testing.T, key, want string) {
 	t.Helper()
 	if got := os.Getenv(key); got != want {

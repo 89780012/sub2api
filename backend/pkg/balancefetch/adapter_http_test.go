@@ -1,6 +1,7 @@
-package main
+package balancefetch
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -62,7 +63,7 @@ func TestFetchNewAPISiteUsesEndpointFlow(t *testing.T) {
 	}))
 	defer server.Close()
 
-	out, err := fetchNewAPISite(siteConfig{
+	out, err := fetchNewAPISite(context.Background(), siteConfig{
 		Platform: platformNewAPI,
 		Name:     "new",
 		BaseURL:  server.URL,
@@ -162,7 +163,7 @@ func TestFetchSub2APISiteUsesEndpointFlow(t *testing.T) {
 	}))
 	defer server.Close()
 
-	out, err := fetchSub2APISite(siteConfig{
+	out, err := fetchSub2APISite(context.Background(), siteConfig{
 		Platform: platformSub2API,
 		Name:     "sub",
 		BaseURL:  server.URL,

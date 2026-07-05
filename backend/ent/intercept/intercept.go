@@ -9,12 +9,15 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/account"
+	"github.com/Wei-Shaw/sub2api/ent/accountbalancebinding"
 	"github.com/Wei-Shaw/sub2api/ent/accountgroup"
 	"github.com/Wei-Shaw/sub2api/ent/announcement"
 	"github.com/Wei-Shaw/sub2api/ent/announcementread"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	"github.com/Wei-Shaw/sub2api/ent/authidentitychannel"
+	"github.com/Wei-Shaw/sub2api/ent/balancekeysnapshot"
+	"github.com/Wei-Shaw/sub2api/ent/balancesite"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitor"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitordailyrollup"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
@@ -156,6 +159,33 @@ func (f TraverseAccount) Traverse(ctx context.Context, q ent.Query) error {
 	return fmt.Errorf("unexpected query type %T. expect *ent.AccountQuery", q)
 }
 
+// The AccountBalanceBindingFunc type is an adapter to allow the use of ordinary function as a Querier.
+type AccountBalanceBindingFunc func(context.Context, *ent.AccountBalanceBindingQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f AccountBalanceBindingFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.AccountBalanceBindingQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.AccountBalanceBindingQuery", q)
+}
+
+// The TraverseAccountBalanceBinding type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseAccountBalanceBinding func(context.Context, *ent.AccountBalanceBindingQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseAccountBalanceBinding) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseAccountBalanceBinding) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.AccountBalanceBindingQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.AccountBalanceBindingQuery", q)
+}
+
 // The AccountGroupFunc type is an adapter to allow the use of ordinary function as a Querier.
 type AccountGroupFunc func(context.Context, *ent.AccountGroupQuery) (ent.Value, error)
 
@@ -289,6 +319,60 @@ func (f TraverseAuthIdentityChannel) Traverse(ctx context.Context, q ent.Query) 
 		return f(ctx, q)
 	}
 	return fmt.Errorf("unexpected query type %T. expect *ent.AuthIdentityChannelQuery", q)
+}
+
+// The BalanceKeySnapshotFunc type is an adapter to allow the use of ordinary function as a Querier.
+type BalanceKeySnapshotFunc func(context.Context, *ent.BalanceKeySnapshotQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f BalanceKeySnapshotFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.BalanceKeySnapshotQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.BalanceKeySnapshotQuery", q)
+}
+
+// The TraverseBalanceKeySnapshot type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseBalanceKeySnapshot func(context.Context, *ent.BalanceKeySnapshotQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseBalanceKeySnapshot) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseBalanceKeySnapshot) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.BalanceKeySnapshotQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.BalanceKeySnapshotQuery", q)
+}
+
+// The BalanceSiteFunc type is an adapter to allow the use of ordinary function as a Querier.
+type BalanceSiteFunc func(context.Context, *ent.BalanceSiteQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f BalanceSiteFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.BalanceSiteQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.BalanceSiteQuery", q)
+}
+
+// The TraverseBalanceSite type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseBalanceSite func(context.Context, *ent.BalanceSiteQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseBalanceSite) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseBalanceSite) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.BalanceSiteQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.BalanceSiteQuery", q)
 }
 
 // The ChannelMonitorFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -1054,6 +1138,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.APIKeyQuery, predicate.APIKey, apikey.OrderOption]{typ: ent.TypeAPIKey, tq: q}, nil
 	case *ent.AccountQuery:
 		return &query[*ent.AccountQuery, predicate.Account, account.OrderOption]{typ: ent.TypeAccount, tq: q}, nil
+	case *ent.AccountBalanceBindingQuery:
+		return &query[*ent.AccountBalanceBindingQuery, predicate.AccountBalanceBinding, accountbalancebinding.OrderOption]{typ: ent.TypeAccountBalanceBinding, tq: q}, nil
 	case *ent.AccountGroupQuery:
 		return &query[*ent.AccountGroupQuery, predicate.AccountGroup, accountgroup.OrderOption]{typ: ent.TypeAccountGroup, tq: q}, nil
 	case *ent.AnnouncementQuery:
@@ -1064,6 +1150,10 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.AuthIdentityQuery, predicate.AuthIdentity, authidentity.OrderOption]{typ: ent.TypeAuthIdentity, tq: q}, nil
 	case *ent.AuthIdentityChannelQuery:
 		return &query[*ent.AuthIdentityChannelQuery, predicate.AuthIdentityChannel, authidentitychannel.OrderOption]{typ: ent.TypeAuthIdentityChannel, tq: q}, nil
+	case *ent.BalanceKeySnapshotQuery:
+		return &query[*ent.BalanceKeySnapshotQuery, predicate.BalanceKeySnapshot, balancekeysnapshot.OrderOption]{typ: ent.TypeBalanceKeySnapshot, tq: q}, nil
+	case *ent.BalanceSiteQuery:
+		return &query[*ent.BalanceSiteQuery, predicate.BalanceSite, balancesite.OrderOption]{typ: ent.TypeBalanceSite, tq: q}, nil
 	case *ent.ChannelMonitorQuery:
 		return &query[*ent.ChannelMonitorQuery, predicate.ChannelMonitor, channelmonitor.OrderOption]{typ: ent.TypeChannelMonitor, tq: q}, nil
 	case *ent.ChannelMonitorDailyRollupQuery:

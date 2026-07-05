@@ -131,6 +131,12 @@
                       </span>
                       <span class="flex-1 text-left">{{ t('admin.tlsFingerprintProfiles.title') }}</span>
                     </button>
+                    <button class="account-tools-menu-item" @click="openBalanceSync">
+                      <span class="account-tools-menu-icon bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
+                        <Icon name="database" size="sm" />
+                      </span>
+                      <span class="flex-1 text-left">{{ t('admin.accounts.balanceSync.menuTitle') }}</span>
+                    </button>
 
                     <div class="my-2 border-t border-gray-100 dark:border-gray-700"></div>
                     <div class="px-2 py-2">
@@ -287,6 +293,28 @@
               :manual-refresh-token="usageManualRefreshToken"
             />
           </template>
+          <template #cell-external_balance="{ row }">
+            <ExternalBalanceCell
+              :balance="row.external_balance"
+              :subscription-balance="row.external_subscription_balance"
+              :match-status="row.external_balance_match_status"
+              :site-name="row.external_balance_site_name"
+              :key-name="row.external_balance_key_name"
+              :key-last4="row.external_balance_key_last4"
+              :fetched-at="row.external_balance_fetched_at"
+            />
+          </template>
+          <template #cell-external_rate_multiplier="{ row }">
+            <div class="flex min-w-[6rem] flex-col gap-1">
+              <span v-if="typeof row.external_rate_multiplier === 'number'" class="font-mono text-sm text-gray-700 dark:text-gray-300">
+                {{ row.external_rate_multiplier.toFixed(2) }}x
+              </span>
+              <span v-else class="text-sm text-gray-400 dark:text-dark-500">-</span>
+              <span v-if="row.external_balance_match_status" class="text-[11px] text-gray-500 dark:text-gray-400">
+                {{ row.external_balance_match_status }}
+              </span>
+            </div>
+          </template>
           <template #cell-proxy="{ row }">
             <div class="flex flex-col gap-1">
               <div v-if="row.proxy" class="flex items-center gap-2">
@@ -392,6 +420,7 @@
     </ConfirmDialog>
     <ErrorPassthroughRulesModal :show="showErrorPassthrough" @close="showErrorPassthrough = false" />
     <TLSFingerprintProfilesModal :show="showTLSFingerprintProfiles" @close="showTLSFingerprintProfiles = false" />
+    <BalanceSyncModal :show="showBalanceSync" @close="showBalanceSync = false" @updated="reload" />
   </AppLayout>
 </template>
 
@@ -427,6 +456,8 @@ import AccountUsageCell from '@/components/account/AccountUsageCell.vue'
 import AccountTodayStatsCell from '@/components/account/AccountTodayStatsCell.vue'
 import AccountGroupsCell from '@/components/account/AccountGroupsCell.vue'
 import AccountCapacityCell from '@/components/account/AccountCapacityCell.vue'
+import ExternalBalanceCell from '@/components/admin/account/ExternalBalanceCell.vue'
+import BalanceSyncModal from '@/components/admin/account/BalanceSyncModal.vue'
 import PlatformTypeBadge from '@/components/common/PlatformTypeBadge.vue'
 import Icon from '@/components/icons/Icon.vue'
 import ErrorPassthroughRulesModal from '@/components/admin/ErrorPassthroughRulesModal.vue'
@@ -498,6 +529,7 @@ const showTest = ref(false)
 const showStats = ref(false)
 const showErrorPassthrough = ref(false)
 const showTLSFingerprintProfiles = ref(false)
+const showBalanceSync = ref(false)
 const edAcc = ref<Account | null>(null)
 const tempUnschedAcc = ref<Account | null>(null)
 const deletingAcc = ref<Account | null>(null)
@@ -876,7 +908,8 @@ const isAnyModalOpen = computed(() => {
     showStats.value ||
     showSchedulePanel.value ||
     showErrorPassthrough.value ||
-    showTLSFingerprintProfiles.value
+    showTLSFingerprintProfiles.value ||
+    showBalanceSync.value
   )
 })
 
@@ -1016,6 +1049,11 @@ const openTLSFingerprintProfiles = () => {
   showTLSFingerprintProfiles.value = true
 }
 
+const openBalanceSync = () => {
+  closeAccountToolsDropdown()
+  showBalanceSync.value = true
+}
+
 const syncPendingListChanges = async () => {
   hasPendingListSync.value = false
   await load()
@@ -1147,6 +1185,8 @@ const allColumns = computed(() => {
   }
   c.push(
     { key: 'usage', label: t('admin.accounts.columns.usageWindows'), sortable: false },
+    { key: 'external_balance', label: t('admin.accounts.columns.externalBalance'), sortable: false },
+    { key: 'external_rate_multiplier', label: t('admin.accounts.columns.upstreamRateMultiplier'), sortable: false },
     { key: 'proxy', label: t('admin.accounts.columns.proxy'), sortable: false },
     { key: 'priority', label: t('admin.accounts.columns.priority'), sortable: true },
     { key: 'rate_multiplier', label: t('admin.accounts.columns.billingRateMultiplier'), sortable: true },

@@ -58,6 +58,7 @@ type AccountHandler struct {
 	sessionLimitCache       service.SessionLimitCache
 	rpmCache                service.RPMCache
 	tokenCacheInvalidator   service.TokenCacheInvalidator
+	balanceSnapshotService  *service.BalanceSnapshotService
 }
 
 // NewAccountHandler creates a new admin account handler
@@ -90,6 +91,12 @@ func NewAccountHandler(
 		sessionLimitCache:       sessionLimitCache,
 		rpmCache:                rpmCache,
 		tokenCacheInvalidator:   tokenCacheInvalidator,
+	}
+}
+
+func (h *AccountHandler) SetBalanceSnapshotService(balanceSnapshotService *service.BalanceSnapshotService) {
+	if h != nil {
+		h.balanceSnapshotService = balanceSnapshotService
 	}
 }
 
@@ -179,6 +186,9 @@ type AccountWithConcurrency struct {
 const accountListGroupUngroupedQueryValue = "ungrouped"
 
 func (h *AccountHandler) buildAccountResponseWithRuntime(ctx context.Context, account *service.Account) AccountWithConcurrency {
+	if account != nil {
+		h.attachExternalBalanceSnapshots(ctx, []*service.Account{account})
+	}
 	item := AccountWithConcurrency{
 		Account:            dto.AccountFromService(account),
 		CurrentConcurrency: 0,
@@ -269,6 +279,11 @@ func (h *AccountHandler) List(c *gin.Context) {
 	for i, acc := range accounts {
 		accountIDs[i] = acc.ID
 	}
+	accountPtrs := make([]*service.Account, 0, len(accounts))
+	for i := range accounts {
+		accountPtrs = append(accountPtrs, &accounts[i])
+	}
+	h.attachExternalBalanceSnapshots(c.Request.Context(), accountPtrs)
 
 	concurrencyCounts := make(map[int64]int)
 	var windowCosts map[int64]float64
@@ -446,6 +461,32 @@ func ifNoneMatchMatched(ifNoneMatch, etag string) bool {
 		}
 	}
 	return false
+}
+
+func (h *AccountHandler) attachExternalBalanceSnapshots(ctx context.Context, accounts []*service.Account) {
+	if h == nil || h.balanceSnapshotService == nil || len(accounts) == 0 {
+		return
+	}
+	ids := make([]int64, 0, len(accounts))
+	for _, account := range accounts {
+		if account != nil && account.ID > 0 {
+			ids = append(ids, account.ID)
+		}
+	}
+	if len(ids) == 0 {
+		return
+	}
+	snapshots, err := h.balanceSnapshotService.SnapshotsByAccountIDs(ctx, ids)
+	if err != nil {
+		slog.Warn("attach external balance snapshots failed", "error", err)
+		return
+	}
+	for _, account := range accounts {
+		if account == nil {
+			continue
+		}
+		account.ExternalBalanceSnapshot = snapshots[account.ID]
+	}
 }
 
 // GetByID handles getting an account by ID
