@@ -474,6 +474,7 @@ var (
 		{Name: "group_id", Type: field.TypeString, Size: 255, Default: ""},
 		{Name: "group_name", Type: field.TypeString, Size: 255, Default: ""},
 		{Name: "balance", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "account_balance", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "subscription_balance", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "rate_multiplier", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(10,4)"}},
 		{Name: "fetched_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
@@ -488,13 +489,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "balance_key_snapshots_accounts_account",
-				Columns:    []*schema.Column{BalanceKeySnapshotsColumns[15]},
+				Columns:    []*schema.Column{BalanceKeySnapshotsColumns[16]},
 				RefColumns: []*schema.Column{AccountsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "balance_key_snapshots_balance_sites_snapshots",
-				Columns:    []*schema.Column{BalanceKeySnapshotsColumns[16]},
+				Columns:    []*schema.Column{BalanceKeySnapshotsColumns[17]},
 				RefColumns: []*schema.Column{BalanceSitesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -503,7 +504,7 @@ var (
 			{
 				Name:    "balancekeysnapshot_site_id_external_key_id",
 				Unique:  false,
-				Columns: []*schema.Column{BalanceKeySnapshotsColumns[16], BalanceKeySnapshotsColumns[3]},
+				Columns: []*schema.Column{BalanceKeySnapshotsColumns[17], BalanceKeySnapshotsColumns[3]},
 			},
 			{
 				Name:    "balancekeysnapshot_key_last4",
@@ -513,7 +514,7 @@ var (
 			{
 				Name:    "balancekeysnapshot_account_id_fetched_at",
 				Unique:  false,
-				Columns: []*schema.Column{BalanceKeySnapshotsColumns[15], BalanceKeySnapshotsColumns[14]},
+				Columns: []*schema.Column{BalanceKeySnapshotsColumns[16], BalanceKeySnapshotsColumns[15]},
 			},
 		},
 	}

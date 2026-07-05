@@ -296,6 +296,7 @@
           <template #cell-external_balance="{ row }">
             <ExternalBalanceCell
               :balance="row.external_balance"
+              :account-balance="row.external_account_balance"
               :subscription-balance="row.external_subscription_balance"
               :match-status="row.external_balance_match_status"
               :site-name="row.external_balance_site_name"

@@ -636,6 +636,7 @@ export interface GroupAccountQualityItem {
   primary_eligible: boolean
   primary_ineligible_reason?: string
   external_balance?: ExternalBalanceAmount | null
+  external_account_balance?: ExternalBalanceAmount | null
   external_subscription_balance?: ExternalSubscriptionBalance | null
   external_rate_multiplier?: number | null
   external_balance_fetched_at?: string | null
@@ -1008,6 +1009,7 @@ export interface BalanceSnapshot {
   group_id?: string
   group_name?: string
   balance?: ExternalBalanceAmount | null
+  account_balance?: ExternalBalanceAmount | null
   subscription_balance?: ExternalSubscriptionBalance | null
   rate_multiplier?: number | null
   fetched_at: string
@@ -1066,6 +1068,7 @@ export interface Account {
   groups?: Group[] // Preloaded group objects
 
   external_balance?: ExternalBalanceAmount | null
+  external_account_balance?: ExternalBalanceAmount | null
   external_subscription_balance?: ExternalSubscriptionBalance | null
   external_rate_multiplier?: number | null
   external_balance_fetched_at?: string | null

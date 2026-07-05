@@ -188,6 +188,12 @@ func (_u *BalanceKeySnapshotUpdate) SetBalance(v map[string]interface{}) *Balanc
 	return _u
 }
 
+// SetAccountBalance sets the "account_balance" field.
+func (_u *BalanceKeySnapshotUpdate) SetAccountBalance(v map[string]interface{}) *BalanceKeySnapshotUpdate {
+	_u.mutation.SetAccountBalance(v)
+	return _u
+}
+
 // SetSubscriptionBalance sets the "subscription_balance" field.
 func (_u *BalanceKeySnapshotUpdate) SetSubscriptionBalance(v map[string]interface{}) *BalanceKeySnapshotUpdate {
 	_u.mutation.SetSubscriptionBalance(v)
@@ -387,6 +393,9 @@ func (_u *BalanceKeySnapshotUpdate) sqlSave(ctx context.Context) (_node int, err
 	}
 	if value, ok := _u.mutation.Balance(); ok {
 		_spec.SetField(balancekeysnapshot.FieldBalance, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AccountBalance(); ok {
+		_spec.SetField(balancekeysnapshot.FieldAccountBalance, field.TypeJSON, value)
 	}
 	if value, ok := _u.mutation.SubscriptionBalance(); ok {
 		_spec.SetField(balancekeysnapshot.FieldSubscriptionBalance, field.TypeJSON, value)
@@ -639,6 +648,12 @@ func (_u *BalanceKeySnapshotUpdateOne) SetBalance(v map[string]interface{}) *Bal
 	return _u
 }
 
+// SetAccountBalance sets the "account_balance" field.
+func (_u *BalanceKeySnapshotUpdateOne) SetAccountBalance(v map[string]interface{}) *BalanceKeySnapshotUpdateOne {
+	_u.mutation.SetAccountBalance(v)
+	return _u
+}
+
 // SetSubscriptionBalance sets the "subscription_balance" field.
 func (_u *BalanceKeySnapshotUpdateOne) SetSubscriptionBalance(v map[string]interface{}) *BalanceKeySnapshotUpdateOne {
 	_u.mutation.SetSubscriptionBalance(v)
@@ -868,6 +883,9 @@ func (_u *BalanceKeySnapshotUpdateOne) sqlSave(ctx context.Context) (_node *Bala
 	}
 	if value, ok := _u.mutation.Balance(); ok {
 		_spec.SetField(balancekeysnapshot.FieldBalance, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AccountBalance(); ok {
+		_spec.SetField(balancekeysnapshot.FieldAccountBalance, field.TypeJSON, value)
 	}
 	if value, ok := _u.mutation.SubscriptionBalance(); ok {
 		_spec.SetField(balancekeysnapshot.FieldSubscriptionBalance, field.TypeJSON, value)

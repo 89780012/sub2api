@@ -29,7 +29,7 @@ The user value is that operators can see each locally configured account's upstr
 - R7. Support manual resolution when last-four matching is missing or ambiguous.
 - R8. Add external balance and upstream multiplier fields to admin account list rows.
 - R8a. Add the balance site configuration UI under the account management page's "more tools" menu as "balance sync configuration".
-- R8b. When both key balance and subscription/package balance are available, the account table balance cell must display key balance as the primary value and subscription/package windows as secondary information in the same cell.
+- R8b. The account table balance cell must display account/site balance, subscription/package balance, and key balance as separate independent values when each source is available; missing fields must not be synthesized from another balance field.
 - R9. Add external balance and upstream multiplier fields to group quality panel account rows.
 - R10. Keep the existing local account `rate_multiplier` behavior unchanged.
 - R11. Preserve stale-but-known snapshot values when a refresh fails, while surfacing refresh errors and stale timestamps to admins.
@@ -44,7 +44,7 @@ The user value is that operators can see each locally configured account's upstr
 - [ ] Admins can manually refresh a balance site and see success/failure status.
 - [ ] A successful refresh stores latest upstream key snapshots with balance, subscription balance when available, rate multiplier, last-four key matcher, fetched timestamp, and source site metadata.
 - [ ] A local account with a uniquely matching key last-four displays external balance and upstream multiplier in the account management table.
-- [ ] Account table balance cells prioritize key balance and show subscription/package daily, weekly, or monthly windows as secondary details when available.
+- [ ] Account table balance cells show account/site balance, subscription/package daily/weekly/monthly windows, and key balance as separate values without fallback or mixing.
 - [ ] A missing or ambiguous last-four match is visible to the admin and can be resolved manually.
 - [ ] The group quality panel includes the same external balance and upstream multiplier for each account row where a snapshot is matched.
 - [ ] Existing local billing multiplier values and account scheduling/charging behavior do not change.

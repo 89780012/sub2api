@@ -372,6 +372,7 @@ func AccountFromServiceShallow(a *service.Account) *Account {
 
 	if snap := a.ExternalBalanceSnapshot; snap != nil {
 		out.ExternalBalance = snap.Balance
+		out.ExternalAccountBalance = snap.AccountBalance
 		out.ExternalSubscriptionBalance = snap.SubscriptionBalance
 		out.ExternalRateMultiplier = snap.RateMultiplier
 		fetchedAt := snap.FetchedAt

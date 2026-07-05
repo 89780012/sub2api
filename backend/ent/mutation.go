@@ -9649,6 +9649,7 @@ type BalanceKeySnapshotMutation struct {
 	group_id             *string
 	group_name           *string
 	balance              *map[string]interface{}
+	account_balance      *map[string]interface{}
 	subscription_balance *map[string]interface{}
 	rate_multiplier      *float64
 	addrate_multiplier   *float64
@@ -10242,6 +10243,42 @@ func (m *BalanceKeySnapshotMutation) ResetBalance() {
 	m.balance = nil
 }
 
+// SetAccountBalance sets the "account_balance" field.
+func (m *BalanceKeySnapshotMutation) SetAccountBalance(value map[string]interface{}) {
+	m.account_balance = &value
+}
+
+// AccountBalance returns the value of the "account_balance" field in the mutation.
+func (m *BalanceKeySnapshotMutation) AccountBalance() (r map[string]interface{}, exists bool) {
+	v := m.account_balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountBalance returns the old "account_balance" field's value of the BalanceKeySnapshot entity.
+// If the BalanceKeySnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceKeySnapshotMutation) OldAccountBalance(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountBalance is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountBalance requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountBalance: %w", err)
+	}
+	return oldValue.AccountBalance, nil
+}
+
+// ResetAccountBalance resets all changes to the "account_balance" field.
+func (m *BalanceKeySnapshotMutation) ResetAccountBalance() {
+	m.account_balance = nil
+}
+
 // SetSubscriptionBalance sets the "subscription_balance" field.
 func (m *BalanceKeySnapshotMutation) SetSubscriptionBalance(value map[string]interface{}) {
 	m.subscription_balance = &value
@@ -10472,7 +10509,7 @@ func (m *BalanceKeySnapshotMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BalanceKeySnapshotMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 17)
 	if m.created_at != nil {
 		fields = append(fields, balancekeysnapshot.FieldCreatedAt)
 	}
@@ -10511,6 +10548,9 @@ func (m *BalanceKeySnapshotMutation) Fields() []string {
 	}
 	if m.balance != nil {
 		fields = append(fields, balancekeysnapshot.FieldBalance)
+	}
+	if m.account_balance != nil {
+		fields = append(fields, balancekeysnapshot.FieldAccountBalance)
 	}
 	if m.subscription_balance != nil {
 		fields = append(fields, balancekeysnapshot.FieldSubscriptionBalance)
@@ -10555,6 +10595,8 @@ func (m *BalanceKeySnapshotMutation) Field(name string) (ent.Value, bool) {
 		return m.GroupName()
 	case balancekeysnapshot.FieldBalance:
 		return m.Balance()
+	case balancekeysnapshot.FieldAccountBalance:
+		return m.AccountBalance()
 	case balancekeysnapshot.FieldSubscriptionBalance:
 		return m.SubscriptionBalance()
 	case balancekeysnapshot.FieldRateMultiplier:
@@ -10596,6 +10638,8 @@ func (m *BalanceKeySnapshotMutation) OldField(ctx context.Context, name string) 
 		return m.OldGroupName(ctx)
 	case balancekeysnapshot.FieldBalance:
 		return m.OldBalance(ctx)
+	case balancekeysnapshot.FieldAccountBalance:
+		return m.OldAccountBalance(ctx)
 	case balancekeysnapshot.FieldSubscriptionBalance:
 		return m.OldSubscriptionBalance(ctx)
 	case balancekeysnapshot.FieldRateMultiplier:
@@ -10701,6 +10745,13 @@ func (m *BalanceKeySnapshotMutation) SetField(name string, value ent.Value) erro
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetBalance(v)
+		return nil
+	case balancekeysnapshot.FieldAccountBalance:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountBalance(v)
 		return nil
 	case balancekeysnapshot.FieldSubscriptionBalance:
 		v, ok := value.(map[string]interface{})
@@ -10840,6 +10891,9 @@ func (m *BalanceKeySnapshotMutation) ResetField(name string) error {
 		return nil
 	case balancekeysnapshot.FieldBalance:
 		m.ResetBalance()
+		return nil
+	case balancekeysnapshot.FieldAccountBalance:
+		m.ResetAccountBalance()
 		return nil
 	case balancekeysnapshot.FieldSubscriptionBalance:
 		m.ResetSubscriptionBalance()

@@ -46,6 +46,8 @@ type BalanceKeySnapshot struct {
 	GroupName string `json:"group_name,omitempty"`
 	// Balance holds the value of the "balance" field.
 	Balance map[string]interface{} `json:"balance,omitempty"`
+	// AccountBalance holds the value of the "account_balance" field.
+	AccountBalance map[string]interface{} `json:"account_balance,omitempty"`
 	// SubscriptionBalance holds the value of the "subscription_balance" field.
 	SubscriptionBalance map[string]interface{} `json:"subscription_balance,omitempty"`
 	// RateMultiplier holds the value of the "rate_multiplier" field.
@@ -96,7 +98,7 @@ func (*BalanceKeySnapshot) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case balancekeysnapshot.FieldBalance, balancekeysnapshot.FieldSubscriptionBalance:
+		case balancekeysnapshot.FieldBalance, balancekeysnapshot.FieldAccountBalance, balancekeysnapshot.FieldSubscriptionBalance:
 			values[i] = new([]byte)
 		case balancekeysnapshot.FieldRateMultiplier:
 			values[i] = new(sql.NullFloat64)
@@ -208,6 +210,14 @@ func (_m *BalanceKeySnapshot) assignValues(columns []string, values []any) error
 					return fmt.Errorf("unmarshal field balance: %w", err)
 				}
 			}
+		case balancekeysnapshot.FieldAccountBalance:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field account_balance", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.AccountBalance); err != nil {
+					return fmt.Errorf("unmarshal field account_balance: %w", err)
+				}
+			}
 		case balancekeysnapshot.FieldSubscriptionBalance:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field subscription_balance", values[i])
@@ -315,6 +325,9 @@ func (_m *BalanceKeySnapshot) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("balance=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Balance))
+	builder.WriteString(", ")
+	builder.WriteString("account_balance=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AccountBalance))
 	builder.WriteString(", ")
 	builder.WriteString("subscription_balance=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SubscriptionBalance))

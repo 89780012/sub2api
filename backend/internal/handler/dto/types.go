@@ -268,6 +268,7 @@ type Account struct {
 	Groups   []*Group `json:"groups,omitempty"`
 
 	ExternalBalance             map[string]any `json:"external_balance,omitempty"`
+	ExternalAccountBalance      map[string]any `json:"external_account_balance,omitempty"`
 	ExternalSubscriptionBalance map[string]any `json:"external_subscription_balance,omitempty"`
 	ExternalRateMultiplier      *float64       `json:"external_rate_multiplier,omitempty"`
 	ExternalBalanceFetchedAt    *time.Time     `json:"external_balance_fetched_at,omitempty"`

@@ -154,7 +154,7 @@ func (r *balanceSnapshotRepository) ListSnapshots(ctx context.Context, siteID in
 	query := `
 		SELECT s.id, s.site_id, bs.name, bs.platform, s.external_key_id, s.masked_key, s.key_last4,
 		       s.account_id, s.match_status, s.key_name, s.status, s.group_id, s.group_name,
-		       s.balance, s.subscription_balance, s.rate_multiplier, s.fetched_at, s.created_at, s.updated_at
+		       s.balance, s.account_balance, s.subscription_balance, s.rate_multiplier, s.fetched_at, s.created_at, s.updated_at
 		FROM balance_key_snapshots s
 		JOIN balance_sites bs ON bs.id = s.site_id`
 	args := []any{}
@@ -180,7 +180,7 @@ func (r *balanceSnapshotRepository) ListSnapshotsByAccountIDs(ctx context.Contex
 		SELECT DISTINCT ON (s.account_id)
 		       s.id, s.site_id, bs.name, bs.platform, s.external_key_id, s.masked_key, s.key_last4,
 		       s.account_id, s.match_status, s.key_name, s.status, s.group_id, s.group_name,
-		       s.balance, s.subscription_balance, s.rate_multiplier, s.fetched_at, s.created_at, s.updated_at
+		       s.balance, s.account_balance, s.subscription_balance, s.rate_multiplier, s.fetched_at, s.created_at, s.updated_at
 		FROM balance_key_snapshots s
 		JOIN balance_sites bs ON bs.id = s.site_id
 		WHERE s.account_id = ANY($1)
@@ -216,10 +216,10 @@ func (r *balanceSnapshotRepository) ReplaceSiteSnapshots(ctx context.Context, si
 	stmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO balance_key_snapshots (
 			site_id, external_key_id, masked_key, key_last4, account_id, match_status,
-			key_name, status, group_id, group_name, balance, subscription_balance,
+			key_name, status, group_id, group_name, balance, account_balance, subscription_balance,
 			rate_multiplier, fetched_at
 		)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`)
 	if err != nil {
 		return err
 	}
@@ -227,6 +227,10 @@ func (r *balanceSnapshotRepository) ReplaceSiteSnapshots(ctx context.Context, si
 	for i := range snapshots {
 		s := snapshots[i]
 		balanceJSON, err := json.Marshal(nullMap(s.Balance))
+		if err != nil {
+			return err
+		}
+		accountBalanceJSON, err := json.Marshal(nullMap(s.AccountBalance))
 		if err != nil {
 			return err
 		}
@@ -240,8 +244,8 @@ func (r *balanceSnapshotRepository) ReplaceSiteSnapshots(ctx context.Context, si
 		}
 		if _, err := stmt.ExecContext(ctx,
 			siteID, s.ExternalKeyID, s.MaskedKey, s.KeyLast4, accountID, s.MatchStatus,
-			s.KeyName, s.Status, s.GroupID, s.GroupName, balanceJSON, subJSON,
-			s.RateMultiplier, s.FetchedAt,
+			s.KeyName, s.Status, s.GroupID, s.GroupName, balanceJSON, accountBalanceJSON,
+			subJSON, s.RateMultiplier, s.FetchedAt,
 		); err != nil {
 			return err
 		}
@@ -321,17 +325,18 @@ func scanBalanceSnapshots(rows *sql.Rows) ([]service.BalanceSnapshot, error) {
 	out := []service.BalanceSnapshot{}
 	for rows.Next() {
 		var item service.BalanceSnapshot
-		var balanceRaw, subRaw []byte
+		var balanceRaw, accountBalanceRaw, subRaw []byte
 		if err := rows.Scan(
 			&item.ID, &item.SiteID, &item.SiteName, &item.SitePlatform, &item.ExternalKeyID,
 			&item.MaskedKey, &item.KeyLast4, &item.AccountID, &item.MatchStatus,
 			&item.KeyName, &item.Status, &item.GroupID, &item.GroupName,
-			&balanceRaw, &subRaw, &item.RateMultiplier, &item.FetchedAt,
+			&balanceRaw, &accountBalanceRaw, &subRaw, &item.RateMultiplier, &item.FetchedAt,
 			&item.CreatedAt, &item.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
 		item.Balance = decodeJSONMap(balanceRaw)
+		item.AccountBalance = decodeJSONMap(accountBalanceRaw)
 		item.SubscriptionBalance = decodeJSONMap(subRaw)
 		out = append(out, item)
 	}

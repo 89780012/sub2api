@@ -100,6 +100,7 @@ type groupAccountQualityItem struct {
 	PrimaryEligible             bool           `json:"primary_eligible"`
 	PrimaryIneligibleReason     string         `json:"primary_ineligible_reason,omitempty"`
 	ExternalBalance             map[string]any `json:"external_balance,omitempty"`
+	ExternalAccountBalance      map[string]any `json:"external_account_balance,omitempty"`
 	ExternalSubscriptionBalance map[string]any `json:"external_subscription_balance,omitempty"`
 	ExternalRateMultiplier      *float64       `json:"external_rate_multiplier,omitempty"`
 	ExternalBalanceFetchedAt    *time.Time     `json:"external_balance_fetched_at,omitempty"`
@@ -545,6 +546,7 @@ func (h *GroupHandler) GetAccountQuality(c *gin.Context) {
 		}
 		if external := externalSnapshots[account.ID]; external != nil {
 			item.ExternalBalance = external.Balance
+			item.ExternalAccountBalance = external.AccountBalance
 			item.ExternalSubscriptionBalance = external.SubscriptionBalance
 			item.ExternalRateMultiplier = external.RateMultiplier
 			fetchedAt := external.FetchedAt

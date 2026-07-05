@@ -190,6 +190,12 @@ func (_c *BalanceKeySnapshotCreate) SetBalance(v map[string]interface{}) *Balanc
 	return _c
 }
 
+// SetAccountBalance sets the "account_balance" field.
+func (_c *BalanceKeySnapshotCreate) SetAccountBalance(v map[string]interface{}) *BalanceKeySnapshotCreate {
+	_c.mutation.SetAccountBalance(v)
+	return _c
+}
+
 // SetSubscriptionBalance sets the "subscription_balance" field.
 func (_c *BalanceKeySnapshotCreate) SetSubscriptionBalance(v map[string]interface{}) *BalanceKeySnapshotCreate {
 	_c.mutation.SetSubscriptionBalance(v)
@@ -305,6 +311,10 @@ func (_c *BalanceKeySnapshotCreate) defaults() {
 		v := balancekeysnapshot.DefaultBalance()
 		_c.mutation.SetBalance(v)
 	}
+	if _, ok := _c.mutation.AccountBalance(); !ok {
+		v := balancekeysnapshot.DefaultAccountBalance()
+		_c.mutation.SetAccountBalance(v)
+	}
 	if _, ok := _c.mutation.SubscriptionBalance(); !ok {
 		v := balancekeysnapshot.DefaultSubscriptionBalance()
 		_c.mutation.SetSubscriptionBalance(v)
@@ -389,6 +399,9 @@ func (_c *BalanceKeySnapshotCreate) check() error {
 	if _, ok := _c.mutation.Balance(); !ok {
 		return &ValidationError{Name: "balance", err: errors.New(`ent: missing required field "BalanceKeySnapshot.balance"`)}
 	}
+	if _, ok := _c.mutation.AccountBalance(); !ok {
+		return &ValidationError{Name: "account_balance", err: errors.New(`ent: missing required field "BalanceKeySnapshot.account_balance"`)}
+	}
 	if _, ok := _c.mutation.SubscriptionBalance(); !ok {
 		return &ValidationError{Name: "subscription_balance", err: errors.New(`ent: missing required field "BalanceKeySnapshot.subscription_balance"`)}
 	}
@@ -468,6 +481,10 @@ func (_c *BalanceKeySnapshotCreate) createSpec() (*BalanceKeySnapshot, *sqlgraph
 	if value, ok := _c.mutation.Balance(); ok {
 		_spec.SetField(balancekeysnapshot.FieldBalance, field.TypeJSON, value)
 		_node.Balance = value
+	}
+	if value, ok := _c.mutation.AccountBalance(); ok {
+		_spec.SetField(balancekeysnapshot.FieldAccountBalance, field.TypeJSON, value)
+		_node.AccountBalance = value
 	}
 	if value, ok := _c.mutation.SubscriptionBalance(); ok {
 		_spec.SetField(balancekeysnapshot.FieldSubscriptionBalance, field.TypeJSON, value)
@@ -714,6 +731,18 @@ func (u *BalanceKeySnapshotUpsert) SetBalance(v map[string]interface{}) *Balance
 // UpdateBalance sets the "balance" field to the value that was provided on create.
 func (u *BalanceKeySnapshotUpsert) UpdateBalance() *BalanceKeySnapshotUpsert {
 	u.SetExcluded(balancekeysnapshot.FieldBalance)
+	return u
+}
+
+// SetAccountBalance sets the "account_balance" field.
+func (u *BalanceKeySnapshotUpsert) SetAccountBalance(v map[string]interface{}) *BalanceKeySnapshotUpsert {
+	u.Set(balancekeysnapshot.FieldAccountBalance, v)
+	return u
+}
+
+// UpdateAccountBalance sets the "account_balance" field to the value that was provided on create.
+func (u *BalanceKeySnapshotUpsert) UpdateAccountBalance() *BalanceKeySnapshotUpsert {
+	u.SetExcluded(balancekeysnapshot.FieldAccountBalance)
 	return u
 }
 
@@ -982,6 +1011,20 @@ func (u *BalanceKeySnapshotUpsertOne) SetBalance(v map[string]interface{}) *Bala
 func (u *BalanceKeySnapshotUpsertOne) UpdateBalance() *BalanceKeySnapshotUpsertOne {
 	return u.Update(func(s *BalanceKeySnapshotUpsert) {
 		s.UpdateBalance()
+	})
+}
+
+// SetAccountBalance sets the "account_balance" field.
+func (u *BalanceKeySnapshotUpsertOne) SetAccountBalance(v map[string]interface{}) *BalanceKeySnapshotUpsertOne {
+	return u.Update(func(s *BalanceKeySnapshotUpsert) {
+		s.SetAccountBalance(v)
+	})
+}
+
+// UpdateAccountBalance sets the "account_balance" field to the value that was provided on create.
+func (u *BalanceKeySnapshotUpsertOne) UpdateAccountBalance() *BalanceKeySnapshotUpsertOne {
+	return u.Update(func(s *BalanceKeySnapshotUpsert) {
+		s.UpdateAccountBalance()
 	})
 }
 
@@ -1424,6 +1467,20 @@ func (u *BalanceKeySnapshotUpsertBulk) SetBalance(v map[string]interface{}) *Bal
 func (u *BalanceKeySnapshotUpsertBulk) UpdateBalance() *BalanceKeySnapshotUpsertBulk {
 	return u.Update(func(s *BalanceKeySnapshotUpsert) {
 		s.UpdateBalance()
+	})
+}
+
+// SetAccountBalance sets the "account_balance" field.
+func (u *BalanceKeySnapshotUpsertBulk) SetAccountBalance(v map[string]interface{}) *BalanceKeySnapshotUpsertBulk {
+	return u.Update(func(s *BalanceKeySnapshotUpsert) {
+		s.SetAccountBalance(v)
+	})
+}
+
+// UpdateAccountBalance sets the "account_balance" field to the value that was provided on create.
+func (u *BalanceKeySnapshotUpsertBulk) UpdateAccountBalance() *BalanceKeySnapshotUpsertBulk {
+	return u.Update(func(s *BalanceKeySnapshotUpsert) {
+		s.UpdateAccountBalance()
 	})
 }
 

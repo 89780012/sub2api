@@ -79,6 +79,7 @@ type BalanceSnapshot struct {
 	GroupID             string         `json:"group_id,omitempty"`
 	GroupName           string         `json:"group_name,omitempty"`
 	Balance             map[string]any `json:"balance,omitempty"`
+	AccountBalance      map[string]any `json:"account_balance,omitempty"`
 	SubscriptionBalance map[string]any `json:"subscription_balance,omitempty"`
 	RateMultiplier      *float64       `json:"rate_multiplier,omitempty"`
 	FetchedAt           time.Time      `json:"fetched_at"`
@@ -476,12 +477,20 @@ func (s *BalanceSnapshotService) snapshotsFromFetched(ctx context.Context, site 
 			GroupID:             key.GroupID,
 			GroupName:           key.GroupName,
 			Balance:             structToMap(key.KeyBalance),
+			AccountBalance:      fetchedAccountBalance(fetched),
 			SubscriptionBalance: structToMap(key.SubscriptionBalance),
 			RateMultiplier:      key.RateMultiplier,
 			FetchedAt:           now,
 		})
 	}
 	return out, nil
+}
+
+func fetchedAccountBalance(site *balancefetch.Site) map[string]any {
+	if site == nil || site.Account == nil {
+		return nil
+	}
+	return structToMap(site.Account.Balance)
 }
 
 func accountKeyLast4(account *Account) string {

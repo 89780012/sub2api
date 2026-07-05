@@ -211,6 +211,7 @@
                       </div>
                       <ExternalBalanceCell
                         :balance="item.external_balance"
+                        :account-balance="item.external_account_balance"
                         :subscription-balance="item.external_subscription_balance"
                         :match-status="item.external_balance_match_status"
                         :site-name="item.external_balance_site_name"

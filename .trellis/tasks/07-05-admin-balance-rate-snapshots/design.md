@@ -44,6 +44,7 @@ Add a `balance_key_snapshots` table for the latest known upstream key state:
 - `group_id`
 - `group_name`
 - `balance` JSONB
+- `account_balance` JSONB
 - `subscription_balance` JSONB
 - `rate_multiplier`
 - `fetched_at`
@@ -101,11 +102,11 @@ Extend admin account list and account detail responses with the latest matched e
 Account management adds:
 
 - Two toggleable columns: external balance and upstream multiplier.
-- The external balance cell displays key balance as the primary value. When subscription/package balance exists, it appears as secondary compact details in the same cell, such as daily, weekly, and monthly remaining windows.
+- The external balance cell displays account/site balance, key balance, and subscription/package balance as separate independent values. The UI must not fall back from one balance source to another; if a value is missing, that field is simply absent.
 - A balance sync configuration panel for multi-site CRUD, manual refresh, and refresh status, opened from the account management page's "more tools" menu.
 - A row-level manual binding affordance for unmatched or ambiguous accounts.
 
-Group quality panel adds balance/multiplier display for each account row using the existing group quality response payload. It should follow the same display priority as the account table: key balance first, subscription/package windows second.
+Group quality panel adds balance/multiplier display for each account row using the existing group quality response payload. It should follow the same split-field display as the account table: account/site balance, key balance, and subscription/package windows remain independent.
 
 ## Compatibility And Rollback
 

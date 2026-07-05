@@ -521,8 +521,12 @@ func init() {
 	balancekeysnapshotDescBalance := balancekeysnapshotFields[10].Descriptor()
 	// balancekeysnapshot.DefaultBalance holds the default value on creation for the balance field.
 	balancekeysnapshot.DefaultBalance = balancekeysnapshotDescBalance.Default.(func() map[string]interface{})
+	// balancekeysnapshotDescAccountBalance is the schema descriptor for account_balance field.
+	balancekeysnapshotDescAccountBalance := balancekeysnapshotFields[11].Descriptor()
+	// balancekeysnapshot.DefaultAccountBalance holds the default value on creation for the account_balance field.
+	balancekeysnapshot.DefaultAccountBalance = balancekeysnapshotDescAccountBalance.Default.(func() map[string]interface{})
 	// balancekeysnapshotDescSubscriptionBalance is the schema descriptor for subscription_balance field.
-	balancekeysnapshotDescSubscriptionBalance := balancekeysnapshotFields[11].Descriptor()
+	balancekeysnapshotDescSubscriptionBalance := balancekeysnapshotFields[12].Descriptor()
 	// balancekeysnapshot.DefaultSubscriptionBalance holds the default value on creation for the subscription_balance field.
 	balancekeysnapshot.DefaultSubscriptionBalance = balancekeysnapshotDescSubscriptionBalance.Default.(func() map[string]interface{})
 	balancesiteMixin := schema.BalanceSite{}.Mixin()

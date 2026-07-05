@@ -41,6 +41,8 @@ const (
 	FieldGroupName = "group_name"
 	// FieldBalance holds the string denoting the balance field in the database.
 	FieldBalance = "balance"
+	// FieldAccountBalance holds the string denoting the account_balance field in the database.
+	FieldAccountBalance = "account_balance"
 	// FieldSubscriptionBalance holds the string denoting the subscription_balance field in the database.
 	FieldSubscriptionBalance = "subscription_balance"
 	// FieldRateMultiplier holds the string denoting the rate_multiplier field in the database.
@@ -85,6 +87,7 @@ var Columns = []string{
 	FieldGroupID,
 	FieldGroupName,
 	FieldBalance,
+	FieldAccountBalance,
 	FieldSubscriptionBalance,
 	FieldRateMultiplier,
 	FieldFetchedAt,
@@ -137,6 +140,8 @@ var (
 	GroupNameValidator func(string) error
 	// DefaultBalance holds the default value on creation for the "balance" field.
 	DefaultBalance func() map[string]interface{}
+	// DefaultAccountBalance holds the default value on creation for the "account_balance" field.
+	DefaultAccountBalance func() map[string]interface{}
 	// DefaultSubscriptionBalance holds the default value on creation for the "subscription_balance" field.
 	DefaultSubscriptionBalance func() map[string]interface{}
 )

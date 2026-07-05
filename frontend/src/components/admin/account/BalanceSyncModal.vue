@@ -140,7 +140,9 @@
               <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500 dark:bg-dark-700 dark:text-gray-400">
                 <tr>
                   <th class="px-3 py-2">{{ t('admin.accounts.balanceSync.key') }}</th>
-                  <th class="px-3 py-2">{{ t('common.balance') }}</th>
+                  <th class="px-3 py-2">{{ t('admin.accounts.balanceSync.accountBalance') }}</th>
+                  <th class="px-3 py-2">{{ t('admin.accounts.balanceSync.packageBalance') }}</th>
+                  <th class="px-3 py-2">{{ t('admin.accounts.balanceSync.keyBalance') }}</th>
                   <th class="px-3 py-2">{{ t('admin.accounts.balanceSync.upstreamRate') }}</th>
                   <th class="px-3 py-2">{{ t('admin.accounts.balanceSync.match') }}</th>
                   <th class="px-3 py-2">{{ t('admin.accounts.balanceSync.accountId') }}</th>
@@ -153,6 +155,8 @@
                     <div class="font-medium text-gray-900 dark:text-white">{{ snapshot.key_name || snapshot.masked_key || snapshot.external_key_id }}</div>
                     <div class="text-xs text-gray-500 dark:text-gray-400">{{ snapshot.site_name }} · ****{{ snapshot.key_last4 }}</div>
                   </td>
+                  <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ formatBalance(snapshot.account_balance) }}</td>
+                  <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ formatSubscriptionBalance(snapshot.subscription_balance) }}</td>
                   <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ formatBalance(snapshot.balance) }}</td>
                   <td class="px-3 py-2 font-mono text-gray-700 dark:text-gray-300">{{ formatRate(snapshot.rate_multiplier) }}</td>
                   <td class="px-3 py-2">
@@ -209,7 +213,7 @@ import { useAppStore } from '@/stores/app'
 import { formatDateTime } from '@/utils/format'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
-import type { BalanceSite, BalanceSitePayload, BalanceSnapshot, ExternalBalanceAmount } from '@/types'
+import type { BalanceSite, BalanceSitePayload, BalanceSnapshot, ExternalBalanceAmount, ExternalSubscriptionBalance } from '@/types'
 
 const props = defineProps<{
   show: boolean
@@ -442,6 +446,15 @@ const formatBalance = (balance?: ExternalBalanceAmount | null) => {
       : null
   if (value === null) return balance.unit || '-'
   return `${value.toFixed(value >= 1 ? 2 : 4)} ${balance.unit || ''}`.trim()
+}
+
+const formatSubscriptionBalance = (balance?: ExternalSubscriptionBalance | null) => {
+  if (!balance) return '-'
+  const parts: string[] = []
+  if (balance.daily) parts.push(`${t('admin.accounts.balanceSync.dailyShort')} ${formatBalance(balance.daily)}`)
+  if (balance.weekly) parts.push(`${t('admin.accounts.balanceSync.weeklyShort')} ${formatBalance(balance.weekly)}`)
+  if (balance.monthly) parts.push(`${t('admin.accounts.balanceSync.monthlyShort')} ${formatBalance(balance.monthly)}`)
+  return parts.length ? parts.join(' / ') : '-'
 }
 
 const formatRate = (rate?: number | null) => typeof rate === 'number' ? `${rate.toFixed(2)}x` : '-'

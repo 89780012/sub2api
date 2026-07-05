@@ -1,10 +1,20 @@
 <template>
   <div class="min-w-[9rem] space-y-1">
-    <div v-if="balance" class="flex flex-col">
-      <span class="font-mono text-sm font-medium text-gray-900 dark:text-white">
-        {{ formatBalance(balance) }}
-      </span>
+    <div v-if="hasBalanceData" class="flex flex-col gap-1">
+      <div v-if="accountBalance" class="flex flex-wrap items-baseline gap-1">
+        <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ t('admin.accounts.balanceSync.accountBalance') }}</span>
+        <span class="font-mono text-sm font-medium text-gray-900 dark:text-white">
+          {{ formatBalance(accountBalance) }}
+        </span>
+      </div>
+      <div v-if="balance" class="flex flex-wrap items-baseline gap-1">
+        <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ t('admin.accounts.balanceSync.keyBalance') }}</span>
+        <span class="font-mono text-sm font-medium text-gray-900 dark:text-white">
+          {{ formatBalance(balance) }}
+        </span>
+      </div>
       <div v-if="subscriptionLines.length" class="flex flex-wrap gap-1">
+        <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ t('admin.accounts.balanceSync.packageBalance') }}</span>
         <span
           v-for="line in subscriptionLines"
           :key="line"
@@ -35,6 +45,7 @@ import type { ExternalBalanceAmount, ExternalSubscriptionBalance } from '@/types
 
 const props = defineProps<{
   balance?: ExternalBalanceAmount | null
+  accountBalance?: ExternalBalanceAmount | null
   subscriptionBalance?: ExternalSubscriptionBalance | null
   matchStatus?: string
   siteName?: string
@@ -44,6 +55,8 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+
+const hasBalanceData = computed(() => Boolean(props.accountBalance || props.balance || subscriptionLines.value.length))
 
 const formatNumber = (value: number) => {
   if (Math.abs(value) >= 100) return value.toFixed(0)
