@@ -54,6 +54,7 @@ WORKDIR /app/backend
 
 # Copy go mod files first (better caching)
 COPY backend/go.mod backend/go.sum ./
+COPY backend/pkg/balancefetch/go.mod ./pkg/balancefetch/go.mod
 RUN go mod download
 
 # Copy backend source first
