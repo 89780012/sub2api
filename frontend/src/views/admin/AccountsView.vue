@@ -308,7 +308,7 @@
           <template #cell-external_rate_multiplier="{ row }">
             <div class="flex min-w-[6rem] flex-col gap-1">
               <span v-if="typeof row.external_rate_multiplier === 'number'" class="font-mono text-sm text-gray-700 dark:text-gray-300">
-                {{ row.external_rate_multiplier.toFixed(2) }}x
+                {{ formatRateMultiplier(row.external_rate_multiplier, { fractionDigits: 3 }) }}
               </span>
               <span v-else class="text-sm text-gray-400 dark:text-dark-500">-</span>
               <span v-if="row.external_balance_match_status" class="text-[11px] text-gray-500 dark:text-gray-400">
@@ -464,7 +464,7 @@ import Icon from '@/components/icons/Icon.vue'
 import ErrorPassthroughRulesModal from '@/components/admin/ErrorPassthroughRulesModal.vue'
 import TLSFingerprintProfilesModal from '@/components/admin/TLSFingerprintProfilesModal.vue'
 import { buildOpenAIUsageRefreshKey } from '@/utils/accountUsageRefresh'
-import { formatDateTime, formatRelativeTime } from '@/utils/format'
+import { formatDateTime, formatRateMultiplier, formatRelativeTime } from '@/utils/format'
 import { proxyExpiryBadgeClass, proxyExpiryLabelKey } from '@/utils/proxyExpiry'
 import type { Account, AccountPlatform, AccountType, Proxy as AccountProxy, AdminGroup, WindowStats, ClaudeModel } from '@/types'
 

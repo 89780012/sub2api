@@ -210,7 +210,7 @@ import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { useAppStore } from '@/stores/app'
-import { formatDateTime } from '@/utils/format'
+import { formatDateTime, formatRateMultiplier } from '@/utils/format'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
 import type { BalanceSite, BalanceSitePayload, BalanceSnapshot, ExternalBalanceAmount, ExternalSubscriptionBalance } from '@/types'
@@ -457,7 +457,7 @@ const formatSubscriptionBalance = (balance?: ExternalSubscriptionBalance | null)
   return parts.length ? parts.join(' / ') : '-'
 }
 
-const formatRate = (rate?: number | null) => typeof rate === 'number' ? `${rate.toFixed(2)}x` : '-'
+const formatRate = (rate?: number | null) => formatRateMultiplier(rate, { fractionDigits: 3 })
 
 const refreshStatusLabel = (status: string) => {
   if (!status) return t('admin.accounts.balanceSync.notRefreshed')

@@ -221,7 +221,7 @@
                       />
                       <div v-if="typeof item.external_rate_multiplier === 'number'" class="mt-1 text-xs text-gray-600 dark:text-gray-300">
                         {{ t('admin.accounts.columns.upstreamRateMultiplier') }}:
-                        <span class="font-mono">{{ item.external_rate_multiplier.toFixed(2) }}x</span>
+                        <span class="font-mono">{{ formatRateMultiplier(item.external_rate_multiplier, { fractionDigits: 3 }) }}</span>
                       </div>
                     </div>
                   </div>
@@ -408,6 +408,7 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 import PlatformIcon from '@/components/common/PlatformIcon.vue'
 import Icon from '@/components/icons/Icon.vue'
 import ExternalBalanceCell from '@/components/admin/account/ExternalBalanceCell.vue'
+import { formatRateMultiplier } from '@/utils/format'
 
 const props = defineProps<{
   show: boolean

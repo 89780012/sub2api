@@ -238,6 +238,16 @@ export function formatCostFixed(amount: number, fractionDigits: number = 4): str
   return amount.toFixed(fractionDigits)
 }
 
+export function formatRateMultiplier(
+  rate: number | null | undefined,
+  options: { fractionDigits?: number; fallback?: string } = {}
+): string {
+  if (typeof rate !== 'number' || !Number.isFinite(rate)) return options.fallback ?? '-'
+
+  const fractionDigits = options.fractionDigits ?? 2
+  return `${rate.toFixed(fractionDigits)}x`
+}
+
 /**
  * 格式化 token 数量（>=1M 显示为 M，>=1K 显示为 K，保留 1 位小数）
  * @param tokens token 数量
