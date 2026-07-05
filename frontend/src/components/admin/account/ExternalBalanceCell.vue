@@ -1,15 +1,15 @@
 <template>
-  <div class="min-w-[9rem] space-y-1">
+  <div :class="highlight ? 'min-w-0 space-y-1' : 'min-w-[9rem] space-y-1'">
     <div v-if="hasBalanceData" class="flex flex-col gap-1">
       <div v-if="accountBalance" class="flex flex-wrap items-baseline gap-1">
-        <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ t('admin.accounts.balanceSync.accountBalance') }}</span>
-        <span class="font-mono text-sm font-medium text-gray-900 dark:text-white">
+        <span :class="highlight ? 'text-[11px] font-medium text-emerald-700 dark:text-emerald-300' : 'text-[11px] text-gray-500 dark:text-gray-400'">{{ t('admin.accounts.balanceSync.accountBalance') }}</span>
+        <span :class="highlightValueClass">
           {{ formatBalance(accountBalance) }}
         </span>
       </div>
       <div v-if="balance" class="flex flex-wrap items-baseline gap-1">
-        <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ t('admin.accounts.balanceSync.keyBalance') }}</span>
-        <span class="font-mono text-sm font-medium text-gray-900 dark:text-white">
+        <span :class="highlight ? 'text-[11px] font-medium text-emerald-700 dark:text-emerald-300' : 'text-[11px] text-gray-500 dark:text-gray-400'">{{ t('admin.accounts.balanceSync.keyBalance') }}</span>
+        <span :class="highlightValueClass">
           {{ formatBalance(balance) }}
         </span>
       </div>
@@ -52,11 +52,17 @@ const props = defineProps<{
   keyName?: string
   keyLast4?: string
   fetchedAt?: string | null
+  highlight?: boolean
 }>()
 
 const { t } = useI18n()
 
 const hasBalanceData = computed(() => Boolean(props.accountBalance || props.balance || subscriptionLines.value.length))
+const highlight = computed(() => Boolean(props.highlight))
+const highlightValueClass = computed(() => highlight.value
+  ? 'font-mono text-sm font-semibold text-emerald-900 dark:text-emerald-100'
+  : 'font-mono text-sm font-medium text-gray-900 dark:text-white'
+)
 
 const formatNumber = (value: number) => {
   if (Math.abs(value) >= 100) return value.toFixed(0)

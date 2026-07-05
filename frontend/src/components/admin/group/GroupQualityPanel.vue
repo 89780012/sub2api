@@ -210,22 +210,34 @@
                       </div>
                     </div>
                     <div v-if="item.external_balance || item.external_rate_multiplier != null || item.external_balance_match_status" class="mt-3">
-                      <div class="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                        {{ t('admin.groups.qualityPanel.columns.externalBalance') }}
-                      </div>
-                      <ExternalBalanceCell
-                        :balance="item.external_balance"
-                        :account-balance="item.external_account_balance"
-                        :subscription-balance="item.external_subscription_balance"
-                        :match-status="item.external_balance_match_status"
-                        :site-name="item.external_balance_site_name"
-                        :key-name="item.external_balance_key_name"
-                        :key-last4="item.external_balance_key_last4"
-                        :fetched-at="item.external_balance_fetched_at"
-                      />
-                      <div v-if="typeof item.external_rate_multiplier === 'number'" class="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                        {{ t('admin.accounts.columns.upstreamRateMultiplier') }}:
-                        <span class="font-mono">{{ formatRateMultiplier(item.external_rate_multiplier, { fractionDigits: 3 }) }}</span>
+                      <div :class="typeof item.external_rate_multiplier === 'number' ? 'grid gap-2 sm:grid-cols-2' : 'grid gap-2'">
+                        <div class="rounded-md border border-emerald-200 bg-emerald-50/80 px-2.5 py-2 shadow-sm shadow-emerald-100/60 dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:shadow-none">
+                          <div class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                            {{ t('admin.groups.qualityPanel.columns.externalBalance') }}
+                          </div>
+                          <ExternalBalanceCell
+                            highlight
+                            :balance="item.external_balance"
+                            :account-balance="item.external_account_balance"
+                            :subscription-balance="item.external_subscription_balance"
+                            :match-status="item.external_balance_match_status"
+                            :site-name="item.external_balance_site_name"
+                            :key-name="item.external_balance_key_name"
+                            :key-last4="item.external_balance_key_last4"
+                            :fetched-at="item.external_balance_fetched_at"
+                          />
+                        </div>
+                        <div
+                          v-if="typeof item.external_rate_multiplier === 'number'"
+                          class="rounded-md border border-amber-200 bg-amber-50/85 px-2.5 py-2 shadow-sm shadow-amber-100/60 dark:border-amber-900/50 dark:bg-amber-950/25 dark:shadow-none"
+                        >
+                          <div class="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                            {{ t('admin.accounts.columns.upstreamRateMultiplier') }}
+                          </div>
+                          <div class="mt-1 font-mono text-sm font-semibold text-amber-900 dark:text-amber-100">
+                            {{ formatRateMultiplier(item.external_rate_multiplier, { fractionDigits: 3 }) }}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
