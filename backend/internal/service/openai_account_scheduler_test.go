@@ -77,6 +77,18 @@ func (r schedulerTestGroupRepo) GetByIDLite(ctx context.Context, id int64) (*Gro
 	return r.GetByID(ctx, id)
 }
 
+type schedulerUpdatingGroupRepo struct {
+	schedulerTestGroupRepo
+	updated *Group
+}
+
+func (r *schedulerUpdatingGroupRepo) Update(_ context.Context, group *Group) error {
+	cloned := *group
+	r.updated = &cloned
+	r.group = &cloned
+	return nil
+}
+
 func (r schedulerGroupAwareOpenAIAccountRepo) ListSchedulableByGroupIDAndPlatform(ctx context.Context, groupID int64, platform string) ([]Account, error) {
 	var result []Account
 	for _, acc := range r.accounts {
@@ -187,6 +199,20 @@ func (c *schedulerTestGatewayCache) DeleteSessionAccountID(ctx context.Context, 
 	c.deletedSessions[sessionHash]++
 	delete(c.sessionBindings, sessionHash)
 	return nil
+}
+
+type schedulerTestAccountQualityReader struct {
+	snapshots map[int64]*AccountQualitySnapshot
+}
+
+func (r schedulerTestAccountQualityReader) GetSnapshotsByAccountIDs(_ context.Context, accountIDs []int64) (map[int64]*AccountQualitySnapshot, error) {
+	out := make(map[int64]*AccountQualitySnapshot, len(accountIDs))
+	for _, id := range accountIDs {
+		if snapshot := r.snapshots[id]; snapshot != nil {
+			out[id] = snapshot
+		}
+	}
+	return out, nil
 }
 
 func newSchedulerTestOpenAIWSV2Config() *config.Config {
@@ -953,6 +979,64 @@ func TestOpenAIGatewayService_SelectAccountForModelWithExclusions_ManualPrimaryO
 	require.Equal(t, manualPrimaryID, cache.sessionBindings["openai:session_hash_manual_primary_legacy"])
 }
 
+func TestOpenAIGatewayService_SelectAccountForModelWithExclusions_PrimaryQualityEscapeExcludesPrimary(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10153)
+	manualPrimaryID := int64(21651)
+	secondaryID := int64(21652)
+	accounts := []Account{
+		{
+			ID:          manualPrimaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+		{
+			ID:          secondaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+	}
+	groupRepo := schedulerTestGroupRepo{
+		group: &Group{
+			ID:                     groupID,
+			PrimaryAccountMode:     GroupPrimaryAccountModeManual,
+			ManualPrimaryAccountID: &manualPrimaryID,
+			ActivePrimaryAccountID: &manualPrimaryID,
+		},
+	}
+	svc := &OpenAIGatewayService{
+		accountRepo: schedulerGroupAwareOpenAIAccountRepo{schedulerTestOpenAIAccountRepo{accounts: accounts}},
+		groupRepo:   groupRepo,
+		cfg:         &config.Config{},
+		accountQualityReader: schedulerTestAccountQualityReader{snapshots: map[int64]*AccountQualitySnapshot{
+			manualPrimaryID: {
+				AccountID:             manualPrimaryID,
+				TotalRequests:         accountQualityMinSamples,
+				RecentSuccessRate:     1,
+				EffectiveQualityScore: 0.40,
+				BaseQualityScore:      0.40,
+				QualityScore:          0.40,
+				SlowStreak:            3,
+			},
+		}},
+	}
+
+	account, err := svc.SelectAccountForModelWithExclusions(ctx, &groupID, "", "gpt-5.1", nil)
+	require.NoError(t, err)
+	require.NotNil(t, account)
+	require.Equal(t, secondaryID, account.ID)
+}
+
 func TestOpenAIGatewayService_SelectAccountForModelWithExclusions_AllowsBelow5hThreshold(t *testing.T) {
 	ctx := context.Background()
 	primary := Account{
@@ -1654,6 +1738,323 @@ func TestOpenAIGatewayService_SelectAccountWithScheduler_ManualPrimaryExcludedRe
 	require.Equal(t, manualPrimaryID, selection.ScheduleTrace.PrimaryCandidateID)
 	require.Equal(t, groupPrimaryBypassReasonExcludedAfterFailover, selection.ScheduleTrace.PrimaryBypassReason)
 	require.False(t, selection.ScheduleTrace.PrimaryHit)
+	if selection.ReleaseFunc != nil {
+		selection.ReleaseFunc()
+	}
+}
+
+func TestOpenAIGatewayService_SelectAccountWithScheduler_PrimaryQualityEscapeRecordsBypassTrace(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10154)
+	manualPrimaryID := int64(21801)
+	secondaryID := int64(21802)
+	accounts := []Account{
+		{
+			ID:          manualPrimaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+		{
+			ID:          secondaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+	}
+	groupRepo := schedulerTestGroupRepo{
+		group: &Group{
+			ID:                     groupID,
+			PrimaryAccountMode:     GroupPrimaryAccountModeManual,
+			ManualPrimaryAccountID: &manualPrimaryID,
+			ActivePrimaryAccountID: &manualPrimaryID,
+		},
+	}
+	svc := &OpenAIGatewayService{
+		accountRepo:        schedulerGroupAwareOpenAIAccountRepo{schedulerTestOpenAIAccountRepo{accounts: accounts}},
+		groupRepo:          groupRepo,
+		cfg:                &config.Config{},
+		rateLimitService:   newOpenAIAdvancedSchedulerRateLimitService("true"),
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{}),
+		accountQualityReader: schedulerTestAccountQualityReader{snapshots: map[int64]*AccountQualitySnapshot{
+			manualPrimaryID: {
+				AccountID:             manualPrimaryID,
+				TotalRequests:         accountQualityMinSamples,
+				RecentSuccessRate:     1,
+				EffectiveQualityScore: 0.50,
+				BaseQualityScore:      0.50,
+				QualityScore:          0.50,
+				TTFTSampleCount:       accountQualityMinSamples,
+				TTFTGT20sCount:        accountQualityMinSamples,
+				TTFTGT20sRate:         1,
+				SlowStreak:            3,
+			},
+			secondaryID: {
+				AccountID:             secondaryID,
+				TotalRequests:         accountQualityMinSamples,
+				RecentSuccessRate:     1,
+				EffectiveQualityScore: 0.95,
+				BaseQualityScore:      0.95,
+				QualityScore:          0.95,
+			},
+		}},
+	}
+
+	selection, decision, err := svc.SelectAccountWithScheduler(
+		ctx,
+		&groupID,
+		"",
+		"session_hash_manual_primary_quality_escape",
+		"gpt-5.1",
+		nil,
+		OpenAIUpstreamTransportAny,
+		false,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, selection)
+	require.NotNil(t, selection.Account)
+	require.Equal(t, secondaryID, selection.Account.ID)
+	require.Equal(t, openAIAccountScheduleLayerLoadBalance, decision.Layer)
+	require.NotNil(t, selection.ScheduleTrace)
+	require.Equal(t, manualPrimaryID, selection.ScheduleTrace.PrimaryCandidateID)
+	require.Equal(t, groupPrimaryBypassReasonQualityEscape, selection.ScheduleTrace.PrimaryBypassReason)
+	require.False(t, selection.ScheduleTrace.PrimaryHit)
+	if selection.ReleaseFunc != nil {
+		selection.ReleaseFunc()
+	}
+}
+
+func TestOpenAIGatewayService_SelectAccountWithScheduler_PrimaryRuntimeTTFTEscapeExcludesPrimary(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10156)
+	manualPrimaryID := int64(21851)
+	secondaryID := int64(21852)
+	accounts := []Account{
+		{
+			ID:          manualPrimaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+		{
+			ID:          secondaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+	}
+	stats := newOpenAIAccountRuntimeStats()
+	slowTTFT := 20000
+	for i := 0; i < 3; i++ {
+		stats.report(manualPrimaryID, true, &slowTTFT)
+	}
+	groupRepo := schedulerTestGroupRepo{
+		group: &Group{
+			ID:                     groupID,
+			PrimaryAccountMode:     GroupPrimaryAccountModeManual,
+			ManualPrimaryAccountID: &manualPrimaryID,
+			ActivePrimaryAccountID: &manualPrimaryID,
+		},
+	}
+	svc := &OpenAIGatewayService{
+		accountRepo:        schedulerGroupAwareOpenAIAccountRepo{schedulerTestOpenAIAccountRepo{accounts: accounts}},
+		groupRepo:          groupRepo,
+		cfg:                &config.Config{},
+		rateLimitService:   newOpenAIAdvancedSchedulerRateLimitService("true"),
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{}),
+		openaiAccountStats: stats,
+	}
+
+	selection, decision, err := svc.SelectAccountWithScheduler(
+		ctx,
+		&groupID,
+		"",
+		"session_hash_manual_primary_runtime_escape",
+		"gpt-5.1",
+		nil,
+		OpenAIUpstreamTransportAny,
+		false,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, selection)
+	require.NotNil(t, selection.Account)
+	require.Equal(t, secondaryID, selection.Account.ID)
+	require.Equal(t, openAIAccountScheduleLayerLoadBalance, decision.Layer)
+	require.NotNil(t, selection.ScheduleTrace)
+	require.Equal(t, groupPrimaryBypassReasonQualityEscape, selection.ScheduleTrace.PrimaryBypassReason)
+	if selection.ReleaseFunc != nil {
+		selection.ReleaseFunc()
+	}
+}
+
+func TestOpenAIGatewayService_SelectAccountWithScheduler_PrimaryRuntimeTTFTSingleSampleDoesNotEscape(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10157)
+	manualPrimaryID := int64(21861)
+	secondaryID := int64(21862)
+	accounts := []Account{
+		{
+			ID:          manualPrimaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+		{
+			ID:          secondaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+	}
+	stats := newOpenAIAccountRuntimeStats()
+	slowTTFT := 20000
+	stats.report(manualPrimaryID, true, &slowTTFT)
+	groupRepo := schedulerTestGroupRepo{
+		group: &Group{
+			ID:                     groupID,
+			PrimaryAccountMode:     GroupPrimaryAccountModeManual,
+			ManualPrimaryAccountID: &manualPrimaryID,
+			ActivePrimaryAccountID: &manualPrimaryID,
+		},
+	}
+	svc := &OpenAIGatewayService{
+		accountRepo:        schedulerGroupAwareOpenAIAccountRepo{schedulerTestOpenAIAccountRepo{accounts: accounts}},
+		groupRepo:          groupRepo,
+		cfg:                &config.Config{},
+		rateLimitService:   newOpenAIAdvancedSchedulerRateLimitService("true"),
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{}),
+		openaiAccountStats: stats,
+	}
+
+	selection, decision, err := svc.SelectAccountWithScheduler(
+		ctx,
+		&groupID,
+		"",
+		"session_hash_manual_primary_single_runtime_slow",
+		"gpt-5.1",
+		nil,
+		OpenAIUpstreamTransportAny,
+		false,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, selection)
+	require.NotNil(t, selection.Account)
+	require.Equal(t, manualPrimaryID, selection.Account.ID)
+	require.Equal(t, openAIAccountScheduleLayerGroupPrimary, decision.Layer)
+	if selection.ReleaseFunc != nil {
+		selection.ReleaseFunc()
+	}
+}
+
+func TestOpenAIGatewayService_SelectAccountWithScheduler_PrimaryQualityEscapePromotesCandidateWhenAllowed(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10155)
+	manualPrimaryID := int64(21901)
+	secondaryID := int64(21902)
+	accounts := []Account{
+		{
+			ID:          manualPrimaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+		{
+			ID:          secondaryID,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			GroupIDs:    []int64{groupID},
+		},
+	}
+	groupRepo := &schedulerUpdatingGroupRepo{
+		schedulerTestGroupRepo: schedulerTestGroupRepo{
+			group: &Group{
+				ID:                             groupID,
+				PrimaryAccountMode:             GroupPrimaryAccountModeManual,
+				ManualPrimaryAccountID:         &manualPrimaryID,
+				ActivePrimaryAccountID:         &manualPrimaryID,
+				PrimaryAllowManualAutoReplace:  true,
+				PrimaryFailoverCooldownSeconds: 30,
+			},
+		},
+	}
+	svc := &OpenAIGatewayService{
+		accountRepo:        schedulerGroupAwareOpenAIAccountRepo{schedulerTestOpenAIAccountRepo{accounts: accounts}},
+		groupRepo:          groupRepo,
+		cache:              &schedulerTestGatewayCache{sessionBindings: map[string]int64{"openai:old": manualPrimaryID}},
+		cfg:                &config.Config{},
+		rateLimitService:   newOpenAIAdvancedSchedulerRateLimitService("true"),
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{}),
+		accountQualityReader: schedulerTestAccountQualityReader{snapshots: map[int64]*AccountQualitySnapshot{
+			manualPrimaryID: {
+				AccountID:             manualPrimaryID,
+				TotalRequests:         accountQualityMinSamples,
+				RecentSuccessRate:     1,
+				EffectiveQualityScore: 0.40,
+				BaseQualityScore:      0.40,
+				QualityScore:          0.40,
+				SlowStreak:            3,
+			},
+			secondaryID: {
+				AccountID:             secondaryID,
+				TotalRequests:         accountQualityMinSamples,
+				RecentSuccessRate:     1,
+				EffectiveQualityScore: 0.95,
+				BaseQualityScore:      0.95,
+				QualityScore:          0.95,
+			},
+		}},
+	}
+
+	selection, _, err := svc.SelectAccountWithScheduler(
+		ctx,
+		&groupID,
+		"",
+		"session_hash_manual_primary_quality_promote",
+		"gpt-5.1",
+		nil,
+		OpenAIUpstreamTransportAny,
+		false,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, selection)
+	require.Equal(t, secondaryID, selection.Account.ID)
+	require.NotNil(t, groupRepo.updated)
+	require.NotNil(t, groupRepo.updated.ActivePrimaryAccountID)
+	require.Equal(t, secondaryID, *groupRepo.updated.ActivePrimaryAccountID)
+	require.Equal(t, groupPrimarySourceFailoverCandidate, groupRepo.updated.ActivePrimarySource)
+	require.Equal(t, groupPrimaryReasonRetryExhausted, groupRepo.updated.ActivePrimaryReason)
 	if selection.ReleaseFunc != nil {
 		selection.ReleaseFunc()
 	}

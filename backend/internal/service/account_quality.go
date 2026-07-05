@@ -471,6 +471,20 @@ func shouldEscapeStickyByAccountQuality(snapshot *AccountQualitySnapshot) (bool,
 	return false, ""
 }
 
+func shouldEscapePrimaryByAccountQuality(snapshot *AccountQualitySnapshot) (bool, string) {
+	escape, reason := shouldEscapeStickyByAccountQuality(snapshot)
+	if !escape {
+		return false, ""
+	}
+	if reason != "quality_score" {
+		return true, reason
+	}
+	if snapshot != nil && snapshot.SlowStreak >= 3 {
+		return true, reason
+	}
+	return false, ""
+}
+
 func shouldEscapeStickyAccountByQuality(ctx context.Context, reader AccountQualityReader, accountID int64, logKey string) (bool, string, *AccountQualitySnapshot) {
 	if reader == nil || accountID <= 0 {
 		return false, "", nil

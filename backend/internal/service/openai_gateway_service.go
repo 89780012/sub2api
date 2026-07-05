@@ -450,6 +450,24 @@ func (s *OpenAIGatewayService) inspectPrimaryAccountHit(
 	if !openAIStickyAccountMatchesGroup(account, groupID) {
 		return nil, groupPrimaryBypassReasonGroupMismatch
 	}
+	if snapshot := accountQualitySnapshotForAccount(ctx, s.accountQualityReader, account.ID, "service.openai_gateway"); snapshot != nil {
+		qualityEscape, _ := shouldEscapePrimaryByAccountQuality(snapshot)
+		if qualityEscape {
+			score, _ := effectiveAccountQualityScore(snapshot)
+			logger.LegacyPrintf(
+				"service.openai_gateway",
+				"primary account quality escape: account_id=%d total=%d slow_streak=%d success_rate=%.4f score=%.4f penalty=%.4f recovery=%.4f",
+				account.ID,
+				snapshot.TotalRequests,
+				snapshot.SlowStreak,
+				snapshot.RecentSuccessRate,
+				score,
+				snapshot.TransientPenalty,
+				snapshot.RecoveryCredit,
+			)
+			return nil, groupPrimaryBypassReasonQualityEscape
+		}
+	}
 	if groupID != nil && s.needsUpstreamChannelRestrictionCheck(ctx, groupID) &&
 		s.isUpstreamModelRestrictedByChannel(ctx, *groupID, account, requestedModel, requireCompact) {
 		return nil, groupPrimaryBypassReasonChannelRestricted
@@ -1876,11 +1894,13 @@ func (s *OpenAIGatewayService) selectAccountForModelWithExclusions(ctx context.C
 	group := s.getGroupPrimaryConfig(ctx, groupID)
 	preferPrimaryBeforeSticky := group != nil && group.shouldPreferPrimaryBeforeStickySession()
 	if preferPrimaryBeforeSticky {
-		if account := s.tryPrimaryAccountHit(ctx, group, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, requiredCapability); account != nil {
+		if account, reason := s.tryPrimaryAccountHitWithReason(ctx, group, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, requiredCapability); account != nil {
 			if sessionHash != "" {
 				_ = s.setStickySessionAccountID(ctx, groupID, sessionHash, account.ID, openaiStickySessionTTL)
 			}
 			return account, nil
+		} else if reason != "" {
+			excludedIDs = excludedIDsWithPrimaryBypass(excludedIDs, group, reason)
 		}
 	}
 
@@ -1891,11 +1911,13 @@ func (s *OpenAIGatewayService) selectAccountForModelWithExclusions(ctx context.C
 	}
 
 	if !preferPrimaryBeforeSticky {
-		if account := s.tryPrimaryAccountHit(ctx, group, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, requiredCapability); account != nil {
+		if account, reason := s.tryPrimaryAccountHitWithReason(ctx, group, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, requiredCapability); account != nil {
 			if sessionHash != "" {
 				_ = s.setStickySessionAccountID(ctx, groupID, sessionHash, account.ID, openaiStickySessionTTL)
 			}
 			return account, nil
+		} else if reason != "" {
+			excludedIDs = excludedIDsWithPrimaryBypass(excludedIDs, group, reason)
 		}
 	}
 
@@ -2110,6 +2132,8 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 	needsUpstreamCheck := s.needsUpstreamChannelRestrictionCheck(ctx, groupID)
 	group := s.getGroupPrimaryConfig(ctx, groupID)
 	hadExcludedFailures := len(excludedIDs) > 0
+	traceExcludedIDs := excludedIDs
+	primaryBypassReason := ""
 	var stickyAccountID int64
 	if sessionHash != "" && s.cache != nil {
 		if accountID, err := s.getStickySessionAccountID(ctx, groupID, sessionHash); err == nil {
@@ -2127,7 +2151,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 			if selectErr != nil {
 				return nil, selectErr
 			}
-			s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerLoadBalance)
+			s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, traceExcludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerLoadBalance)
 			return selection, nil
 		}
 		if stickyAccountID > 0 && stickyAccountID == account.ID && s.concurrencyService != nil {
@@ -2142,7 +2166,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 				if selectErr != nil {
 					return nil, selectErr
 				}
-				s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerSessionSticky)
+				s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, traceExcludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerSessionSticky)
 				return selection, nil
 			}
 		}
@@ -2155,7 +2179,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 		if selectErr != nil {
 			return nil, selectErr
 		}
-		s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, stickyAccountID, "fallback_wait")
+		s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, traceExcludedIDs, requireCompact, requiredCapability, stickyAccountID, "fallback_wait")
 		return selection, nil
 	}
 
@@ -2204,7 +2228,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 								return nil, selectErr
 							}
 							_ = s.refreshStickySessionTTL(ctx, groupID, sessionHash, openaiStickySessionTTL)
-							s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, accountID, openAIAccountScheduleLayerSessionSticky)
+							s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, traceExcludedIDs, requireCompact, requiredCapability, accountID, openAIAccountScheduleLayerSessionSticky)
 							return selection, nil
 						}
 
@@ -2219,7 +2243,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 							if selectErr != nil {
 								return nil, selectErr
 							}
-							s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, accountID, openAIAccountScheduleLayerSessionSticky)
+							s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, traceExcludedIDs, requireCompact, requiredCapability, accountID, openAIAccountScheduleLayerSessionSticky)
 							return selection, nil
 						}
 					}
@@ -2229,7 +2253,8 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 	}
 
 	// ============ Layer 1.5: Group primary account ============
-	if primaryAccount, _ := s.tryPrimaryAccountHitWithReason(ctx, group, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, requiredCapability); primaryAccount != nil {
+	primaryAccount, primaryReason := s.tryPrimaryAccountHitWithReason(ctx, group, groupID, sessionHash, requestedModel, excludedIDs, requireCompact, requiredCapability)
+	if primaryAccount != nil {
 		result, err := s.tryAcquireAccountSlot(ctx, primaryAccount.ID, primaryAccount.Concurrency)
 		if err == nil && result != nil && result.Acquired {
 			selection, selectErr := s.newAcquiredSelectionResult(ctx, primaryAccount, result.ReleaseFunc)
@@ -2239,7 +2264,7 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 			if sessionHash != "" {
 				_ = s.setStickySessionAccountID(ctx, groupID, sessionHash, primaryAccount.ID, openaiStickySessionTTL)
 			}
-			s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerGroupPrimary)
+			s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, traceExcludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerGroupPrimary)
 			s.persistPrimaryPromotionFromSelection(ctx, group, primaryAccount.ID, hadExcludedFailures)
 			return selection, nil
 		}
@@ -2255,10 +2280,13 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 			if selectErr != nil {
 				return nil, selectErr
 			}
-			s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerGroupPrimary)
+			s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, traceExcludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerGroupPrimary)
 			s.persistPrimaryPromotionFromSelection(ctx, group, primaryAccount.ID, hadExcludedFailures)
 			return selection, nil
 		}
+	} else if primaryReason != "" {
+		primaryBypassReason = primaryReason
+		excludedIDs = excludedIDsWithPrimaryBypass(excludedIDs, group, primaryReason)
 	}
 
 	// ============ Layer 2: Load-aware selection ============
@@ -2381,8 +2409,8 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 				if sessionHash != "" {
 					_ = s.setStickySessionAccountID(ctx, groupID, sessionHash, fresh.ID, openaiStickySessionTTL)
 				}
-				s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerLoadBalance)
-				s.persistPrimaryPromotionFromSelection(ctx, group, fresh.ID, hadExcludedFailures)
+				s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, traceExcludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerLoadBalance)
+				s.persistPrimaryPromotionFromSelection(ctx, group, fresh.ID, shouldPersistPrimaryPromotionAfterBypass(hadExcludedFailures, primaryBypassReason))
 				return selection, true, nil
 			}
 		}
@@ -2418,8 +2446,8 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 				if sessionHash != "" {
 					_ = s.setStickySessionAccountID(ctx, groupID, sessionHash, fresh.ID, openaiStickySessionTTL)
 				}
-				s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerLoadBalance)
-				s.persistPrimaryPromotionFromSelection(ctx, group, fresh.ID, hadExcludedFailures)
+				s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, traceExcludedIDs, requireCompact, requiredCapability, stickyAccountID, openAIAccountScheduleLayerLoadBalance)
+				s.persistPrimaryPromotionFromSelection(ctx, group, fresh.ID, shouldPersistPrimaryPromotionAfterBypass(hadExcludedFailures, primaryBypassReason))
 				return selection, nil
 			}
 		}
@@ -2466,8 +2494,8 @@ func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Contex
 		if err != nil {
 			return nil, err
 		}
-		s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, excludedIDs, requireCompact, requiredCapability, stickyAccountID, "fallback_wait")
-		s.persistPrimaryPromotionFromSelection(ctx, group, fresh.ID, hadExcludedFailures)
+		s.applyLegacyOpenAISimpleTrace(ctx, selection, group, groupID, requestedModel, traceExcludedIDs, requireCompact, requiredCapability, stickyAccountID, "fallback_wait")
+		s.persistPrimaryPromotionFromSelection(ctx, group, fresh.ID, shouldPersistPrimaryPromotionAfterBypass(hadExcludedFailures, primaryBypassReason))
 		return selection, nil
 	}
 

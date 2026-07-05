@@ -172,6 +172,7 @@ type openAIAccountRuntimeStats struct {
 type openAIAccountRuntimeStat struct {
 	errorRateEWMABits atomic.Uint64
 	ttftEWMABits      atomic.Uint64
+	ttftSampleCount   atomic.Int64
 }
 
 func newOpenAIAccountRuntimeStats() *openAIAccountRuntimeStats {
@@ -225,6 +226,7 @@ func (s *openAIAccountRuntimeStats) report(accountID int64, success bool, firstT
 	updateEWMAAtomic(&stat.errorRateEWMABits, errorSample, alpha)
 
 	if firstTokenMs != nil && *firstTokenMs > 0 {
+		stat.ttftSampleCount.Add(1)
 		ttft := float64(*firstTokenMs)
 		ttftBits := math.Float64bits(ttft)
 		for {
@@ -262,6 +264,21 @@ func (s *openAIAccountRuntimeStats) snapshot(accountID int64) (errorRate float64
 		return errorRate, 0, false
 	}
 	return errorRate, ttftValue, true
+}
+
+func (s *openAIAccountRuntimeStats) ttftSampleCount(accountID int64) int64 {
+	if s == nil || accountID <= 0 {
+		return 0
+	}
+	value, ok := s.accounts.Load(accountID)
+	if !ok {
+		return 0
+	}
+	stat, _ := value.(*openAIAccountRuntimeStat)
+	if stat == nil {
+		return 0
+	}
+	return stat.ttftSampleCount.Load()
 }
 
 func (s *openAIAccountRuntimeStats) size() int {
@@ -357,6 +374,7 @@ func (s *defaultOpenAIAccountScheduler) Select(
 			return selection, decision, nil
 		} else if reason != "" {
 			primaryBypassReason = reason
+			req.ExcludedIDs = excludedIDsWithPrimaryBypass(req.ExcludedIDs, group, reason)
 		}
 	}
 
@@ -396,6 +414,7 @@ func (s *defaultOpenAIAccountScheduler) Select(
 			return selection, decision, nil
 		} else if reason != "" {
 			primaryBypassReason = reason
+			req.ExcludedIDs = excludedIDsWithPrimaryBypass(req.ExcludedIDs, group, reason)
 		}
 	}
 
@@ -424,7 +443,7 @@ func (s *defaultOpenAIAccountScheduler) Select(
 		}
 		attachPrimaryTrace(selection.ScheduleTrace, group, false, primaryBypassReason)
 		s.service.fillPrimaryTraceCandidateName(ctx, selection.ScheduleTrace, group)
-		s.service.persistPrimaryPromotionFromSelection(ctx, group, selection.Account.ID, hadExcludedFailures)
+		s.service.persistPrimaryPromotionFromSelection(ctx, group, selection.Account.ID, shouldPersistPrimaryPromotionAfterBypass(hadExcludedFailures, primaryBypassReason))
 	}
 	return selection, decision, nil
 }
@@ -450,6 +469,17 @@ func (s *defaultOpenAIAccountScheduler) trySelectPrimaryAccount(
 	)
 	if primaryAccount == nil {
 		return nil, false, bypassReason, nil
+	}
+	escapeCfg := s.service.openAIStickyEscapeConfig()
+	if reason, errorRate, ttft, shouldEscape := s.shouldEscapeStickyAccount(primaryAccount.ID, escapeCfg); shouldEscape &&
+		(reason != "ttft" || s.stats.ttftSampleCount(primaryAccount.ID) >= accountQualityMinSamples) {
+		slog.Info("primary_escape_triggered",
+			"account_id", primaryAccount.ID,
+			"reason", reason,
+			"error_rate", errorRate,
+			"ttft", ttft,
+		)
+		return nil, false, groupPrimaryBypassReasonQualityEscape, nil
 	}
 	result, acquireErr := s.service.tryAcquireAccountSlot(ctx, primaryAccount.ID, primaryAccount.Concurrency)
 	if acquireErr != nil {

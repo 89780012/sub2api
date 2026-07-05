@@ -28,6 +28,7 @@ const (
 	groupPrimaryBypassReasonGroupMismatch              = "primary_group_mismatch"
 	groupPrimaryBypassReasonChannelRestricted          = "primary_channel_restricted"
 	groupPrimaryBypassReasonSlotBusy                   = "primary_slot_busy"
+	groupPrimaryBypassReasonQualityEscape              = "primary_quality_escape"
 )
 
 type groupPrimaryCandidate struct {
@@ -111,6 +112,26 @@ func (g *Group) shouldPersistPrimaryPromotion(promotedAccountID int64) bool {
 	default:
 		return false
 	}
+}
+
+func shouldPersistPrimaryPromotionAfterBypass(hadExcludedFailures bool, bypassReason string) bool {
+	return hadExcludedFailures || strings.TrimSpace(bypassReason) == groupPrimaryBypassReasonQualityEscape
+}
+
+func excludedIDsWithPrimaryBypass(excludedIDs map[int64]struct{}, group *Group, bypassReason string) map[int64]struct{} {
+	if strings.TrimSpace(bypassReason) != groupPrimaryBypassReasonQualityEscape {
+		return excludedIDs
+	}
+	primaryAccountID := group.currentPreferredPrimaryAccountID()
+	if primaryAccountID <= 0 {
+		return excludedIDs
+	}
+	next := make(map[int64]struct{}, len(excludedIDs)+1)
+	for id := range excludedIDs {
+		next[id] = struct{}{}
+	}
+	next[primaryAccountID] = struct{}{}
+	return next
 }
 
 func (g *Group) shouldBypassPrimaryCooldown(lastSwitchedAt time.Time) bool {

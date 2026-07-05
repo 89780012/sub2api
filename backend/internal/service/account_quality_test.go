@@ -183,6 +183,28 @@ func TestShouldEscapeStickyByAccountQualityIgnoresSmallSamples(t *testing.T) {
 	require.Empty(t, reason)
 }
 
+func TestShouldEscapePrimaryByAccountQualityRequiresSlowStreakForQualityScore(t *testing.T) {
+	escape, reason := shouldEscapePrimaryByAccountQuality(&AccountQualitySnapshot{
+		TotalRequests:         accountQualityMinSamples,
+		RecentSuccessRate:     1,
+		EffectiveQualityScore: 0.68,
+		QualityScore:          0.68,
+		SlowStreak:            1,
+	})
+	require.False(t, escape)
+	require.Empty(t, reason)
+
+	escape, reason = shouldEscapePrimaryByAccountQuality(&AccountQualitySnapshot{
+		TotalRequests:         accountQualityMinSamples,
+		RecentSuccessRate:     1,
+		EffectiveQualityScore: 0.68,
+		QualityScore:          0.68,
+		SlowStreak:            3,
+	})
+	require.True(t, escape)
+	require.Equal(t, "quality_score", reason)
+}
+
 func TestCompareAccountsByQualityPrefersLowerPenaltyWhenScoresEqual(t *testing.T) {
 	a := &Account{ID: 1}
 	b := &Account{ID: 2}
