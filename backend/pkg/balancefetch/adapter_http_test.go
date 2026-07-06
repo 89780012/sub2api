@@ -152,6 +152,72 @@ func TestFetchNewAPISiteUsesAccessTokenFlow(t *testing.T) {
 	}
 }
 
+func TestFetchNewAPISiteUsesCookieFlow(t *testing.T) {
+	loginCalled := false
+	const cookie = "session=abc; user=42"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/user/login":
+			loginCalled = true
+			http.Error(w, "unexpected login", http.StatusTeapot)
+		case "/api/user/self":
+			requireCookie(t, r, cookie)
+			writeJSON(t, w, map[string]any{
+				"success": true,
+				"data": map[string]any{
+					"id":           42,
+					"username":     "new@example.com",
+					"display_name": "New",
+					"group":        "default",
+					"quota":        100,
+					"used_quota":   30,
+				},
+			})
+		case "/api/user/self/groups":
+			requireCookie(t, r, cookie)
+			if got := r.Header.Get("New-Api-User"); got != "42" {
+				t.Fatalf("New-Api-User = %q, want 42", got)
+			}
+			writeJSON(t, w, map[string]any{
+				"success": true,
+				"data": map[string]any{
+					"plus": map[string]any{"desc": "Plus", "ratio": 0.08},
+				},
+			})
+		case "/api/token/":
+			requireCookie(t, r, cookie)
+			if got := r.Header.Get("New-Api-User"); got != "42" {
+				t.Fatalf("New-Api-User = %q, want 42", got)
+			}
+			writeJSON(t, w, map[string]any{
+				"success": true,
+				"data":    map[string]any{"items": []map[string]any{}},
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	out, err := fetchNewAPISite(context.Background(), siteConfig{
+		Platform:    platformNewAPI,
+		Name:        "new",
+		BaseURL:     server.URL,
+		AuthMode:    "cookie",
+		AccessToken: "Cookie: " + cookie,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loginCalled {
+		t.Fatal("login endpoint was called in cookie mode")
+	}
+	if out.Account.ID != "42" {
+		t.Fatalf("account id = %q, want 42", out.Account.ID)
+	}
+}
+
 func TestFetchSub2APISiteUsesEndpointFlow(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -322,5 +388,12 @@ func requireBearer(t *testing.T, r *http.Request, token string) {
 	t.Helper()
 	if got := r.Header.Get("Authorization"); got != "Bearer "+token {
 		t.Fatalf("Authorization = %q, want Bearer %s", got, token)
+	}
+}
+
+func requireCookie(t *testing.T, r *http.Request, cookie string) {
+	t.Helper()
+	if got := r.Header.Get("Cookie"); got != cookie {
+		t.Fatalf("Cookie = %q, want %q", got, cookie)
 	}
 }

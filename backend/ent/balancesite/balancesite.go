@@ -165,6 +165,7 @@ const DefaultAuthMode = AuthModePassword
 const (
 	AuthModePassword    AuthMode = "password"
 	AuthModeAccessToken AuthMode = "access_token"
+	AuthModeCookie      AuthMode = "cookie"
 )
 
 func (am AuthMode) String() string {
@@ -174,7 +175,7 @@ func (am AuthMode) String() string {
 // AuthModeValidator is a validator for the "auth_mode" field enum values. It is called by the builders before save.
 func AuthModeValidator(am AuthMode) error {
 	switch am {
-	case AuthModePassword, AuthModeAccessToken:
+	case AuthModePassword, AuthModeAccessToken, AuthModeCookie:
 		return nil
 	default:
 		return fmt.Errorf("balancesite: invalid enum value for auth_mode field: %q", am)

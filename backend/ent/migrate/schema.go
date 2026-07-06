@@ -526,7 +526,7 @@ var (
 		{Name: "platform", Type: field.TypeEnum, Enums: []string{"newapi", "sub2api"}},
 		{Name: "name", Type: field.TypeString, Size: 100},
 		{Name: "base_url", Type: field.TypeString, Size: 500},
-		{Name: "auth_mode", Type: field.TypeEnum, Enums: []string{"password", "access_token"}, Default: "password"},
+		{Name: "auth_mode", Type: field.TypeEnum, Enums: []string{"password", "access_token", "cookie"}, Default: "password"},
 		{Name: "username", Type: field.TypeString, Size: 255, Default: ""},
 		{Name: "email", Type: field.TypeString, Size: 255, Default: ""},
 		{Name: "password_encrypted", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},

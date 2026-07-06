@@ -936,7 +936,7 @@ export interface TempUnschedulableStatus {
 }
 
 export type BalanceSitePlatform = 'newapi' | 'sub2api'
-export type BalanceSiteAuthMode = 'password' | 'access_token'
+export type BalanceSiteAuthMode = 'password' | 'access_token' | 'cookie'
 export type ExternalBalanceMatchStatus = 'unmatched' | 'matched' | 'ambiguous' | 'manual' | string
 
 export interface ExternalBalanceAmount {

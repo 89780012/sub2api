@@ -20,6 +20,7 @@ const (
 
 	BalanceAuthModePassword    = "password"
 	BalanceAuthModeAccessToken = "access_token"
+	BalanceAuthModeCookie      = "cookie"
 
 	BalanceRefreshStatusSuccess = "success"
 	BalanceRefreshStatusError   = "error"
@@ -204,9 +205,9 @@ func (s *BalanceSnapshotService) CreateSite(ctx context.Context, input BalanceSi
 	if err != nil {
 		return nil, err
 	}
-	if site.AuthMode == BalanceAuthModeAccessToken {
+	if site.AuthMode == BalanceAuthModeAccessToken || site.AuthMode == BalanceAuthModeCookie {
 		if input.AccessToken == nil || strings.TrimSpace(*input.AccessToken) == "" {
-			return nil, infraerrors.BadRequest("BALANCE_SITE_ACCESS_TOKEN_REQUIRED", "access token is required")
+			return nil, infraerrors.BadRequest("BALANCE_SITE_ACCESS_TOKEN_REQUIRED", "access token or cookie is required")
 		}
 		encrypted, err := s.encryptor.Encrypt(strings.TrimSpace(*input.AccessToken))
 		if err != nil {
@@ -260,8 +261,8 @@ func (s *BalanceSnapshotService) UpdateSite(ctx context.Context, id int64, input
 	if site.AuthMode == BalanceAuthModePassword && site.PasswordEncrypted == "" {
 		return nil, infraerrors.BadRequest("BALANCE_SITE_PASSWORD_REQUIRED", "password is required")
 	}
-	if site.AuthMode == BalanceAuthModeAccessToken && site.AccessTokenEncrypted == "" {
-		return nil, infraerrors.BadRequest("BALANCE_SITE_ACCESS_TOKEN_REQUIRED", "access token is required")
+	if (site.AuthMode == BalanceAuthModeAccessToken || site.AuthMode == BalanceAuthModeCookie) && site.AccessTokenEncrypted == "" {
+		return nil, infraerrors.BadRequest("BALANCE_SITE_ACCESS_TOKEN_REQUIRED", "access token or cookie is required")
 	}
 	if err := s.repo.UpdateSite(ctx, site); err != nil {
 		return nil, err
@@ -357,10 +358,10 @@ func (s *BalanceSnapshotService) RefreshSite(ctx context.Context, siteID int64) 
 		Username: site.Username,
 		Email:    site.Email,
 	}
-	if site.AuthMode == BalanceAuthModeAccessToken {
+	if site.AuthMode == BalanceAuthModeAccessToken || site.AuthMode == BalanceAuthModeCookie {
 		accessToken, err := s.encryptor.Decrypt(site.AccessTokenEncrypted)
 		if err != nil {
-			_ = s.repo.UpdateSiteRefreshStatus(ctx, siteID, BalanceRefreshStatusError, "decrypt access token failed", nil)
+			_ = s.repo.UpdateSiteRefreshStatus(ctx, siteID, BalanceRefreshStatusError, "decrypt access token or cookie failed", nil)
 			return nil, err
 		}
 		fetchConfig.AccessToken = accessToken
@@ -412,8 +413,14 @@ func (s *BalanceSnapshotService) normalizeSiteInput(input BalanceSiteInput, exis
 	if site.AuthMode == "" {
 		site.AuthMode = BalanceAuthModePassword
 	}
-	if site.AuthMode != BalanceAuthModePassword && site.AuthMode != BalanceAuthModeAccessToken {
+	if site.AuthMode != BalanceAuthModePassword && site.AuthMode != BalanceAuthModeAccessToken && site.AuthMode != BalanceAuthModeCookie {
 		return nil, infraerrors.BadRequest("BALANCE_SITE_AUTH_MODE_INVALID", "invalid balance site auth mode")
+	}
+	if site.Platform == BalancePlatformNewAPI && site.AuthMode == BalanceAuthModeAccessToken {
+		site.AuthMode = BalanceAuthModeCookie
+	}
+	if site.Platform == BalancePlatformSub2API && site.AuthMode == BalanceAuthModeCookie {
+		return nil, infraerrors.BadRequest("BALANCE_SITE_AUTH_MODE_INVALID", "sub2api does not support cookie auth mode")
 	}
 	if strings.TrimSpace(input.Name) != "" {
 		site.Name = strings.TrimSpace(input.Name)

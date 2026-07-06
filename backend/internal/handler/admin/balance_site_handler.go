@@ -20,7 +20,7 @@ type balanceSiteRequest struct {
 	Platform               string  `json:"platform" binding:"required,oneof=newapi sub2api"`
 	Name                   string  `json:"name" binding:"required"`
 	BaseURL                string  `json:"base_url" binding:"required"`
-	AuthMode               string  `json:"auth_mode" binding:"omitempty,oneof=password access_token"`
+	AuthMode               string  `json:"auth_mode" binding:"omitempty,oneof=password access_token cookie"`
 	Username               string  `json:"username"`
 	Email                  string  `json:"email"`
 	Password               *string `json:"password"`

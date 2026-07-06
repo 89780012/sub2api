@@ -39,7 +39,7 @@
               <span v-if="site.last_refresh_at">{{ formatDateTime(site.last_refresh_at) }}</span>
               <span>{{ authModeLabel(site.auth_mode) }}</span>
               <span v-if="site.password_configured">{{ t('admin.accounts.balanceSync.passwordConfigured') }}</span>
-              <span v-if="site.access_token_configured">{{ t('admin.accounts.balanceSync.accessTokenConfigured') }}</span>
+              <span v-if="site.access_token_configured">{{ secretConfiguredLabel(site.auth_mode) }}</span>
             </div>
             <div v-if="site.last_refresh_error" class="mt-1 truncate text-xs text-rose-600 dark:text-rose-400">
               {{ site.last_refresh_error }}
@@ -85,7 +85,8 @@
             <span class="form-label">{{ t('admin.accounts.balanceSync.authMode') }}</span>
             <select v-model="form.auth_mode" class="form-input">
               <option value="password">{{ t('admin.accounts.balanceSync.authModePassword') }}</option>
-              <option value="access_token">{{ t('admin.accounts.balanceSync.authModeAccessToken') }}</option>
+              <option v-if="form.platform === 'sub2api'" value="access_token">{{ t('admin.accounts.balanceSync.authModeAccessToken') }}</option>
+              <option v-if="form.platform === 'newapi'" value="cookie">{{ t('admin.accounts.balanceSync.authModeCookie') }}</option>
             </select>
           </label>
           <div v-if="form.auth_mode === 'password'" class="grid gap-3 md:grid-cols-2">
@@ -114,13 +115,13 @@
           <div v-else class="grid gap-3 md:grid-cols-2">
             <label class="space-y-1 md:col-span-2">
               <span class="form-label">
-                {{ t('admin.accounts.balanceSync.accessToken') }}
-                <span v-if="editingId" class="text-xs font-normal text-gray-400">{{ t('admin.accounts.balanceSync.accessTokenKeepHint') }}</span>
+                {{ secretInputLabel(form.auth_mode) }}
+                <span v-if="editingId" class="text-xs font-normal text-gray-400">{{ secretKeepHint(form.auth_mode) }}</span>
               </span>
               <textarea
                 v-model="form.access_token"
                 class="form-input min-h-24 font-mono text-xs"
-                :required="!editingId && form.auth_mode === 'access_token'"
+                :required="!editingId"
                 autocomplete="off"
                 spellcheck="false"
               />
@@ -327,7 +328,7 @@ const payloadFromForm = (): BalanceSitePayload => {
   if (form.auth_mode === 'password' && form.password && form.password.trim()) {
     payload.password = form.password
   }
-  if (form.auth_mode === 'access_token' && form.access_token && form.access_token.trim()) {
+  if (form.auth_mode !== 'password' && form.access_token && form.access_token.trim()) {
     payload.access_token = form.access_token.trim()
   }
   return payload
@@ -374,6 +375,7 @@ const saveSite = async () => {
       : await adminAPI.balanceSites.create(payload)
     editingId.value = site.id
     form.password = ''
+    form.access_token = ''
     await loadSites()
     appStore.showSuccess(t('common.saved'))
     emit('updated')
@@ -505,9 +507,27 @@ const refreshStatusLabel = (status: string) => {
 }
 
 const authModeLabel = (mode?: string) => {
-  return mode === 'access_token'
-    ? t('admin.accounts.balanceSync.authModeAccessToken')
-    : t('admin.accounts.balanceSync.authModePassword')
+  if (mode === 'access_token') return t('admin.accounts.balanceSync.authModeAccessToken')
+  if (mode === 'cookie') return t('admin.accounts.balanceSync.authModeCookie')
+  return t('admin.accounts.balanceSync.authModePassword')
+}
+
+const secretInputLabel = (mode?: string) => {
+  return mode === 'cookie'
+    ? t('admin.accounts.balanceSync.cookie')
+    : t('admin.accounts.balanceSync.accessToken')
+}
+
+const secretKeepHint = (mode?: string) => {
+  return mode === 'cookie'
+    ? t('admin.accounts.balanceSync.cookieKeepHint')
+    : t('admin.accounts.balanceSync.accessTokenKeepHint')
+}
+
+const secretConfiguredLabel = (mode?: string) => {
+  return mode === 'cookie'
+    ? t('admin.accounts.balanceSync.cookieConfigured')
+    : t('admin.accounts.balanceSync.accessTokenConfigured')
 }
 
 const snapshotMatchClass = (status: string) => {
@@ -520,6 +540,15 @@ const snapshotMatchClass = (status: string) => {
 watch(() => props.show, (show) => {
   if (show) {
     loadAll()
+  }
+})
+
+watch(() => form.platform, (platform) => {
+  if (platform === 'newapi' && form.auth_mode === 'access_token') {
+    form.auth_mode = 'cookie'
+  }
+  if (platform === 'sub2api' && form.auth_mode === 'cookie') {
+    form.auth_mode = 'access_token'
   }
 })
 </script>

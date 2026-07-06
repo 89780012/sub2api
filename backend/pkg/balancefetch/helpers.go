@@ -271,12 +271,24 @@ func useAccessTokenMode(authMode string) bool {
 	return strings.EqualFold(strings.TrimSpace(authMode), "access_token")
 }
 
+func useCookieMode(authMode string) bool {
+	return strings.EqualFold(strings.TrimSpace(authMode), "cookie")
+}
+
 func normalizeBearerToken(token string) string {
 	token = strings.TrimSpace(token)
 	if len(token) > 7 && strings.EqualFold(token[:7], "bearer ") {
 		return strings.TrimSpace(token[7:])
 	}
 	return token
+}
+
+func normalizeCookieHeader(cookie string) string {
+	cookie = strings.TrimSpace(cookie)
+	if len(cookie) > 7 && strings.EqualFold(cookie[:7], "cookie:") {
+		return strings.TrimSpace(cookie[7:])
+	}
+	return cookie
 }
 
 func quotaBalance(limit, used, remain float64, unlimited bool) *balance {
