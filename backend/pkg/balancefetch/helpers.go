@@ -267,6 +267,18 @@ func intPtr(v int) *int {
 	return &v
 }
 
+func useAccessTokenMode(authMode string) bool {
+	return strings.EqualFold(strings.TrimSpace(authMode), "access_token")
+}
+
+func normalizeBearerToken(token string) string {
+	token = strings.TrimSpace(token)
+	if len(token) > 7 && strings.EqualFold(token[:7], "bearer ") {
+		return strings.TrimSpace(token[7:])
+	}
+	return token
+}
+
 func quotaBalance(limit, used, remain float64, unlimited bool) *balance {
 	return &balance{
 		Unit:      "quota",

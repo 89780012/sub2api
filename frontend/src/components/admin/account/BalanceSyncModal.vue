@@ -37,7 +37,9 @@
             <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
               <span>{{ refreshStatusLabel(site.last_refresh_status) }}</span>
               <span v-if="site.last_refresh_at">{{ formatDateTime(site.last_refresh_at) }}</span>
+              <span>{{ authModeLabel(site.auth_mode) }}</span>
               <span v-if="site.password_configured">{{ t('admin.accounts.balanceSync.passwordConfigured') }}</span>
+              <span v-if="site.access_token_configured">{{ t('admin.accounts.balanceSync.accessTokenConfigured') }}</span>
             </div>
             <div v-if="site.last_refresh_error" class="mt-1 truncate text-xs text-rose-600 dark:text-rose-400">
               {{ site.last_refresh_error }}
@@ -79,7 +81,14 @@
             <span class="form-label">{{ t('admin.accounts.balanceSync.baseUrl') }}</span>
             <input v-model.trim="form.base_url" class="form-input" required placeholder="https://example.com" />
           </label>
-          <div class="grid gap-3 md:grid-cols-2">
+          <label class="space-y-1">
+            <span class="form-label">{{ t('admin.accounts.balanceSync.authMode') }}</span>
+            <select v-model="form.auth_mode" class="form-input">
+              <option value="password">{{ t('admin.accounts.balanceSync.authModePassword') }}</option>
+              <option value="access_token">{{ t('admin.accounts.balanceSync.authModeAccessToken') }}</option>
+            </select>
+          </label>
+          <div v-if="form.auth_mode === 'password'" class="grid gap-3 md:grid-cols-2">
             <label class="space-y-1">
               <span class="form-label">{{ t('admin.accounts.balanceSync.username') }}</span>
               <input v-model.trim="form.username" class="form-input" autocomplete="username" />
@@ -89,15 +98,34 @@
               <input v-model.trim="form.email" class="form-input" type="email" autocomplete="email" />
             </label>
           </div>
-          <div class="grid gap-3 md:grid-cols-2">
+          <div v-if="form.auth_mode === 'password'" class="grid gap-3 md:grid-cols-2">
             <label class="space-y-1">
               <span class="form-label">
                 {{ t('common.password') }}
                 <span v-if="editingId" class="text-xs font-normal text-gray-400">{{ t('admin.accounts.balanceSync.passwordKeepHint') }}</span>
               </span>
-              <input v-model="form.password" class="form-input" type="password" :required="!editingId" autocomplete="new-password" />
+              <input v-model="form.password" class="form-input" type="password" :required="!editingId && form.auth_mode === 'password'" autocomplete="new-password" />
             </label>
             <label class="space-y-1">
+              <span class="form-label">{{ t('admin.accounts.balanceSync.refreshInterval') }}</span>
+              <input v-model.number="form.refresh_interval_minutes" class="form-input" type="number" min="5" step="1" />
+            </label>
+          </div>
+          <div v-else class="grid gap-3 md:grid-cols-2">
+            <label class="space-y-1 md:col-span-2">
+              <span class="form-label">
+                {{ t('admin.accounts.balanceSync.accessToken') }}
+                <span v-if="editingId" class="text-xs font-normal text-gray-400">{{ t('admin.accounts.balanceSync.accessTokenKeepHint') }}</span>
+              </span>
+              <textarea
+                v-model="form.access_token"
+                class="form-input min-h-24 font-mono text-xs"
+                :required="!editingId && form.auth_mode === 'access_token'"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </label>
+            <label class="space-y-1 md:col-span-2">
               <span class="form-label">{{ t('admin.accounts.balanceSync.refreshInterval') }}</span>
               <input v-model.number="form.refresh_interval_minutes" class="form-input" type="number" min="5" step="1" />
             </label>
@@ -246,9 +274,11 @@ const form = reactive<BalanceSitePayload>({
   platform: 'newapi',
   name: '',
   base_url: '',
+  auth_mode: 'password',
   username: '',
   email: '',
   password: '',
+  access_token: '',
   enabled: true,
   refresh_interval_minutes: 180
 })
@@ -258,9 +288,11 @@ const resetForm = () => {
   form.platform = 'newapi'
   form.name = ''
   form.base_url = ''
+  form.auth_mode = 'password'
   form.username = ''
   form.email = ''
   form.password = ''
+  form.access_token = ''
   form.enabled = true
   form.refresh_interval_minutes = 180
 }
@@ -270,9 +302,11 @@ const editSite = (site: BalanceSite) => {
   form.platform = site.platform
   form.name = site.name
   form.base_url = site.base_url
+  form.auth_mode = site.auth_mode || 'password'
   form.username = site.username || ''
   form.email = site.email || ''
   form.password = ''
+  form.access_token = ''
   form.enabled = site.enabled
   form.refresh_interval_minutes = site.refresh_interval_minutes || 180
   snapshotSiteId.value = site.id
@@ -284,13 +318,17 @@ const payloadFromForm = (): BalanceSitePayload => {
     platform: form.platform,
     name: form.name.trim(),
     base_url: form.base_url.trim(),
+    auth_mode: form.auth_mode || 'password',
     username: form.username?.trim() || undefined,
     email: form.email?.trim() || undefined,
     enabled: form.enabled,
     refresh_interval_minutes: Number(form.refresh_interval_minutes) || 180
   }
-  if (form.password && form.password.trim()) {
+  if (form.auth_mode === 'password' && form.password && form.password.trim()) {
     payload.password = form.password
+  }
+  if (form.auth_mode === 'access_token' && form.access_token && form.access_token.trim()) {
+    payload.access_token = form.access_token.trim()
   }
   return payload
 }
@@ -464,6 +502,12 @@ const refreshStatusLabel = (status: string) => {
   const key = `admin.accounts.balanceSync.refreshStatus.${status}`
   const label = t(key)
   return label === key ? status : label
+}
+
+const authModeLabel = (mode?: string) => {
+  return mode === 'access_token'
+    ? t('admin.accounts.balanceSync.authModeAccessToken')
+    : t('admin.accounts.balanceSync.authModePassword')
 }
 
 const snapshotMatchClass = (status: string) => {

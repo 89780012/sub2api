@@ -80,9 +80,18 @@ type sub2APISubscriptionItem struct {
 func fetchSub2APISite(ctx context.Context, site siteConfig) (*unifiedSite, error) {
 	client := &http.Client{Timeout: 30 * time.Second}
 
-	token, err := sub2APILogin(ctx, client, site)
-	if err != nil {
-		return nil, fmt.Errorf("login: %w", err)
+	token := ""
+	if useAccessTokenMode(site.AuthMode) {
+		token = normalizeBearerToken(site.AccessToken)
+		if token == "" {
+			return nil, fmt.Errorf("empty access token")
+		}
+	} else {
+		var err error
+		token, err = sub2APILogin(ctx, client, site)
+		if err != nil {
+			return nil, fmt.Errorf("login: %w", err)
+		}
 	}
 	me, err := sub2APIGetMe(ctx, client, site.BaseURL, token)
 	if err != nil {

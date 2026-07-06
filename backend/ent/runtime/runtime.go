@@ -581,33 +581,37 @@ func init() {
 		}
 	}()
 	// balancesiteDescUsername is the schema descriptor for username field.
-	balancesiteDescUsername := balancesiteFields[3].Descriptor()
+	balancesiteDescUsername := balancesiteFields[4].Descriptor()
 	// balancesite.DefaultUsername holds the default value on creation for the username field.
 	balancesite.DefaultUsername = balancesiteDescUsername.Default.(string)
 	// balancesite.UsernameValidator is a validator for the "username" field. It is called by the builders before save.
 	balancesite.UsernameValidator = balancesiteDescUsername.Validators[0].(func(string) error)
 	// balancesiteDescEmail is the schema descriptor for email field.
-	balancesiteDescEmail := balancesiteFields[4].Descriptor()
+	balancesiteDescEmail := balancesiteFields[5].Descriptor()
 	// balancesite.DefaultEmail holds the default value on creation for the email field.
 	balancesite.DefaultEmail = balancesiteDescEmail.Default.(string)
 	// balancesite.EmailValidator is a validator for the "email" field. It is called by the builders before save.
 	balancesite.EmailValidator = balancesiteDescEmail.Validators[0].(func(string) error)
 	// balancesiteDescPasswordEncrypted is the schema descriptor for password_encrypted field.
-	balancesiteDescPasswordEncrypted := balancesiteFields[5].Descriptor()
-	// balancesite.PasswordEncryptedValidator is a validator for the "password_encrypted" field. It is called by the builders before save.
-	balancesite.PasswordEncryptedValidator = balancesiteDescPasswordEncrypted.Validators[0].(func(string) error)
+	balancesiteDescPasswordEncrypted := balancesiteFields[6].Descriptor()
+	// balancesite.DefaultPasswordEncrypted holds the default value on creation for the password_encrypted field.
+	balancesite.DefaultPasswordEncrypted = balancesiteDescPasswordEncrypted.Default.(string)
+	// balancesiteDescAccessTokenEncrypted is the schema descriptor for access_token_encrypted field.
+	balancesiteDescAccessTokenEncrypted := balancesiteFields[7].Descriptor()
+	// balancesite.DefaultAccessTokenEncrypted holds the default value on creation for the access_token_encrypted field.
+	balancesite.DefaultAccessTokenEncrypted = balancesiteDescAccessTokenEncrypted.Default.(string)
 	// balancesiteDescEnabled is the schema descriptor for enabled field.
-	balancesiteDescEnabled := balancesiteFields[6].Descriptor()
+	balancesiteDescEnabled := balancesiteFields[8].Descriptor()
 	// balancesite.DefaultEnabled holds the default value on creation for the enabled field.
 	balancesite.DefaultEnabled = balancesiteDescEnabled.Default.(bool)
 	// balancesiteDescRefreshIntervalMinutes is the schema descriptor for refresh_interval_minutes field.
-	balancesiteDescRefreshIntervalMinutes := balancesiteFields[7].Descriptor()
+	balancesiteDescRefreshIntervalMinutes := balancesiteFields[9].Descriptor()
 	// balancesite.DefaultRefreshIntervalMinutes holds the default value on creation for the refresh_interval_minutes field.
 	balancesite.DefaultRefreshIntervalMinutes = balancesiteDescRefreshIntervalMinutes.Default.(int)
 	// balancesite.RefreshIntervalMinutesValidator is a validator for the "refresh_interval_minutes" field. It is called by the builders before save.
 	balancesite.RefreshIntervalMinutesValidator = balancesiteDescRefreshIntervalMinutes.Validators[0].(func(int) error)
 	// balancesiteDescLastRefreshStatus is the schema descriptor for last_refresh_status field.
-	balancesiteDescLastRefreshStatus := balancesiteFields[9].Descriptor()
+	balancesiteDescLastRefreshStatus := balancesiteFields[11].Descriptor()
 	// balancesite.DefaultLastRefreshStatus holds the default value on creation for the last_refresh_status field.
 	balancesite.DefaultLastRefreshStatus = balancesiteDescLastRefreshStatus.Default.(string)
 	// balancesite.LastRefreshStatusValidator is a validator for the "last_refresh_status" field. It is called by the builders before save.

@@ -31,10 +31,15 @@ func (BalanceSite) Fields() []ent.Field {
 		field.Enum("platform").Values("newapi", "sub2api"),
 		field.String("name").NotEmpty().MaxLen(100),
 		field.String("base_url").NotEmpty().MaxLen(500),
+		field.Enum("auth_mode").Values("password", "access_token").Default("password"),
 		field.String("username").Default("").MaxLen(255),
 		field.String("email").Default("").MaxLen(255),
 		field.String("password_encrypted").
-			NotEmpty().
+			Default("").
+			Sensitive().
+			SchemaType(map[string]string{dialect.Postgres: "text"}),
+		field.String("access_token_encrypted").
+			Default("").
 			Sensitive().
 			SchemaType(map[string]string{dialect.Postgres: "text"}),
 		field.Bool("enabled").Default(true),

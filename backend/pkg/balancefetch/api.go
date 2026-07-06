@@ -14,21 +14,25 @@ const (
 )
 
 type SiteConfig struct {
-	Platform Platform
-	Name     string
-	BaseURL  string
-	Username string
-	Email    string
-	Password string
+	Platform    Platform
+	Name        string
+	BaseURL     string
+	AuthMode    string
+	Username    string
+	Email       string
+	Password    string
+	AccessToken string
 }
 
 type siteConfig struct {
-	Platform platform
-	Name     string
-	BaseURL  string
-	Username string
-	Email    string
-	Password string
+	Platform    platform
+	Name        string
+	BaseURL     string
+	AuthMode    string
+	Username    string
+	Email       string
+	Password    string
+	AccessToken string
 }
 
 type Output = unifiedOutput
@@ -51,12 +55,14 @@ func FetchConfiguredSite(site SiteConfig) (*Site, error) {
 
 func FetchConfiguredSiteContext(ctx context.Context, site SiteConfig) (*Site, error) {
 	internal := siteConfig{
-		Platform: platform(site.Platform),
-		Name:     site.Name,
-		BaseURL:  site.BaseURL,
-		Username: site.Username,
-		Email:    site.Email,
-		Password: site.Password,
+		Platform:    platform(site.Platform),
+		Name:        site.Name,
+		BaseURL:     site.BaseURL,
+		AuthMode:    site.AuthMode,
+		Username:    site.Username,
+		Email:       site.Email,
+		Password:    site.Password,
+		AccessToken: site.AccessToken,
 	}
 	switch internal.Platform {
 	case platformNewAPI:

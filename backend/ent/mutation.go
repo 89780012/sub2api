@@ -11011,9 +11011,11 @@ type BalanceSiteMutation struct {
 	platform                    *balancesite.Platform
 	name                        *string
 	base_url                    *string
+	auth_mode                   *balancesite.AuthMode
 	username                    *string
 	email                       *string
 	password_encrypted          *string
+	access_token_encrypted      *string
 	enabled                     *bool
 	refresh_interval_minutes    *int
 	addrefresh_interval_minutes *int
@@ -11310,6 +11312,42 @@ func (m *BalanceSiteMutation) ResetBaseURL() {
 	m.base_url = nil
 }
 
+// SetAuthMode sets the "auth_mode" field.
+func (m *BalanceSiteMutation) SetAuthMode(bm balancesite.AuthMode) {
+	m.auth_mode = &bm
+}
+
+// AuthMode returns the value of the "auth_mode" field in the mutation.
+func (m *BalanceSiteMutation) AuthMode() (r balancesite.AuthMode, exists bool) {
+	v := m.auth_mode
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthMode returns the old "auth_mode" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldAuthMode(ctx context.Context) (v balancesite.AuthMode, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthMode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthMode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthMode: %w", err)
+	}
+	return oldValue.AuthMode, nil
+}
+
+// ResetAuthMode resets all changes to the "auth_mode" field.
+func (m *BalanceSiteMutation) ResetAuthMode() {
+	m.auth_mode = nil
+}
+
 // SetUsername sets the "username" field.
 func (m *BalanceSiteMutation) SetUsername(s string) {
 	m.username = &s
@@ -11416,6 +11454,42 @@ func (m *BalanceSiteMutation) OldPasswordEncrypted(ctx context.Context) (v strin
 // ResetPasswordEncrypted resets all changes to the "password_encrypted" field.
 func (m *BalanceSiteMutation) ResetPasswordEncrypted() {
 	m.password_encrypted = nil
+}
+
+// SetAccessTokenEncrypted sets the "access_token_encrypted" field.
+func (m *BalanceSiteMutation) SetAccessTokenEncrypted(s string) {
+	m.access_token_encrypted = &s
+}
+
+// AccessTokenEncrypted returns the value of the "access_token_encrypted" field in the mutation.
+func (m *BalanceSiteMutation) AccessTokenEncrypted() (r string, exists bool) {
+	v := m.access_token_encrypted
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccessTokenEncrypted returns the old "access_token_encrypted" field's value of the BalanceSite entity.
+// If the BalanceSite object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BalanceSiteMutation) OldAccessTokenEncrypted(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccessTokenEncrypted is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccessTokenEncrypted requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccessTokenEncrypted: %w", err)
+	}
+	return oldValue.AccessTokenEncrypted, nil
+}
+
+// ResetAccessTokenEncrypted resets all changes to the "access_token_encrypted" field.
+func (m *BalanceSiteMutation) ResetAccessTokenEncrypted() {
+	m.access_token_encrypted = nil
 }
 
 // SetEnabled sets the "enabled" field.
@@ -11786,7 +11860,7 @@ func (m *BalanceSiteMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BalanceSiteMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 15)
 	if m.created_at != nil {
 		fields = append(fields, balancesite.FieldCreatedAt)
 	}
@@ -11802,6 +11876,9 @@ func (m *BalanceSiteMutation) Fields() []string {
 	if m.base_url != nil {
 		fields = append(fields, balancesite.FieldBaseURL)
 	}
+	if m.auth_mode != nil {
+		fields = append(fields, balancesite.FieldAuthMode)
+	}
 	if m.username != nil {
 		fields = append(fields, balancesite.FieldUsername)
 	}
@@ -11810,6 +11887,9 @@ func (m *BalanceSiteMutation) Fields() []string {
 	}
 	if m.password_encrypted != nil {
 		fields = append(fields, balancesite.FieldPasswordEncrypted)
+	}
+	if m.access_token_encrypted != nil {
+		fields = append(fields, balancesite.FieldAccessTokenEncrypted)
 	}
 	if m.enabled != nil {
 		fields = append(fields, balancesite.FieldEnabled)
@@ -11844,12 +11924,16 @@ func (m *BalanceSiteMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case balancesite.FieldBaseURL:
 		return m.BaseURL()
+	case balancesite.FieldAuthMode:
+		return m.AuthMode()
 	case balancesite.FieldUsername:
 		return m.Username()
 	case balancesite.FieldEmail:
 		return m.Email()
 	case balancesite.FieldPasswordEncrypted:
 		return m.PasswordEncrypted()
+	case balancesite.FieldAccessTokenEncrypted:
+		return m.AccessTokenEncrypted()
 	case balancesite.FieldEnabled:
 		return m.Enabled()
 	case balancesite.FieldRefreshIntervalMinutes:
@@ -11879,12 +11963,16 @@ func (m *BalanceSiteMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldName(ctx)
 	case balancesite.FieldBaseURL:
 		return m.OldBaseURL(ctx)
+	case balancesite.FieldAuthMode:
+		return m.OldAuthMode(ctx)
 	case balancesite.FieldUsername:
 		return m.OldUsername(ctx)
 	case balancesite.FieldEmail:
 		return m.OldEmail(ctx)
 	case balancesite.FieldPasswordEncrypted:
 		return m.OldPasswordEncrypted(ctx)
+	case balancesite.FieldAccessTokenEncrypted:
+		return m.OldAccessTokenEncrypted(ctx)
 	case balancesite.FieldEnabled:
 		return m.OldEnabled(ctx)
 	case balancesite.FieldRefreshIntervalMinutes:
@@ -11939,6 +12027,13 @@ func (m *BalanceSiteMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetBaseURL(v)
 		return nil
+	case balancesite.FieldAuthMode:
+		v, ok := value.(balancesite.AuthMode)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthMode(v)
+		return nil
 	case balancesite.FieldUsername:
 		v, ok := value.(string)
 		if !ok {
@@ -11959,6 +12054,13 @@ func (m *BalanceSiteMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPasswordEncrypted(v)
+		return nil
+	case balancesite.FieldAccessTokenEncrypted:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccessTokenEncrypted(v)
 		return nil
 	case balancesite.FieldEnabled:
 		v, ok := value.(bool)
@@ -12089,6 +12191,9 @@ func (m *BalanceSiteMutation) ResetField(name string) error {
 	case balancesite.FieldBaseURL:
 		m.ResetBaseURL()
 		return nil
+	case balancesite.FieldAuthMode:
+		m.ResetAuthMode()
+		return nil
 	case balancesite.FieldUsername:
 		m.ResetUsername()
 		return nil
@@ -12097,6 +12202,9 @@ func (m *BalanceSiteMutation) ResetField(name string) error {
 		return nil
 	case balancesite.FieldPasswordEncrypted:
 		m.ResetPasswordEncrypted()
+		return nil
+	case balancesite.FieldAccessTokenEncrypted:
+		m.ResetAccessTokenEncrypted()
 		return nil
 	case balancesite.FieldEnabled:
 		m.ResetEnabled()

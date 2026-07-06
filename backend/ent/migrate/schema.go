@@ -526,9 +526,11 @@ var (
 		{Name: "platform", Type: field.TypeEnum, Enums: []string{"newapi", "sub2api"}},
 		{Name: "name", Type: field.TypeString, Size: 100},
 		{Name: "base_url", Type: field.TypeString, Size: 500},
+		{Name: "auth_mode", Type: field.TypeEnum, Enums: []string{"password", "access_token"}, Default: "password"},
 		{Name: "username", Type: field.TypeString, Size: 255, Default: ""},
 		{Name: "email", Type: field.TypeString, Size: 255, Default: ""},
-		{Name: "password_encrypted", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "password_encrypted", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "access_token_encrypted", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
 		{Name: "refresh_interval_minutes", Type: field.TypeInt, Default: 180},
 		{Name: "last_refresh_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
@@ -544,7 +546,7 @@ var (
 			{
 				Name:    "balancesite_enabled_last_refresh_at",
 				Unique:  false,
-				Columns: []*schema.Column{BalanceSitesColumns[9], BalanceSitesColumns[11]},
+				Columns: []*schema.Column{BalanceSitesColumns[11], BalanceSitesColumns[13]},
 			},
 			{
 				Name:    "balancesite_platform",

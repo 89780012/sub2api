@@ -84,6 +84,74 @@ func TestFetchNewAPISiteUsesEndpointFlow(t *testing.T) {
 	}
 }
 
+func TestFetchNewAPISiteUsesAccessTokenFlow(t *testing.T) {
+	loginCalled := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/user/login":
+			loginCalled = true
+			http.Error(w, "unexpected login", http.StatusTeapot)
+		case "/api/user/self":
+			requireBearer(t, r, "new-token")
+			if got := r.Header.Get("New-Api-User"); got != "" {
+				t.Fatalf("New-Api-User on self = %q, want empty before user id discovery", got)
+			}
+			writeJSON(t, w, map[string]any{
+				"success": true,
+				"data": map[string]any{
+					"id":           42,
+					"username":     "new@example.com",
+					"display_name": "New",
+					"group":        "default",
+					"quota":        100,
+					"used_quota":   30,
+				},
+			})
+		case "/api/user/self/groups":
+			requireBearer(t, r, "new-token")
+			if got := r.Header.Get("New-Api-User"); got != "42" {
+				t.Fatalf("New-Api-User = %q, want 42", got)
+			}
+			writeJSON(t, w, map[string]any{
+				"success": true,
+				"data": map[string]any{
+					"plus": map[string]any{"desc": "Plus", "ratio": 0.08},
+				},
+			})
+		case "/api/token/":
+			requireBearer(t, r, "new-token")
+			if got := r.Header.Get("New-Api-User"); got != "42" {
+				t.Fatalf("New-Api-User = %q, want 42", got)
+			}
+			writeJSON(t, w, map[string]any{
+				"success": true,
+				"data":    map[string]any{"items": []map[string]any{}},
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	out, err := fetchNewAPISite(context.Background(), siteConfig{
+		Platform:    platformNewAPI,
+		Name:        "new",
+		BaseURL:     server.URL,
+		AuthMode:    "access_token",
+		AccessToken: "Bearer new-token",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loginCalled {
+		t.Fatal("login endpoint was called in access token mode")
+	}
+	if out.Account.ID != "42" {
+		t.Fatalf("account id = %q, want 42", out.Account.ID)
+	}
+}
+
 func TestFetchSub2APISiteUsesEndpointFlow(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -94,7 +162,7 @@ func TestFetchSub2APISiteUsesEndpointFlow(t *testing.T) {
 				"data": map[string]any{"access_token": "token"},
 			})
 		case "/api/v1/auth/me":
-			requireBearer(t, r)
+			requireBearer(t, r, "token")
 			writeJSON(t, w, map[string]any{
 				"code": 0,
 				"data": map[string]any{
@@ -109,7 +177,7 @@ func TestFetchSub2APISiteUsesEndpointFlow(t *testing.T) {
 				},
 			})
 		case "/api/v1/keys":
-			requireBearer(t, r)
+			requireBearer(t, r, "token")
 			writeJSON(t, w, map[string]any{
 				"code": 0,
 				"data": map[string]any{
@@ -125,7 +193,7 @@ func TestFetchSub2APISiteUsesEndpointFlow(t *testing.T) {
 				},
 			})
 		case "/api/v1/groups/available":
-			requireBearer(t, r)
+			requireBearer(t, r, "token")
 			writeJSON(t, w, map[string]any{
 				"code": 0,
 				"data": []map[string]any{
@@ -143,7 +211,7 @@ func TestFetchSub2APISiteUsesEndpointFlow(t *testing.T) {
 				},
 			})
 		case "/api/v1/subscriptions/active":
-			requireBearer(t, r)
+			requireBearer(t, r, "token")
 			writeJSON(t, w, map[string]any{
 				"code": 0,
 				"data": []map[string]any{
@@ -184,6 +252,65 @@ func TestFetchSub2APISiteUsesEndpointFlow(t *testing.T) {
 	}
 }
 
+func TestFetchSub2APISiteUsesAccessTokenFlow(t *testing.T) {
+	loginCalled := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/v1/auth/login":
+			loginCalled = true
+			http.Error(w, "unexpected login", http.StatusTeapot)
+		case "/api/v1/auth/me":
+			requireBearer(t, r, "copied-token")
+			writeJSON(t, w, map[string]any{
+				"code": 0,
+				"data": map[string]any{
+					"id":              99,
+					"email":           "sub@example.com",
+					"status":          "active",
+					"balance":         12.5,
+					"total_recharged": 20,
+					"concurrency":     10,
+					"rpm_limit":       0,
+					"role":            "user",
+				},
+			})
+		case "/api/v1/keys":
+			requireBearer(t, r, "copied-token")
+			writeJSON(t, w, map[string]any{
+				"code": 0,
+				"data": map[string]any{"items": []map[string]any{}},
+			})
+		case "/api/v1/groups/available":
+			requireBearer(t, r, "copied-token")
+			writeJSON(t, w, map[string]any{"code": 0, "data": []map[string]any{}})
+		case "/api/v1/subscriptions/active":
+			requireBearer(t, r, "copied-token")
+			writeJSON(t, w, map[string]any{"code": 0, "data": []map[string]any{}})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	out, err := fetchSub2APISite(context.Background(), siteConfig{
+		Platform:    platformSub2API,
+		Name:        "sub",
+		BaseURL:     server.URL,
+		AuthMode:    "access_token",
+		AccessToken: "copied-token",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loginCalled {
+		t.Fatal("login endpoint was called in access token mode")
+	}
+	if out.Account.Login != "sub@example.com" {
+		t.Fatalf("account login = %q, want sub@example.com", out.Account.Login)
+	}
+}
+
 func writeJSON(t *testing.T, w http.ResponseWriter, value any) {
 	t.Helper()
 	if err := json.NewEncoder(w).Encode(value); err != nil {
@@ -191,9 +318,9 @@ func writeJSON(t *testing.T, w http.ResponseWriter, value any) {
 	}
 }
 
-func requireBearer(t *testing.T, r *http.Request) {
+func requireBearer(t *testing.T, r *http.Request, token string) {
 	t.Helper()
-	if got := r.Header.Get("Authorization"); got != "Bearer token" {
-		t.Fatalf("Authorization = %q, want Bearer token", got)
+	if got := r.Header.Get("Authorization"); got != "Bearer "+token {
+		t.Fatalf("Authorization = %q, want Bearer %s", got, token)
 	}
 }

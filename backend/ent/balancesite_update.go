@@ -78,6 +78,20 @@ func (_u *BalanceSiteUpdate) SetNillableBaseURL(v *string) *BalanceSiteUpdate {
 	return _u
 }
 
+// SetAuthMode sets the "auth_mode" field.
+func (_u *BalanceSiteUpdate) SetAuthMode(v balancesite.AuthMode) *BalanceSiteUpdate {
+	_u.mutation.SetAuthMode(v)
+	return _u
+}
+
+// SetNillableAuthMode sets the "auth_mode" field if the given value is not nil.
+func (_u *BalanceSiteUpdate) SetNillableAuthMode(v *balancesite.AuthMode) *BalanceSiteUpdate {
+	if v != nil {
+		_u.SetAuthMode(*v)
+	}
+	return _u
+}
+
 // SetUsername sets the "username" field.
 func (_u *BalanceSiteUpdate) SetUsername(v string) *BalanceSiteUpdate {
 	_u.mutation.SetUsername(v)
@@ -116,6 +130,20 @@ func (_u *BalanceSiteUpdate) SetPasswordEncrypted(v string) *BalanceSiteUpdate {
 func (_u *BalanceSiteUpdate) SetNillablePasswordEncrypted(v *string) *BalanceSiteUpdate {
 	if v != nil {
 		_u.SetPasswordEncrypted(*v)
+	}
+	return _u
+}
+
+// SetAccessTokenEncrypted sets the "access_token_encrypted" field.
+func (_u *BalanceSiteUpdate) SetAccessTokenEncrypted(v string) *BalanceSiteUpdate {
+	_u.mutation.SetAccessTokenEncrypted(v)
+	return _u
+}
+
+// SetNillableAccessTokenEncrypted sets the "access_token_encrypted" field if the given value is not nil.
+func (_u *BalanceSiteUpdate) SetNillableAccessTokenEncrypted(v *string) *BalanceSiteUpdate {
+	if v != nil {
+		_u.SetAccessTokenEncrypted(*v)
 	}
 	return _u
 }
@@ -339,6 +367,11 @@ func (_u *BalanceSiteUpdate) check() error {
 			return &ValidationError{Name: "base_url", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.base_url": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.AuthMode(); ok {
+		if err := balancesite.AuthModeValidator(v); err != nil {
+			return &ValidationError{Name: "auth_mode", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.auth_mode": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Username(); ok {
 		if err := balancesite.UsernameValidator(v); err != nil {
 			return &ValidationError{Name: "username", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.username": %w`, err)}
@@ -347,11 +380,6 @@ func (_u *BalanceSiteUpdate) check() error {
 	if v, ok := _u.mutation.Email(); ok {
 		if err := balancesite.EmailValidator(v); err != nil {
 			return &ValidationError{Name: "email", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.email": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.PasswordEncrypted(); ok {
-		if err := balancesite.PasswordEncryptedValidator(v); err != nil {
-			return &ValidationError{Name: "password_encrypted", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.password_encrypted": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.RefreshIntervalMinutes(); ok {
@@ -391,6 +419,9 @@ func (_u *BalanceSiteUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if value, ok := _u.mutation.BaseURL(); ok {
 		_spec.SetField(balancesite.FieldBaseURL, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.AuthMode(); ok {
+		_spec.SetField(balancesite.FieldAuthMode, field.TypeEnum, value)
+	}
 	if value, ok := _u.mutation.Username(); ok {
 		_spec.SetField(balancesite.FieldUsername, field.TypeString, value)
 	}
@@ -399,6 +430,9 @@ func (_u *BalanceSiteUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if value, ok := _u.mutation.PasswordEncrypted(); ok {
 		_spec.SetField(balancesite.FieldPasswordEncrypted, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.AccessTokenEncrypted(); ok {
+		_spec.SetField(balancesite.FieldAccessTokenEncrypted, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(balancesite.FieldEnabled, field.TypeBool, value)
@@ -582,6 +616,20 @@ func (_u *BalanceSiteUpdateOne) SetNillableBaseURL(v *string) *BalanceSiteUpdate
 	return _u
 }
 
+// SetAuthMode sets the "auth_mode" field.
+func (_u *BalanceSiteUpdateOne) SetAuthMode(v balancesite.AuthMode) *BalanceSiteUpdateOne {
+	_u.mutation.SetAuthMode(v)
+	return _u
+}
+
+// SetNillableAuthMode sets the "auth_mode" field if the given value is not nil.
+func (_u *BalanceSiteUpdateOne) SetNillableAuthMode(v *balancesite.AuthMode) *BalanceSiteUpdateOne {
+	if v != nil {
+		_u.SetAuthMode(*v)
+	}
+	return _u
+}
+
 // SetUsername sets the "username" field.
 func (_u *BalanceSiteUpdateOne) SetUsername(v string) *BalanceSiteUpdateOne {
 	_u.mutation.SetUsername(v)
@@ -620,6 +668,20 @@ func (_u *BalanceSiteUpdateOne) SetPasswordEncrypted(v string) *BalanceSiteUpdat
 func (_u *BalanceSiteUpdateOne) SetNillablePasswordEncrypted(v *string) *BalanceSiteUpdateOne {
 	if v != nil {
 		_u.SetPasswordEncrypted(*v)
+	}
+	return _u
+}
+
+// SetAccessTokenEncrypted sets the "access_token_encrypted" field.
+func (_u *BalanceSiteUpdateOne) SetAccessTokenEncrypted(v string) *BalanceSiteUpdateOne {
+	_u.mutation.SetAccessTokenEncrypted(v)
+	return _u
+}
+
+// SetNillableAccessTokenEncrypted sets the "access_token_encrypted" field if the given value is not nil.
+func (_u *BalanceSiteUpdateOne) SetNillableAccessTokenEncrypted(v *string) *BalanceSiteUpdateOne {
+	if v != nil {
+		_u.SetAccessTokenEncrypted(*v)
 	}
 	return _u
 }
@@ -856,6 +918,11 @@ func (_u *BalanceSiteUpdateOne) check() error {
 			return &ValidationError{Name: "base_url", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.base_url": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.AuthMode(); ok {
+		if err := balancesite.AuthModeValidator(v); err != nil {
+			return &ValidationError{Name: "auth_mode", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.auth_mode": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Username(); ok {
 		if err := balancesite.UsernameValidator(v); err != nil {
 			return &ValidationError{Name: "username", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.username": %w`, err)}
@@ -864,11 +931,6 @@ func (_u *BalanceSiteUpdateOne) check() error {
 	if v, ok := _u.mutation.Email(); ok {
 		if err := balancesite.EmailValidator(v); err != nil {
 			return &ValidationError{Name: "email", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.email": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.PasswordEncrypted(); ok {
-		if err := balancesite.PasswordEncryptedValidator(v); err != nil {
-			return &ValidationError{Name: "password_encrypted", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.password_encrypted": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.RefreshIntervalMinutes(); ok {
@@ -925,6 +987,9 @@ func (_u *BalanceSiteUpdateOne) sqlSave(ctx context.Context) (_node *BalanceSite
 	if value, ok := _u.mutation.BaseURL(); ok {
 		_spec.SetField(balancesite.FieldBaseURL, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.AuthMode(); ok {
+		_spec.SetField(balancesite.FieldAuthMode, field.TypeEnum, value)
+	}
 	if value, ok := _u.mutation.Username(); ok {
 		_spec.SetField(balancesite.FieldUsername, field.TypeString, value)
 	}
@@ -933,6 +998,9 @@ func (_u *BalanceSiteUpdateOne) sqlSave(ctx context.Context) (_node *BalanceSite
 	}
 	if value, ok := _u.mutation.PasswordEncrypted(); ok {
 		_spec.SetField(balancesite.FieldPasswordEncrypted, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.AccessTokenEncrypted(); ok {
+		_spec.SetField(balancesite.FieldAccessTokenEncrypted, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(balancesite.FieldEnabled, field.TypeBool, value)

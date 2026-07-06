@@ -21,7 +21,8 @@ func NewBalanceSnapshotRepository(db *sql.DB) service.BalanceSnapshotRepository 
 
 func (r *balanceSnapshotRepository) ListSites(ctx context.Context) ([]service.BalanceSite, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, platform, name, base_url, username, email, password_encrypted,
+		SELECT id, platform, name, base_url, auth_mode, username, email, password_encrypted,
+		       access_token_encrypted,
 		       enabled, refresh_interval_minutes, last_refresh_at, last_refresh_status,
 		       COALESCE(last_refresh_error, ''), created_at, updated_at
 		FROM balance_sites
@@ -35,7 +36,8 @@ func (r *balanceSnapshotRepository) ListSites(ctx context.Context) ([]service.Ba
 
 func (r *balanceSnapshotRepository) GetSite(ctx context.Context, id int64) (*service.BalanceSite, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, platform, name, base_url, username, email, password_encrypted,
+		SELECT id, platform, name, base_url, auth_mode, username, email, password_encrypted,
+		       access_token_encrypted,
 		       enabled, refresh_interval_minutes, last_refresh_at, last_refresh_status,
 		       COALESCE(last_refresh_error, ''), created_at, updated_at
 		FROM balance_sites
@@ -56,18 +58,20 @@ func (r *balanceSnapshotRepository) CreateSite(ctx context.Context, site *servic
 	}
 	err := r.db.QueryRowContext(ctx, `
 		INSERT INTO balance_sites (
-			platform, name, base_url, username, email, password_encrypted,
+			platform, name, base_url, auth_mode, username, email, password_encrypted, access_token_encrypted,
 			enabled, refresh_interval_minutes
 		)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 		RETURNING id, created_at, updated_at`,
-		site.Platform, site.Name, site.BaseURL, site.Username, site.Email, site.PasswordEncrypted,
+		site.Platform, site.Name, site.BaseURL, site.AuthMode, site.Username, site.Email,
+		site.PasswordEncrypted, site.AccessTokenEncrypted,
 		site.Enabled, site.RefreshIntervalMinutes,
 	).Scan(&site.ID, &site.CreatedAt, &site.UpdatedAt)
 	if err != nil {
 		return err
 	}
 	site.PasswordConfigured = site.PasswordEncrypted != ""
+	site.AccessTokenConfigured = site.AccessTokenEncrypted != ""
 	return nil
 }
 
@@ -80,16 +84,18 @@ func (r *balanceSnapshotRepository) UpdateSite(ctx context.Context, site *servic
 		SET platform = $2,
 		    name = $3,
 		    base_url = $4,
-		    username = $5,
-		    email = $6,
-		    password_encrypted = $7,
-		    enabled = $8,
-		    refresh_interval_minutes = $9,
+		    auth_mode = $5,
+		    username = $6,
+		    email = $7,
+		    password_encrypted = $8,
+		    access_token_encrypted = $9,
+		    enabled = $10,
+		    refresh_interval_minutes = $11,
 		    updated_at = NOW()
 		WHERE id = $1
 		RETURNING created_at, updated_at`,
-		site.ID, site.Platform, site.Name, site.BaseURL, site.Username, site.Email,
-		site.PasswordEncrypted, site.Enabled, site.RefreshIntervalMinutes,
+		site.ID, site.Platform, site.Name, site.BaseURL, site.AuthMode, site.Username, site.Email,
+		site.PasswordEncrypted, site.AccessTokenEncrypted, site.Enabled, site.RefreshIntervalMinutes,
 	)
 	if err := row.Scan(&site.CreatedAt, &site.UpdatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -113,7 +119,8 @@ func (r *balanceSnapshotRepository) DeleteSite(ctx context.Context, id int64) er
 
 func (r *balanceSnapshotRepository) ListDueSites(ctx context.Context, now time.Time) ([]service.BalanceSite, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, platform, name, base_url, username, email, password_encrypted,
+		SELECT id, platform, name, base_url, auth_mode, username, email, password_encrypted,
+		       access_token_encrypted,
 		       enabled, refresh_interval_minutes, last_refresh_at, last_refresh_status,
 		       COALESCE(last_refresh_error, ''), created_at, updated_at
 		FROM balance_sites
@@ -298,14 +305,18 @@ type balanceSiteScanner interface {
 func scanBalanceSite(scanner balanceSiteScanner) (*service.BalanceSite, error) {
 	var site service.BalanceSite
 	if err := scanner.Scan(
-		&site.ID, &site.Platform, &site.Name, &site.BaseURL, &site.Username, &site.Email,
-		&site.PasswordEncrypted, &site.Enabled, &site.RefreshIntervalMinutes,
+		&site.ID, &site.Platform, &site.Name, &site.BaseURL, &site.AuthMode, &site.Username, &site.Email,
+		&site.PasswordEncrypted, &site.AccessTokenEncrypted, &site.Enabled, &site.RefreshIntervalMinutes,
 		&site.LastRefreshAt, &site.LastRefreshStatus, &site.LastRefreshError,
 		&site.CreatedAt, &site.UpdatedAt,
 	); err != nil {
 		return nil, err
 	}
+	if site.AuthMode == "" {
+		site.AuthMode = service.BalanceAuthModePassword
+	}
 	site.PasswordConfigured = site.PasswordEncrypted != ""
+	site.AccessTokenConfigured = site.AccessTokenEncrypted != ""
 	return &site, nil
 }
 

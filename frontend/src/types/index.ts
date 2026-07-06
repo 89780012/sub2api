@@ -936,6 +936,7 @@ export interface TempUnschedulableStatus {
 }
 
 export type BalanceSitePlatform = 'newapi' | 'sub2api'
+export type BalanceSiteAuthMode = 'password' | 'access_token'
 export type ExternalBalanceMatchStatus = 'unmatched' | 'matched' | 'ambiguous' | 'manual' | string
 
 export interface ExternalBalanceAmount {
@@ -971,9 +972,11 @@ export interface BalanceSite {
   platform: BalanceSitePlatform
   name: string
   base_url: string
+  auth_mode: BalanceSiteAuthMode
   username?: string
   email?: string
   password_configured: boolean
+  access_token_configured: boolean
   enabled: boolean
   refresh_interval_minutes: number
   last_refresh_at?: string | null
@@ -987,9 +990,11 @@ export interface BalanceSitePayload {
   platform: BalanceSitePlatform
   name: string
   base_url: string
+  auth_mode?: BalanceSiteAuthMode
   username?: string
   email?: string
   password?: string
+  access_token?: string
   enabled?: boolean
   refresh_interval_minutes?: number
 }

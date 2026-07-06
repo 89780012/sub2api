@@ -70,6 +70,20 @@ func (_c *BalanceSiteCreate) SetBaseURL(v string) *BalanceSiteCreate {
 	return _c
 }
 
+// SetAuthMode sets the "auth_mode" field.
+func (_c *BalanceSiteCreate) SetAuthMode(v balancesite.AuthMode) *BalanceSiteCreate {
+	_c.mutation.SetAuthMode(v)
+	return _c
+}
+
+// SetNillableAuthMode sets the "auth_mode" field if the given value is not nil.
+func (_c *BalanceSiteCreate) SetNillableAuthMode(v *balancesite.AuthMode) *BalanceSiteCreate {
+	if v != nil {
+		_c.SetAuthMode(*v)
+	}
+	return _c
+}
+
 // SetUsername sets the "username" field.
 func (_c *BalanceSiteCreate) SetUsername(v string) *BalanceSiteCreate {
 	_c.mutation.SetUsername(v)
@@ -101,6 +115,28 @@ func (_c *BalanceSiteCreate) SetNillableEmail(v *string) *BalanceSiteCreate {
 // SetPasswordEncrypted sets the "password_encrypted" field.
 func (_c *BalanceSiteCreate) SetPasswordEncrypted(v string) *BalanceSiteCreate {
 	_c.mutation.SetPasswordEncrypted(v)
+	return _c
+}
+
+// SetNillablePasswordEncrypted sets the "password_encrypted" field if the given value is not nil.
+func (_c *BalanceSiteCreate) SetNillablePasswordEncrypted(v *string) *BalanceSiteCreate {
+	if v != nil {
+		_c.SetPasswordEncrypted(*v)
+	}
+	return _c
+}
+
+// SetAccessTokenEncrypted sets the "access_token_encrypted" field.
+func (_c *BalanceSiteCreate) SetAccessTokenEncrypted(v string) *BalanceSiteCreate {
+	_c.mutation.SetAccessTokenEncrypted(v)
+	return _c
+}
+
+// SetNillableAccessTokenEncrypted sets the "access_token_encrypted" field if the given value is not nil.
+func (_c *BalanceSiteCreate) SetNillableAccessTokenEncrypted(v *string) *BalanceSiteCreate {
+	if v != nil {
+		_c.SetAccessTokenEncrypted(*v)
+	}
 	return _c
 }
 
@@ -247,6 +283,10 @@ func (_c *BalanceSiteCreate) defaults() {
 		v := balancesite.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.AuthMode(); !ok {
+		v := balancesite.DefaultAuthMode
+		_c.mutation.SetAuthMode(v)
+	}
 	if _, ok := _c.mutation.Username(); !ok {
 		v := balancesite.DefaultUsername
 		_c.mutation.SetUsername(v)
@@ -254,6 +294,14 @@ func (_c *BalanceSiteCreate) defaults() {
 	if _, ok := _c.mutation.Email(); !ok {
 		v := balancesite.DefaultEmail
 		_c.mutation.SetEmail(v)
+	}
+	if _, ok := _c.mutation.PasswordEncrypted(); !ok {
+		v := balancesite.DefaultPasswordEncrypted
+		_c.mutation.SetPasswordEncrypted(v)
+	}
+	if _, ok := _c.mutation.AccessTokenEncrypted(); !ok {
+		v := balancesite.DefaultAccessTokenEncrypted
+		_c.mutation.SetAccessTokenEncrypted(v)
 	}
 	if _, ok := _c.mutation.Enabled(); !ok {
 		v := balancesite.DefaultEnabled
@@ -301,6 +349,14 @@ func (_c *BalanceSiteCreate) check() error {
 			return &ValidationError{Name: "base_url", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.base_url": %w`, err)}
 		}
 	}
+	if _, ok := _c.mutation.AuthMode(); !ok {
+		return &ValidationError{Name: "auth_mode", err: errors.New(`ent: missing required field "BalanceSite.auth_mode"`)}
+	}
+	if v, ok := _c.mutation.AuthMode(); ok {
+		if err := balancesite.AuthModeValidator(v); err != nil {
+			return &ValidationError{Name: "auth_mode", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.auth_mode": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Username(); !ok {
 		return &ValidationError{Name: "username", err: errors.New(`ent: missing required field "BalanceSite.username"`)}
 	}
@@ -320,10 +376,8 @@ func (_c *BalanceSiteCreate) check() error {
 	if _, ok := _c.mutation.PasswordEncrypted(); !ok {
 		return &ValidationError{Name: "password_encrypted", err: errors.New(`ent: missing required field "BalanceSite.password_encrypted"`)}
 	}
-	if v, ok := _c.mutation.PasswordEncrypted(); ok {
-		if err := balancesite.PasswordEncryptedValidator(v); err != nil {
-			return &ValidationError{Name: "password_encrypted", err: fmt.Errorf(`ent: validator failed for field "BalanceSite.password_encrypted": %w`, err)}
-		}
+	if _, ok := _c.mutation.AccessTokenEncrypted(); !ok {
+		return &ValidationError{Name: "access_token_encrypted", err: errors.New(`ent: missing required field "BalanceSite.access_token_encrypted"`)}
 	}
 	if _, ok := _c.mutation.Enabled(); !ok {
 		return &ValidationError{Name: "enabled", err: errors.New(`ent: missing required field "BalanceSite.enabled"`)}
@@ -391,6 +445,10 @@ func (_c *BalanceSiteCreate) createSpec() (*BalanceSite, *sqlgraph.CreateSpec) {
 		_spec.SetField(balancesite.FieldBaseURL, field.TypeString, value)
 		_node.BaseURL = value
 	}
+	if value, ok := _c.mutation.AuthMode(); ok {
+		_spec.SetField(balancesite.FieldAuthMode, field.TypeEnum, value)
+		_node.AuthMode = value
+	}
 	if value, ok := _c.mutation.Username(); ok {
 		_spec.SetField(balancesite.FieldUsername, field.TypeString, value)
 		_node.Username = value
@@ -402,6 +460,10 @@ func (_c *BalanceSiteCreate) createSpec() (*BalanceSite, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.PasswordEncrypted(); ok {
 		_spec.SetField(balancesite.FieldPasswordEncrypted, field.TypeString, value)
 		_node.PasswordEncrypted = value
+	}
+	if value, ok := _c.mutation.AccessTokenEncrypted(); ok {
+		_spec.SetField(balancesite.FieldAccessTokenEncrypted, field.TypeString, value)
+		_node.AccessTokenEncrypted = value
 	}
 	if value, ok := _c.mutation.Enabled(); ok {
 		_spec.SetField(balancesite.FieldEnabled, field.TypeBool, value)
@@ -555,6 +617,18 @@ func (u *BalanceSiteUpsert) UpdateBaseURL() *BalanceSiteUpsert {
 	return u
 }
 
+// SetAuthMode sets the "auth_mode" field.
+func (u *BalanceSiteUpsert) SetAuthMode(v balancesite.AuthMode) *BalanceSiteUpsert {
+	u.Set(balancesite.FieldAuthMode, v)
+	return u
+}
+
+// UpdateAuthMode sets the "auth_mode" field to the value that was provided on create.
+func (u *BalanceSiteUpsert) UpdateAuthMode() *BalanceSiteUpsert {
+	u.SetExcluded(balancesite.FieldAuthMode)
+	return u
+}
+
 // SetUsername sets the "username" field.
 func (u *BalanceSiteUpsert) SetUsername(v string) *BalanceSiteUpsert {
 	u.Set(balancesite.FieldUsername, v)
@@ -588,6 +662,18 @@ func (u *BalanceSiteUpsert) SetPasswordEncrypted(v string) *BalanceSiteUpsert {
 // UpdatePasswordEncrypted sets the "password_encrypted" field to the value that was provided on create.
 func (u *BalanceSiteUpsert) UpdatePasswordEncrypted() *BalanceSiteUpsert {
 	u.SetExcluded(balancesite.FieldPasswordEncrypted)
+	return u
+}
+
+// SetAccessTokenEncrypted sets the "access_token_encrypted" field.
+func (u *BalanceSiteUpsert) SetAccessTokenEncrypted(v string) *BalanceSiteUpsert {
+	u.Set(balancesite.FieldAccessTokenEncrypted, v)
+	return u
+}
+
+// UpdateAccessTokenEncrypted sets the "access_token_encrypted" field to the value that was provided on create.
+func (u *BalanceSiteUpsert) UpdateAccessTokenEncrypted() *BalanceSiteUpsert {
+	u.SetExcluded(balancesite.FieldAccessTokenEncrypted)
 	return u
 }
 
@@ -770,6 +856,20 @@ func (u *BalanceSiteUpsertOne) UpdateBaseURL() *BalanceSiteUpsertOne {
 	})
 }
 
+// SetAuthMode sets the "auth_mode" field.
+func (u *BalanceSiteUpsertOne) SetAuthMode(v balancesite.AuthMode) *BalanceSiteUpsertOne {
+	return u.Update(func(s *BalanceSiteUpsert) {
+		s.SetAuthMode(v)
+	})
+}
+
+// UpdateAuthMode sets the "auth_mode" field to the value that was provided on create.
+func (u *BalanceSiteUpsertOne) UpdateAuthMode() *BalanceSiteUpsertOne {
+	return u.Update(func(s *BalanceSiteUpsert) {
+		s.UpdateAuthMode()
+	})
+}
+
 // SetUsername sets the "username" field.
 func (u *BalanceSiteUpsertOne) SetUsername(v string) *BalanceSiteUpsertOne {
 	return u.Update(func(s *BalanceSiteUpsert) {
@@ -809,6 +909,20 @@ func (u *BalanceSiteUpsertOne) SetPasswordEncrypted(v string) *BalanceSiteUpsert
 func (u *BalanceSiteUpsertOne) UpdatePasswordEncrypted() *BalanceSiteUpsertOne {
 	return u.Update(func(s *BalanceSiteUpsert) {
 		s.UpdatePasswordEncrypted()
+	})
+}
+
+// SetAccessTokenEncrypted sets the "access_token_encrypted" field.
+func (u *BalanceSiteUpsertOne) SetAccessTokenEncrypted(v string) *BalanceSiteUpsertOne {
+	return u.Update(func(s *BalanceSiteUpsert) {
+		s.SetAccessTokenEncrypted(v)
+	})
+}
+
+// UpdateAccessTokenEncrypted sets the "access_token_encrypted" field to the value that was provided on create.
+func (u *BalanceSiteUpsertOne) UpdateAccessTokenEncrypted() *BalanceSiteUpsertOne {
+	return u.Update(func(s *BalanceSiteUpsert) {
+		s.UpdateAccessTokenEncrypted()
 	})
 }
 
@@ -1170,6 +1284,20 @@ func (u *BalanceSiteUpsertBulk) UpdateBaseURL() *BalanceSiteUpsertBulk {
 	})
 }
 
+// SetAuthMode sets the "auth_mode" field.
+func (u *BalanceSiteUpsertBulk) SetAuthMode(v balancesite.AuthMode) *BalanceSiteUpsertBulk {
+	return u.Update(func(s *BalanceSiteUpsert) {
+		s.SetAuthMode(v)
+	})
+}
+
+// UpdateAuthMode sets the "auth_mode" field to the value that was provided on create.
+func (u *BalanceSiteUpsertBulk) UpdateAuthMode() *BalanceSiteUpsertBulk {
+	return u.Update(func(s *BalanceSiteUpsert) {
+		s.UpdateAuthMode()
+	})
+}
+
 // SetUsername sets the "username" field.
 func (u *BalanceSiteUpsertBulk) SetUsername(v string) *BalanceSiteUpsertBulk {
 	return u.Update(func(s *BalanceSiteUpsert) {
@@ -1209,6 +1337,20 @@ func (u *BalanceSiteUpsertBulk) SetPasswordEncrypted(v string) *BalanceSiteUpser
 func (u *BalanceSiteUpsertBulk) UpdatePasswordEncrypted() *BalanceSiteUpsertBulk {
 	return u.Update(func(s *BalanceSiteUpsert) {
 		s.UpdatePasswordEncrypted()
+	})
+}
+
+// SetAccessTokenEncrypted sets the "access_token_encrypted" field.
+func (u *BalanceSiteUpsertBulk) SetAccessTokenEncrypted(v string) *BalanceSiteUpsertBulk {
+	return u.Update(func(s *BalanceSiteUpsert) {
+		s.SetAccessTokenEncrypted(v)
+	})
+}
+
+// UpdateAccessTokenEncrypted sets the "access_token_encrypted" field to the value that was provided on create.
+func (u *BalanceSiteUpsertBulk) UpdateAccessTokenEncrypted() *BalanceSiteUpsertBulk {
+	return u.Update(func(s *BalanceSiteUpsert) {
+		s.UpdateAccessTokenEncrypted()
 	})
 }
 

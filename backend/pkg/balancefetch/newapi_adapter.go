@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -70,19 +71,33 @@ func fetchNewAPISite(ctx context.Context, site siteConfig) (*unifiedSite, error)
 	}
 	client := &http.Client{Jar: jar, Timeout: 20 * time.Second}
 
-	userID, err := newAPILogin(ctx, client, site)
-	if err != nil {
-		return nil, fmt.Errorf("login: %w", err)
+	userID := 0
+	accessToken := ""
+	if useAccessTokenMode(site.AuthMode) {
+		accessToken = normalizeBearerToken(site.AccessToken)
+		if accessToken == "" {
+			return nil, fmt.Errorf("empty access token")
+		}
+		userID, accessToken = parseNewAPIAccessToken(accessToken)
+	} else {
+		var err error
+		userID, err = newAPILogin(ctx, client, site)
+		if err != nil {
+			return nil, fmt.Errorf("login: %w", err)
+		}
 	}
-	userSelf, err := newAPIGetUserSelf(ctx, client, site.BaseURL, userID)
+	userSelf, err := newAPIGetUserSelf(ctx, client, site.BaseURL, userID, accessToken)
 	if err != nil {
 		return nil, fmt.Errorf("get user self: %w", err)
 	}
-	groups, err := newAPIGetGroups(ctx, client, site.BaseURL, userID)
+	if userID <= 0 {
+		userID = userSelf.Data.ID
+	}
+	groups, err := newAPIGetGroups(ctx, client, site.BaseURL, userID, accessToken)
 	if err != nil {
 		return nil, fmt.Errorf("get groups: %w", err)
 	}
-	tokens, err := newAPIGetTokens(ctx, client, site.BaseURL, userID)
+	tokens, err := newAPIGetTokens(ctx, client, site.BaseURL, userID, accessToken)
 	if err != nil {
 		return nil, fmt.Errorf("get tokens: %w", err)
 	}
@@ -96,7 +111,7 @@ func newAPILogin(ctx context.Context, client *http.Client, site siteConfig) (int
 	if err != nil {
 		return 0, err
 	}
-	setNewAPIHeaders(req, 0)
+	setNewAPIHeaders(req, 0, "")
 	if err := doJSON(client, req, newAPILoginRequest{Username: site.Username, Password: site.Password}, &resp); err != nil {
 		return 0, err
 	}
@@ -106,13 +121,13 @@ func newAPILogin(ctx context.Context, client *http.Client, site siteConfig) (int
 	return resp.Data.ID, nil
 }
 
-func newAPIGetUserSelf(ctx context.Context, client *http.Client, baseURL string, userID int) (*newAPIUserSelfResponse, error) {
+func newAPIGetUserSelf(ctx context.Context, client *http.Client, baseURL string, userID int, accessToken string) (*newAPIUserSelfResponse, error) {
 	var resp newAPIUserSelfResponse
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/user/self", nil)
 	if err != nil {
 		return nil, err
 	}
-	setNewAPIHeaders(req, userID)
+	setNewAPIHeaders(req, userID, accessToken)
 	if err := doJSON(client, req, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -122,13 +137,13 @@ func newAPIGetUserSelf(ctx context.Context, client *http.Client, baseURL string,
 	return &resp, nil
 }
 
-func newAPIGetGroups(ctx context.Context, client *http.Client, baseURL string, userID int) (*newAPIGroupsResponse, error) {
+func newAPIGetGroups(ctx context.Context, client *http.Client, baseURL string, userID int, accessToken string) (*newAPIGroupsResponse, error) {
 	var resp newAPIGroupsResponse
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/user/self/groups", nil)
 	if err != nil {
 		return nil, err
 	}
-	setNewAPIHeaders(req, userID)
+	setNewAPIHeaders(req, userID, accessToken)
 	if err := doJSON(client, req, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -138,13 +153,13 @@ func newAPIGetGroups(ctx context.Context, client *http.Client, baseURL string, u
 	return &resp, nil
 }
 
-func newAPIGetTokens(ctx context.Context, client *http.Client, baseURL string, userID int) (*newAPITokenResponse, error) {
+func newAPIGetTokens(ctx context.Context, client *http.Client, baseURL string, userID int, accessToken string) (*newAPITokenResponse, error) {
 	var resp newAPITokenResponse
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/token/?p=1&size=20", nil)
 	if err != nil {
 		return nil, err
 	}
-	setNewAPIHeaders(req, userID)
+	setNewAPIHeaders(req, userID, accessToken)
 	if err := doJSON(client, req, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -154,13 +169,31 @@ func newAPIGetTokens(ctx context.Context, client *http.Client, baseURL string, u
 	return &resp, nil
 }
 
-func setNewAPIHeaders(req *http.Request, userID int) {
+func setNewAPIHeaders(req *http.Request, userID int, accessToken string) {
 	req.Header.Set("Accept", "application/json, text/plain, */*")
 	req.Header.Set("Cache-Control", "no-store")
 	req.Header.Set("User-Agent", "Mozilla/5.0")
 	if userID > 0 {
 		req.Header.Set("New-Api-User", strconv.Itoa(userID))
 	}
+	if accessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+	}
+}
+
+func parseNewAPIAccessToken(raw string) (int, string) {
+	raw = strings.TrimSpace(raw)
+	for _, sep := range []string{":", "|", ","} {
+		left, right, ok := strings.Cut(raw, sep)
+		if !ok {
+			continue
+		}
+		id, err := strconv.Atoi(strings.TrimSpace(left))
+		if err == nil && id > 0 && strings.TrimSpace(right) != "" {
+			return id, strings.TrimSpace(right)
+		}
+	}
+	return 0, raw
 }
 
 func normalizeNewAPI(site siteConfig, userSelf *newAPIUserSelfResponse, groups *newAPIGroupsResponse, tokens *newAPITokenResponse) *unifiedSite {

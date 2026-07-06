@@ -20,9 +20,11 @@ type balanceSiteRequest struct {
 	Platform               string  `json:"platform" binding:"required,oneof=newapi sub2api"`
 	Name                   string  `json:"name" binding:"required"`
 	BaseURL                string  `json:"base_url" binding:"required"`
+	AuthMode               string  `json:"auth_mode" binding:"omitempty,oneof=password access_token"`
 	Username               string  `json:"username"`
 	Email                  string  `json:"email"`
 	Password               *string `json:"password"`
+	AccessToken            *string `json:"access_token"`
 	Enabled                *bool   `json:"enabled"`
 	RefreshIntervalMinutes *int    `json:"refresh_interval_minutes"`
 }
@@ -165,9 +167,11 @@ func balanceSiteInput(req balanceSiteRequest) service.BalanceSiteInput {
 		Platform:               req.Platform,
 		Name:                   req.Name,
 		BaseURL:                req.BaseURL,
+		AuthMode:               req.AuthMode,
 		Username:               req.Username,
 		Email:                  req.Email,
 		Password:               req.Password,
+		AccessToken:            req.AccessToken,
 		Enabled:                req.Enabled,
 		RefreshIntervalMinutes: req.RefreshIntervalMinutes,
 	}

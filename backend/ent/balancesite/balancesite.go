@@ -25,12 +25,16 @@ const (
 	FieldName = "name"
 	// FieldBaseURL holds the string denoting the base_url field in the database.
 	FieldBaseURL = "base_url"
+	// FieldAuthMode holds the string denoting the auth_mode field in the database.
+	FieldAuthMode = "auth_mode"
 	// FieldUsername holds the string denoting the username field in the database.
 	FieldUsername = "username"
 	// FieldEmail holds the string denoting the email field in the database.
 	FieldEmail = "email"
 	// FieldPasswordEncrypted holds the string denoting the password_encrypted field in the database.
 	FieldPasswordEncrypted = "password_encrypted"
+	// FieldAccessTokenEncrypted holds the string denoting the access_token_encrypted field in the database.
+	FieldAccessTokenEncrypted = "access_token_encrypted"
 	// FieldEnabled holds the string denoting the enabled field in the database.
 	FieldEnabled = "enabled"
 	// FieldRefreshIntervalMinutes holds the string denoting the refresh_interval_minutes field in the database.
@@ -71,9 +75,11 @@ var Columns = []string{
 	FieldPlatform,
 	FieldName,
 	FieldBaseURL,
+	FieldAuthMode,
 	FieldUsername,
 	FieldEmail,
 	FieldPasswordEncrypted,
+	FieldAccessTokenEncrypted,
 	FieldEnabled,
 	FieldRefreshIntervalMinutes,
 	FieldLastRefreshAt,
@@ -110,8 +116,10 @@ var (
 	DefaultEmail string
 	// EmailValidator is a validator for the "email" field. It is called by the builders before save.
 	EmailValidator func(string) error
-	// PasswordEncryptedValidator is a validator for the "password_encrypted" field. It is called by the builders before save.
-	PasswordEncryptedValidator func(string) error
+	// DefaultPasswordEncrypted holds the default value on creation for the "password_encrypted" field.
+	DefaultPasswordEncrypted string
+	// DefaultAccessTokenEncrypted holds the default value on creation for the "access_token_encrypted" field.
+	DefaultAccessTokenEncrypted string
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
 	DefaultEnabled bool
 	// DefaultRefreshIntervalMinutes holds the default value on creation for the "refresh_interval_minutes" field.
@@ -144,6 +152,32 @@ func PlatformValidator(pl Platform) error {
 		return nil
 	default:
 		return fmt.Errorf("balancesite: invalid enum value for platform field: %q", pl)
+	}
+}
+
+// AuthMode defines the type for the "auth_mode" enum field.
+type AuthMode string
+
+// AuthModePassword is the default value of the AuthMode enum.
+const DefaultAuthMode = AuthModePassword
+
+// AuthMode values.
+const (
+	AuthModePassword    AuthMode = "password"
+	AuthModeAccessToken AuthMode = "access_token"
+)
+
+func (am AuthMode) String() string {
+	return string(am)
+}
+
+// AuthModeValidator is a validator for the "auth_mode" field enum values. It is called by the builders before save.
+func AuthModeValidator(am AuthMode) error {
+	switch am {
+	case AuthModePassword, AuthModeAccessToken:
+		return nil
+	default:
+		return fmt.Errorf("balancesite: invalid enum value for auth_mode field: %q", am)
 	}
 }
 
@@ -180,6 +214,11 @@ func ByBaseURL(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBaseURL, opts...).ToFunc()
 }
 
+// ByAuthMode orders the results by the auth_mode field.
+func ByAuthMode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAuthMode, opts...).ToFunc()
+}
+
 // ByUsername orders the results by the username field.
 func ByUsername(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUsername, opts...).ToFunc()
@@ -193,6 +232,11 @@ func ByEmail(opts ...sql.OrderTermOption) OrderOption {
 // ByPasswordEncrypted orders the results by the password_encrypted field.
 func ByPasswordEncrypted(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPasswordEncrypted, opts...).ToFunc()
+}
+
+// ByAccessTokenEncrypted orders the results by the access_token_encrypted field.
+func ByAccessTokenEncrypted(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAccessTokenEncrypted, opts...).ToFunc()
 }
 
 // ByEnabled orders the results by the enabled field.

@@ -18,6 +18,9 @@ const (
 	BalancePlatformNewAPI  = "newapi"
 	BalancePlatformSub2API = "sub2api"
 
+	BalanceAuthModePassword    = "password"
+	BalanceAuthModeAccessToken = "access_token"
+
 	BalanceRefreshStatusSuccess = "success"
 	BalanceRefreshStatusError   = "error"
 
@@ -40,10 +43,13 @@ type BalanceSite struct {
 	Platform               string     `json:"platform"`
 	Name                   string     `json:"name"`
 	BaseURL                string     `json:"base_url"`
+	AuthMode               string     `json:"auth_mode"`
 	Username               string     `json:"username,omitempty"`
 	Email                  string     `json:"email,omitempty"`
 	PasswordEncrypted      string     `json:"-"`
 	PasswordConfigured     bool       `json:"password_configured"`
+	AccessTokenEncrypted   string     `json:"-"`
+	AccessTokenConfigured  bool       `json:"access_token_configured"`
 	Enabled                bool       `json:"enabled"`
 	RefreshIntervalMinutes int        `json:"refresh_interval_minutes"`
 	LastRefreshAt          *time.Time `json:"last_refresh_at,omitempty"`
@@ -57,9 +63,11 @@ type BalanceSiteInput struct {
 	Platform               string
 	Name                   string
 	BaseURL                string
+	AuthMode               string
 	Username               string
 	Email                  string
 	Password               *string
+	AccessToken            *string
 	Enabled                *bool
 	RefreshIntervalMinutes *int
 }
@@ -196,18 +204,30 @@ func (s *BalanceSnapshotService) CreateSite(ctx context.Context, input BalanceSi
 	if err != nil {
 		return nil, err
 	}
-	if input.Password == nil || strings.TrimSpace(*input.Password) == "" {
-		return nil, infraerrors.BadRequest("BALANCE_SITE_PASSWORD_REQUIRED", "password is required")
+	if site.AuthMode == BalanceAuthModeAccessToken {
+		if input.AccessToken == nil || strings.TrimSpace(*input.AccessToken) == "" {
+			return nil, infraerrors.BadRequest("BALANCE_SITE_ACCESS_TOKEN_REQUIRED", "access token is required")
+		}
+		encrypted, err := s.encryptor.Encrypt(strings.TrimSpace(*input.AccessToken))
+		if err != nil {
+			return nil, err
+		}
+		site.AccessTokenEncrypted = encrypted
+	} else {
+		if input.Password == nil || strings.TrimSpace(*input.Password) == "" {
+			return nil, infraerrors.BadRequest("BALANCE_SITE_PASSWORD_REQUIRED", "password is required")
+		}
+		encrypted, err := s.encryptor.Encrypt(strings.TrimSpace(*input.Password))
+		if err != nil {
+			return nil, err
+		}
+		site.PasswordEncrypted = encrypted
 	}
-	encrypted, err := s.encryptor.Encrypt(strings.TrimSpace(*input.Password))
-	if err != nil {
-		return nil, err
-	}
-	site.PasswordEncrypted = encrypted
 	if err := s.repo.CreateSite(ctx, site); err != nil {
 		return nil, err
 	}
-	site.PasswordConfigured = true
+	site.PasswordConfigured = site.PasswordEncrypted != ""
+	site.AccessTokenConfigured = site.AccessTokenEncrypted != ""
 	return site, nil
 }
 
@@ -222,6 +242,7 @@ func (s *BalanceSnapshotService) UpdateSite(ctx context.Context, id int64, input
 	}
 	site.ID = id
 	site.PasswordEncrypted = existing.PasswordEncrypted
+	site.AccessTokenEncrypted = existing.AccessTokenEncrypted
 	if input.Password != nil && strings.TrimSpace(*input.Password) != "" {
 		encrypted, err := s.encryptor.Encrypt(strings.TrimSpace(*input.Password))
 		if err != nil {
@@ -229,10 +250,24 @@ func (s *BalanceSnapshotService) UpdateSite(ctx context.Context, id int64, input
 		}
 		site.PasswordEncrypted = encrypted
 	}
+	if input.AccessToken != nil && strings.TrimSpace(*input.AccessToken) != "" {
+		encrypted, err := s.encryptor.Encrypt(strings.TrimSpace(*input.AccessToken))
+		if err != nil {
+			return nil, err
+		}
+		site.AccessTokenEncrypted = encrypted
+	}
+	if site.AuthMode == BalanceAuthModePassword && site.PasswordEncrypted == "" {
+		return nil, infraerrors.BadRequest("BALANCE_SITE_PASSWORD_REQUIRED", "password is required")
+	}
+	if site.AuthMode == BalanceAuthModeAccessToken && site.AccessTokenEncrypted == "" {
+		return nil, infraerrors.BadRequest("BALANCE_SITE_ACCESS_TOKEN_REQUIRED", "access token is required")
+	}
 	if err := s.repo.UpdateSite(ctx, site); err != nil {
 		return nil, err
 	}
 	site.PasswordConfigured = site.PasswordEncrypted != ""
+	site.AccessTokenConfigured = site.AccessTokenEncrypted != ""
 	return site, nil
 }
 
@@ -309,24 +344,35 @@ func (s *BalanceSnapshotService) RefreshSite(ctx context.Context, siteID int64) 
 	if err != nil {
 		return nil, err
 	}
-	password, err := s.encryptor.Decrypt(site.PasswordEncrypted)
-	if err != nil {
-		_ = s.repo.UpdateSiteRefreshStatus(ctx, siteID, BalanceRefreshStatusError, "decrypt password failed", nil)
-		return nil, err
-	}
 	baseURL, err := balancefetch.NormalizeBaseURL(site.BaseURL)
 	if err != nil {
 		_ = s.repo.UpdateSiteRefreshStatus(ctx, siteID, BalanceRefreshStatusError, err.Error(), nil)
 		return nil, err
 	}
-	fetched, err := balancefetch.FetchConfiguredSiteContext(ctx, balancefetch.SiteConfig{
+	fetchConfig := balancefetch.SiteConfig{
 		Platform: balancefetch.Platform(site.Platform),
 		Name:     site.Name,
 		BaseURL:  baseURL,
+		AuthMode: site.AuthMode,
 		Username: site.Username,
 		Email:    site.Email,
-		Password: password,
-	})
+	}
+	if site.AuthMode == BalanceAuthModeAccessToken {
+		accessToken, err := s.encryptor.Decrypt(site.AccessTokenEncrypted)
+		if err != nil {
+			_ = s.repo.UpdateSiteRefreshStatus(ctx, siteID, BalanceRefreshStatusError, "decrypt access token failed", nil)
+			return nil, err
+		}
+		fetchConfig.AccessToken = accessToken
+	} else {
+		password, err := s.encryptor.Decrypt(site.PasswordEncrypted)
+		if err != nil {
+			_ = s.repo.UpdateSiteRefreshStatus(ctx, siteID, BalanceRefreshStatusError, "decrypt password failed", nil)
+			return nil, err
+		}
+		fetchConfig.Password = password
+	}
+	fetched, err := balancefetch.FetchConfiguredSiteContext(ctx, fetchConfig)
 	if err != nil {
 		_ = s.repo.UpdateSiteRefreshStatus(ctx, siteID, BalanceRefreshStatusError, err.Error(), nil)
 		return nil, err
@@ -359,6 +405,16 @@ func (s *BalanceSnapshotService) normalizeSiteInput(input BalanceSiteInput, exis
 	if site.Platform != BalancePlatformNewAPI && site.Platform != BalancePlatformSub2API {
 		return nil, ErrBalanceSiteInvalid
 	}
+	authMode := strings.ToLower(strings.TrimSpace(input.AuthMode))
+	if authMode != "" {
+		site.AuthMode = authMode
+	}
+	if site.AuthMode == "" {
+		site.AuthMode = BalanceAuthModePassword
+	}
+	if site.AuthMode != BalanceAuthModePassword && site.AuthMode != BalanceAuthModeAccessToken {
+		return nil, infraerrors.BadRequest("BALANCE_SITE_AUTH_MODE_INVALID", "invalid balance site auth mode")
+	}
 	if strings.TrimSpace(input.Name) != "" {
 		site.Name = strings.TrimSpace(input.Name)
 	}
@@ -386,10 +442,10 @@ func (s *BalanceSnapshotService) normalizeSiteInput(input BalanceSiteInput, exis
 	if site.BaseURL == "" {
 		return nil, infraerrors.BadRequest("BALANCE_SITE_URL_REQUIRED", "base_url is required")
 	}
-	if site.Platform == BalancePlatformNewAPI && site.Username == "" {
+	if site.AuthMode == BalanceAuthModePassword && site.Platform == BalancePlatformNewAPI && site.Username == "" {
 		return nil, infraerrors.BadRequest("BALANCE_SITE_USERNAME_REQUIRED", "username is required")
 	}
-	if site.Platform == BalancePlatformSub2API && site.Email == "" {
+	if site.AuthMode == BalanceAuthModePassword && site.Platform == BalancePlatformSub2API && site.Email == "" {
 		return nil, infraerrors.BadRequest("BALANCE_SITE_EMAIL_REQUIRED", "email is required")
 	}
 	if input.Enabled != nil {

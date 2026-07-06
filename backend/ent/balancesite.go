@@ -27,12 +27,16 @@ type BalanceSite struct {
 	Name string `json:"name,omitempty"`
 	// BaseURL holds the value of the "base_url" field.
 	BaseURL string `json:"base_url,omitempty"`
+	// AuthMode holds the value of the "auth_mode" field.
+	AuthMode balancesite.AuthMode `json:"auth_mode,omitempty"`
 	// Username holds the value of the "username" field.
 	Username string `json:"username,omitempty"`
 	// Email holds the value of the "email" field.
 	Email string `json:"email,omitempty"`
 	// PasswordEncrypted holds the value of the "password_encrypted" field.
 	PasswordEncrypted string `json:"-"`
+	// AccessTokenEncrypted holds the value of the "access_token_encrypted" field.
+	AccessTokenEncrypted string `json:"-"`
 	// Enabled holds the value of the "enabled" field.
 	Enabled bool `json:"enabled,omitempty"`
 	// RefreshIntervalMinutes holds the value of the "refresh_interval_minutes" field.
@@ -87,7 +91,7 @@ func (*BalanceSite) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case balancesite.FieldID, balancesite.FieldRefreshIntervalMinutes:
 			values[i] = new(sql.NullInt64)
-		case balancesite.FieldPlatform, balancesite.FieldName, balancesite.FieldBaseURL, balancesite.FieldUsername, balancesite.FieldEmail, balancesite.FieldPasswordEncrypted, balancesite.FieldLastRefreshStatus, balancesite.FieldLastRefreshError:
+		case balancesite.FieldPlatform, balancesite.FieldName, balancesite.FieldBaseURL, balancesite.FieldAuthMode, balancesite.FieldUsername, balancesite.FieldEmail, balancesite.FieldPasswordEncrypted, balancesite.FieldAccessTokenEncrypted, balancesite.FieldLastRefreshStatus, balancesite.FieldLastRefreshError:
 			values[i] = new(sql.NullString)
 		case balancesite.FieldCreatedAt, balancesite.FieldUpdatedAt, balancesite.FieldLastRefreshAt:
 			values[i] = new(sql.NullTime)
@@ -142,6 +146,12 @@ func (_m *BalanceSite) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.BaseURL = value.String
 			}
+		case balancesite.FieldAuthMode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field auth_mode", values[i])
+			} else if value.Valid {
+				_m.AuthMode = balancesite.AuthMode(value.String)
+			}
 		case balancesite.FieldUsername:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field username", values[i])
@@ -159,6 +169,12 @@ func (_m *BalanceSite) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field password_encrypted", values[i])
 			} else if value.Valid {
 				_m.PasswordEncrypted = value.String
+			}
+		case balancesite.FieldAccessTokenEncrypted:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field access_token_encrypted", values[i])
+			} else if value.Valid {
+				_m.AccessTokenEncrypted = value.String
 			}
 		case balancesite.FieldEnabled:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -253,6 +269,9 @@ func (_m *BalanceSite) String() string {
 	builder.WriteString("base_url=")
 	builder.WriteString(_m.BaseURL)
 	builder.WriteString(", ")
+	builder.WriteString("auth_mode=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AuthMode))
+	builder.WriteString(", ")
 	builder.WriteString("username=")
 	builder.WriteString(_m.Username)
 	builder.WriteString(", ")
@@ -260,6 +279,8 @@ func (_m *BalanceSite) String() string {
 	builder.WriteString(_m.Email)
 	builder.WriteString(", ")
 	builder.WriteString("password_encrypted=<sensitive>")
+	builder.WriteString(", ")
+	builder.WriteString("access_token_encrypted=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Enabled))

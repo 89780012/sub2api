@@ -90,6 +90,11 @@ func PasswordEncrypted(v string) predicate.BalanceSite {
 	return predicate.BalanceSite(sql.FieldEQ(FieldPasswordEncrypted, v))
 }
 
+// AccessTokenEncrypted applies equality check predicate on the "access_token_encrypted" field. It's identical to AccessTokenEncryptedEQ.
+func AccessTokenEncrypted(v string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldEQ(FieldAccessTokenEncrypted, v))
+}
+
 // Enabled applies equality check predicate on the "enabled" field. It's identical to EnabledEQ.
 func Enabled(v bool) predicate.BalanceSite {
 	return predicate.BalanceSite(sql.FieldEQ(FieldEnabled, v))
@@ -345,6 +350,26 @@ func BaseURLContainsFold(v string) predicate.BalanceSite {
 	return predicate.BalanceSite(sql.FieldContainsFold(FieldBaseURL, v))
 }
 
+// AuthModeEQ applies the EQ predicate on the "auth_mode" field.
+func AuthModeEQ(v AuthMode) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldEQ(FieldAuthMode, v))
+}
+
+// AuthModeNEQ applies the NEQ predicate on the "auth_mode" field.
+func AuthModeNEQ(v AuthMode) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldNEQ(FieldAuthMode, v))
+}
+
+// AuthModeIn applies the In predicate on the "auth_mode" field.
+func AuthModeIn(vs ...AuthMode) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldIn(FieldAuthMode, vs...))
+}
+
+// AuthModeNotIn applies the NotIn predicate on the "auth_mode" field.
+func AuthModeNotIn(vs ...AuthMode) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldNotIn(FieldAuthMode, vs...))
+}
+
 // UsernameEQ applies the EQ predicate on the "username" field.
 func UsernameEQ(v string) predicate.BalanceSite {
 	return predicate.BalanceSite(sql.FieldEQ(FieldUsername, v))
@@ -538,6 +563,71 @@ func PasswordEncryptedEqualFold(v string) predicate.BalanceSite {
 // PasswordEncryptedContainsFold applies the ContainsFold predicate on the "password_encrypted" field.
 func PasswordEncryptedContainsFold(v string) predicate.BalanceSite {
 	return predicate.BalanceSite(sql.FieldContainsFold(FieldPasswordEncrypted, v))
+}
+
+// AccessTokenEncryptedEQ applies the EQ predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedEQ(v string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldEQ(FieldAccessTokenEncrypted, v))
+}
+
+// AccessTokenEncryptedNEQ applies the NEQ predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedNEQ(v string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldNEQ(FieldAccessTokenEncrypted, v))
+}
+
+// AccessTokenEncryptedIn applies the In predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedIn(vs ...string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldIn(FieldAccessTokenEncrypted, vs...))
+}
+
+// AccessTokenEncryptedNotIn applies the NotIn predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedNotIn(vs ...string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldNotIn(FieldAccessTokenEncrypted, vs...))
+}
+
+// AccessTokenEncryptedGT applies the GT predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedGT(v string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldGT(FieldAccessTokenEncrypted, v))
+}
+
+// AccessTokenEncryptedGTE applies the GTE predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedGTE(v string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldGTE(FieldAccessTokenEncrypted, v))
+}
+
+// AccessTokenEncryptedLT applies the LT predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedLT(v string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldLT(FieldAccessTokenEncrypted, v))
+}
+
+// AccessTokenEncryptedLTE applies the LTE predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedLTE(v string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldLTE(FieldAccessTokenEncrypted, v))
+}
+
+// AccessTokenEncryptedContains applies the Contains predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedContains(v string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldContains(FieldAccessTokenEncrypted, v))
+}
+
+// AccessTokenEncryptedHasPrefix applies the HasPrefix predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedHasPrefix(v string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldHasPrefix(FieldAccessTokenEncrypted, v))
+}
+
+// AccessTokenEncryptedHasSuffix applies the HasSuffix predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedHasSuffix(v string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldHasSuffix(FieldAccessTokenEncrypted, v))
+}
+
+// AccessTokenEncryptedEqualFold applies the EqualFold predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedEqualFold(v string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldEqualFold(FieldAccessTokenEncrypted, v))
+}
+
+// AccessTokenEncryptedContainsFold applies the ContainsFold predicate on the "access_token_encrypted" field.
+func AccessTokenEncryptedContainsFold(v string) predicate.BalanceSite {
+	return predicate.BalanceSite(sql.FieldContainsFold(FieldAccessTokenEncrypted, v))
 }
 
 // EnabledEQ applies the EQ predicate on the "enabled" field.
