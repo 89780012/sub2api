@@ -218,6 +218,47 @@ func TestFetchNewAPISiteUsesCookieFlow(t *testing.T) {
 	}
 }
 
+func TestNormalizeCookieHeader(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "plain cookie",
+			in:   "session=abc; user=42",
+			want: "session=abc; user=42",
+		},
+		{
+			name: "cookie header line",
+			in:   "Cookie: session=abc; user=42",
+			want: "session=abc; user=42",
+		},
+		{
+			name: "devtools request headers",
+			in:   "GET /api/user/self HTTP/2\r\nHost: newapi.example.com\r\nCookie: session=abc; user=42\r\nAccept: application/json",
+			want: "session=abc; user=42",
+		},
+		{
+			name: "curl multiline header",
+			in:   "curl 'https://newapi.example.com/api/user/self' \\\n  -H 'accept: application/json' \\\n  -H 'cookie: session=abc; user=42' \\\n  -H 'user-agent: Mozilla/5.0'",
+			want: "session=abc; user=42",
+		},
+		{
+			name: "curl single line header",
+			in:   "curl 'https://newapi.example.com/api/user/self' -H 'accept: application/json' -H 'cookie: session=abc; user=42' -H 'user-agent: Mozilla/5.0'",
+			want: "session=abc; user=42",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := normalizeCookieHeader(tt.in); got != tt.want {
+				t.Fatalf("normalizeCookieHeader() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFetchSub2APISiteUsesEndpointFlow(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

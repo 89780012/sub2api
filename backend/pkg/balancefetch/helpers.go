@@ -285,10 +285,43 @@ func normalizeBearerToken(token string) string {
 
 func normalizeCookieHeader(cookie string) string {
 	cookie = strings.TrimSpace(cookie)
-	if len(cookie) > 7 && strings.EqualFold(cookie[:7], "cookie:") {
-		return strings.TrimSpace(cookie[7:])
+	if cookie == "" {
+		return ""
+	}
+	scanner := bufio.NewScanner(strings.NewReader(cookie))
+	for scanner.Scan() {
+		if value, ok := cookieHeaderValue(scanner.Text()); ok {
+			return value
+		}
+	}
+	if value, ok := cookieHeaderValue(cookie); ok {
+		return value
 	}
 	return cookie
+}
+
+func cookieHeaderValue(line string) (string, bool) {
+	line = strings.TrimSpace(line)
+	lower := strings.ToLower(line)
+	idx := strings.Index(lower, "cookie:")
+	if idx < 0 {
+		return "", false
+	}
+	if idx > 0 && !strings.Contains(strings.ToLower(line[:idx]), "-h") && !strings.Contains(strings.ToLower(line[:idx]), "--header") {
+		return "", false
+	}
+	value := line[idx+len("cookie:"):]
+	prefix := strings.TrimRight(line[:idx], " \t")
+	if prefix != "" {
+		quote := prefix[len(prefix)-1]
+		if quote == '\'' || quote == '"' {
+			if end := strings.IndexByte(value, quote); end >= 0 {
+				value = value[:end]
+			}
+		}
+	}
+	value = strings.Trim(value, " \t\r\n'\"\\")
+	return value, value != ""
 }
 
 func quotaBalance(limit, used, remain float64, unlimited bool) *balance {
